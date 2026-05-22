@@ -86,3 +86,11 @@ export const compact = <T>(maybes: readonly Maybe<T>[]): T[] => {
   }
   return out;
 };
+
+/** `compact(items.map(fn))` — map to Maybe, drop None. */
+export const compactMap = <T, U>(items: readonly T[], fn: (item: T) => Maybe<U>): U[] =>
+  compact(items.map(fn));
+
+/** `flatMapMaybe(fromNullable(value), fn)` — lift nullable then bind. */
+export const optional = <T, U>(value: T | null | undefined, fn: (value: T) => Maybe<U>): Maybe<U> =>
+  flatMapMaybe(fromNullable(value), fn);

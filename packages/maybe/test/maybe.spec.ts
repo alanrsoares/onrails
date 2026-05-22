@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   andThen,
   compact,
+  compactMap,
   flatMapMaybe,
   fromNullable,
   fromThrowable,
@@ -12,6 +13,7 @@ import {
   match,
   none,
   of,
+  optional,
   some,
   unwrap,
   unwrapOr,
@@ -75,5 +77,14 @@ describe("Maybe", () => {
 
   it("compact drops None", () => {
     expect(compact([some(1), none(), some(2)])).toEqual([1, 2]);
+  });
+
+  it("compactMap maps then compacts", () => {
+    expect(compactMap([1, 2, 3], (n) => (n % 2 === 0 ? some(n) : none<number>()))).toEqual([2]);
+  });
+
+  it("optional lifts nullable then binds", () => {
+    expect(optional("x", (s) => some(s.length))).toEqual(some(1));
+    expect(optional(null, (s) => some(s))).toEqual(none());
   });
 });

@@ -1,6 +1,7 @@
 export {
   andThen,
   compact,
+  compactMap,
   flatMap,
   flatMapMaybe,
   fromNullable,
@@ -15,6 +16,7 @@ export {
   matchWith,
   none,
   of,
+  optional,
   some,
   unwrap,
   unwrapOr,

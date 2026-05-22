@@ -11,7 +11,7 @@ bun add @onrails/maybe
 ## Usage
 
 ```ts
-import { fromNullable, isSome, match, some } from "@onrails/maybe";
+import { compactMap, fromNullable, isSome, match, some } from "@onrails/maybe";
 
 const row = fromNullable(db.get(id));
 

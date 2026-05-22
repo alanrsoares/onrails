@@ -26,6 +26,8 @@ type Maybe<T> =
 | `flatMap` / `andThen` | `flatMap` / `andThen` |
 | `match` | `match` (`{ some, none }` handlers) |
 | `unwrapOr` | `unwrapOr` (= `getOrElse`) |
+| — | `compactMap` (`compact` ∘ `map`) |
+| — | `optional` (`flatMap` ∘ `fromNullable`) |
 
 ## vs RecallOS `Maybe`
 
