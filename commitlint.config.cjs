@@ -5,7 +5,7 @@ module.exports = {
     "scope-enum": [
       2,
       "always",
-      ["result", "codemod", "eslint-plugin", "repo", "deps", "ci", "docs"],
+      ["result", "maybe", "pattern", "codemod", "eslint-plugin", "repo", "deps", "ci", "docs"],
     ],
     "scope-empty": [2, "never"],
     "body-max-line-length": [0, "always"],

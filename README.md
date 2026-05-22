@@ -4,7 +4,9 @@ Tagged `Result` / `ResultAsync` + railway-oriented utilities for TypeScript. Pur
 
 | Package | npm | Description |
 |---|---|---|
-| [`@onrails/result`](./packages/result) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fresult.svg)](https://www.npmjs.com/package/@onrails/result) | Core `Result` / `ResultAsync` / `Maybe` + neverthrow compat shim |
+| [`@onrails/result`](./packages/result) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fresult.svg)](https://www.npmjs.com/package/@onrails/result) | Core `Result` / `ResultAsync` + neverthrow compat shim |
+| [`@onrails/maybe`](./packages/maybe) | — | Tagged `Maybe` for expected absence + `Result` interop |
+| [`@onrails/pattern`](./packages/pattern) | — | Exhaustive matching for owned unions (ts-pattern-shaped, lighter) |
 | [`@onrails/codemod`](./packages/codemod) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fcodemod.svg)](https://www.npmjs.com/package/@onrails/codemod) | Bun script: migrate `neverthrow` imports + `package.json` deps to `@onrails/result/compat/neverthrow` |
 | [`@onrails/eslint-plugin`](./packages/eslint-plugin) | [![npm](https://img.shields.io/npm/v/%40onrails%2Feslint-plugin.svg)](https://www.npmjs.com/package/@onrails/eslint-plugin) | ESLint rules for `@onrails/result` boundaries — flags `Promise<Result<…>>` + `_unsafeUnwrap*` |
 
@@ -15,7 +17,7 @@ Tagged `Result` / `ResultAsync` + railway-oriented utilities for TypeScript. Pur
 
 [Railway-oriented programming](https://fsharpforfunandprofit.com/rop/) — encode failure as values, chain ok/err down two parallel tracks, never throw across a public boundary.
 
-`@onrails/result` is a small, tagged-union take on this pattern. The data is `{ _tag: "Ok"; value }` / `{ _tag: "Err"; error }` — no class wrapper, tree-shake friendly, Fantasy Land-aware. A drop-in `compat/neverthrow` shim makes migration a regex search-and-replace.
+`@onrails/result` is a small, tagged-union take on this pattern. The data is `{ _tag: "Ok"; value }` / `{ _tag: "Err"; error }` — no class wrapper, tree-shake friendly, Fantasy Land-aware. `@onrails/maybe` models expected absence (`Some` / `None`). `@onrails/pattern` exhaustively matches owned unions. A drop-in `compat/neverthrow` shim makes migration a regex search-and-replace.
 
 ## Quick start
 

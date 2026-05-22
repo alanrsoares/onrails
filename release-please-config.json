@@ -12,6 +12,16 @@
       "component": "result",
       "changelog-path": "CHANGELOG.md"
     },
+    "packages/maybe": {
+      "package-name": "@onrails/maybe",
+      "component": "maybe",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "packages/pattern": {
+      "package-name": "@onrails/pattern",
+      "component": "pattern",
+      "changelog-path": "CHANGELOG.md"
+    },
     "packages/codemod": {
       "package-name": "@onrails/codemod",
       "component": "codemod",
