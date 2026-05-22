@@ -5,10 +5,10 @@ import { tryGen, yieldResult } from "../src/try-gen.js";
 describe("tryGen", () => {
   it("short-circuits on first Err", () => {
     const out = tryGen(() => {
-      yieldResult(err("a"));
-      return ok(99);
+      yieldResult(err<number, string>("a"));
+      return ok<number, string>(99);
     });
-    expect(out).toEqual(err("a"));
+    expect(out).toEqual(err<number, string>("a"));
   });
 
   it("returns final Ok", () => {

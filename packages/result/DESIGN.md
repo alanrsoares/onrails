@@ -35,6 +35,10 @@ type Result<T, E> =
 | `@onrails/result/extra` | Error-type utilities |
 | `@onrails/result/compat/neverthrow` | Migration shim (temporary) |
 
+## Type tests
+
+`test/types.spec.ts` — `ts-expect` (`expectType` + `TypeEqual`), same pattern as styled-cva.
+
 ## v1.0 gate
 
 - bun tests: core ops, FL functor/monad laws (sync), neverthrow-compat fixtures

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { fromAsync, type InferErr, type InferOk, makeResultAsync } from "../src/interop.js";
 import { err, ok } from "../src/result.js";
+import type { Result } from "../src/types.js";
 
 describe("fromAsync", () => {
   const returnsPromisedResult = async (s: string) => {
@@ -35,7 +36,7 @@ describe("fromAsync", () => {
   });
 
   it("maps promise rejection to UnexpectedError", async () => {
-    const ra = fromAsync(async () => {
+    const ra = fromAsync(async (): Promise<Result<never, never>> => {
       throw new Error("boom");
     })();
     const result = await ra.resolve();
