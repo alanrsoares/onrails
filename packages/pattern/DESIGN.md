@@ -11,7 +11,18 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 
 ## Handler narrowing
 
-`.with({ type: "message" }, (e) => …)` narrows `e` via `Narrow<T, P>` (`Extract` for object patterns). Guards use `when(fn)`.
+`.with(pattern, handler)` narrows the handler's input via `Narrow<T, P>`:
+
+- **Discriminated union**: `Extract<T, P>` picks the matching member.
+- **Single object type**: falls back to intersection `T & P` so structural matches still narrow (e.g. `{ status: "failed" }` on a `Job` with `status: JobStatus`).
+- **Type-predicate guard** (`(x): x is U`): narrows to `U` via `when(predicate)`.
+- **Plain boolean guard** (`(x) => boolean`): leaves the handler input as `T`.
+
+`Pattern<T>` admits object-shaped patterns only when `T extends object`. Primitive `T` (`number | string`) accepts literals and guards but not free-form objects — this prevents `Record<string, unknown>` distributing into `Narrow` and polluting the handler input type.
+
+## Result-type seeding
+
+`match(x).returnType<R>()` returns a `LockedMatchBuilder<T, R, …>` whose `.with()` handlers must return `R`. Use when branch return-type inference widens to a union narrower than the slot the match feeds into (`ReactNode`, an API DTO, etc.).
 
 ## Type tests
 
@@ -27,7 +38,7 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 
 | Subpath | Purpose |
 |---------|---------|
-| `@onrails/pattern` | `match`, `when`, `assertNever` |
+| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder`, `Pattern`, `Narrow` |
 | `@onrails/pattern/tag` | `matchTag` for `_tag` dispatch |
 
 ## Migration from ts-pattern
@@ -36,10 +47,12 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 |------------|------------------|
 | `match(x).with({ type: "a" }, fn).exhaustive()` | Same |
 | `match(x).with("a", fn).exhaustive()` | Same (primitive / literal union) |
-| `P.when(fn)` | `when(fn)` |
+| `match(x).with(p1, p2, fn)` (multi-pattern) | Split into separate `.with()` calls or extract a handler const |
+| `P.when(fn)` | `when(fn)` (preserves type-predicate narrowing) |
+| `match(x).returnType<R>()` | Same |
 | `P._` / nested selects | Not v1 — keep ts-pattern or refactor to `matchTag` |
 
 ## Deferred
 
+- Multi-pattern `.with(p1, p2, fn)` overload
 - `compat/ts-pattern` re-export or codemod
-- Narrowing helpers per `.with` branch

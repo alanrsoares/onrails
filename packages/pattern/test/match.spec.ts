@@ -70,6 +70,39 @@ describe("match", () => {
     expect(sign(0)).toBe("non-neg");
   });
 
+  it("returnType locks accumulator and runs", () => {
+    type Part = { type: "text"; text: string } | { type: "image"; src: string };
+    const render = (p: Part) =>
+      match(p)
+        .returnType<string>()
+        .with({ type: "text" }, (e) => e.text)
+        .with({ type: "image" }, (e) => e.src)
+        .exhaustive();
+    expect(render({ type: "text", text: "hi" })).toBe("hi");
+    expect(render({ type: "image", src: "u" })).toBe("u");
+  });
+
+  it("returnType supports otherwise", () => {
+    type P = "a" | "b" | "c";
+    const fn = match<P>()
+      .returnType<number>()
+      .with("a", () => 1)
+      .otherwise(() => -1);
+    expect(fn("a")).toBe(1);
+    expect(fn("b")).toBe(-1);
+  });
+
+  it("returnType supports curried exhaustive", () => {
+    type P = "a" | "b";
+    const fn = match<P>()
+      .returnType<number>()
+      .with("a", () => 1)
+      .with("b", () => 2)
+      .exhaustive();
+    expect(fn("a")).toBe(1);
+    expect(fn("b")).toBe(2);
+  });
+
   it("run matches immediately", () => {
     expect(
       match({ type: "error", message: "x" } as Event)

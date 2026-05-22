@@ -35,6 +35,34 @@ const render = (event: { type: "msg"; text: string } | { type: "err"; code: numb
     .exhaustive();
 ```
 
+Type-predicate guards via `when`:
+
+```ts
+import { match, when } from "@onrails/pattern";
+
+type Event = { type: "msg"; text: string } | { type: "err"; code: number };
+const isMsg = (e: Event): e is Extract<Event, { type: "msg" }> => e.type === "msg";
+
+const render = (e: Event) =>
+  match(e)
+    .with(when(isMsg), (msg) => msg.text)            // `msg` narrowed to { type: "msg"; text: string }
+    .otherwise(() => "");
+```
+
+Lock the result type with `returnType<R>()` when branch inference would otherwise widen too narrowly:
+
+```ts
+import type { ReactNode } from "react";
+import { match } from "@onrails/pattern";
+
+const render = (p: Part): ReactNode =>
+  match(p)
+    .returnType<ReactNode>()                          // every `.with` handler must return ReactNode
+    .with({ type: "text" }, (t) => <Text>{t.text}</Text>)
+    .with({ type: "image" }, (i) => <Image src={i.src} />)
+    .otherwise(() => null);
+```
+
 `_tag` unions (`@onrails/result`, `@onrails/maybe`):
 
 ```ts
@@ -52,7 +80,7 @@ const show = <T, E>(r: Result<T, E>) =>
 
 | Path | Contents |
 |------|----------|
-| `@onrails/pattern` | `match`, `when`, `assertNever` |
+| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder` |
 | `@onrails/pattern/tag` | `matchTag` |
 
 See [DESIGN.md](./DESIGN.md).
