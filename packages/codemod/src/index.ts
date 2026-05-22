@@ -41,7 +41,7 @@ function parseArgs(argv: string[]): Args {
     );
     process.exit(2);
   }
-  return { target: resolve(positional[0]!), dry, onrails };
+  return { target: resolve(positional[0] ?? "."), dry, onrails };
 }
 
 function shouldSkip(path: string): boolean {
