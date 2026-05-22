@@ -40,13 +40,19 @@ const matches = <T>(input: T, pattern: Pattern<T>): boolean => {
   return true;
 };
 
-const runCases = <T, R>(input: T, cases: readonly Case<T, R>[]): R | undefined => {
+// Sentinel for "no case matched". Distinct from a handler legitimately
+// returning `undefined` (e.g. side-effect-only handlers), which would
+// otherwise be misreported as non-exhaustive.
+const NO_MATCH = Symbol("@onrails/pattern/no-match");
+type NoMatch = typeof NO_MATCH;
+
+const runCases = <T, R>(input: T, cases: readonly Case<T, R>[]): R | NoMatch => {
   for (const c of cases) {
     if (c.test(input)) {
       return c.run(input);
     }
   }
-  return undefined;
+  return NO_MATCH;
 };
 
 export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
@@ -82,7 +88,7 @@ export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
       throw new Error("match.run: no input value");
     }
     const out = runCases(value, this.cases);
-    if (out === undefined) {
+    if (out === NO_MATCH) {
       throw new Error("Non-exhaustive match: no case matched input");
     }
     return out as R;
@@ -98,7 +104,7 @@ export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
   otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R {
     const runWithFallback = (value: T): R => {
       const out = runCases(value, this.cases);
-      return out === undefined ? handler(value) : (out as R);
+      return out === NO_MATCH ? handler(value) : (out as R);
     };
     if (this.input !== undefined) {
       return runWithFallback(this.input) as HasInput extends true ? R : (input: T) => R;
@@ -135,7 +141,7 @@ export class LockedMatchBuilder<T, R, HasInput extends boolean = false> {
       throw new Error("match.run: no input value");
     }
     const out = runCases(value, this.cases);
-    if (out === undefined) {
+    if (out === NO_MATCH) {
       throw new Error("Non-exhaustive match: no case matched input");
     }
     return out as R;
@@ -151,7 +157,7 @@ export class LockedMatchBuilder<T, R, HasInput extends boolean = false> {
   otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R {
     const runWithFallback = (value: T): R => {
       const out = runCases(value, this.cases);
-      return out === undefined ? handler(value) : (out as R);
+      return out === NO_MATCH ? handler(value) : (out as R);
     };
     if (this.input !== undefined) {
       return runWithFallback(this.input) as HasInput extends true ? R : (input: T) => R;

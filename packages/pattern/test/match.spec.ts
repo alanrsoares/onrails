@@ -103,6 +103,27 @@ describe("match", () => {
     expect(fn("b")).toBe(2);
   });
 
+  it("void-returning handlers count as matched (no false non-exhaustive)", () => {
+    type Event = { kind: "a" } | { kind: "b" } | { kind: "c" };
+    const seen: string[] = [];
+    const dispatch = (e: Event) =>
+      match(e)
+        .with({ kind: "a" }, () => {
+          seen.push("a");
+        })
+        .with({ kind: "b" }, () => {
+          seen.push("b");
+        })
+        .with({ kind: "c" }, () => {
+          seen.push("c");
+        })
+        .exhaustive();
+    dispatch({ kind: "a" });
+    dispatch({ kind: "b" });
+    dispatch({ kind: "c" });
+    expect(seen).toEqual(["a", "b", "c"]);
+  });
+
   it("run matches immediately", () => {
     expect(
       match({ type: "error", message: "x" } as Event)
