@@ -1,4 +1,4 @@
-import type { Narrow } from "./narrow.js";
+import type { Narrow, NarrowUnion } from "./narrow.js";
 
 export type Pattern<T> = T | ObjectPattern<T> | PatternGuard<T>;
 
@@ -55,6 +55,14 @@ const runCases = <T, R>(input: T, cases: readonly Case<T, R>[]): R | NoMatch => 
   return NO_MATCH;
 };
 
+const caseForPatterns = <T, R>(
+  patterns: readonly Pattern<T>[],
+  handler: (input: T) => R,
+): Case<T, R> => ({
+  test: (input) => patterns.some((pattern) => matches(input, pattern)),
+  run: handler,
+});
+
 export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
   constructor(
     private readonly cases: readonly Case<T, unknown>[] = [],
@@ -70,6 +78,24 @@ export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
       run: handler as (input: T) => R | R2,
     };
     return new MatchBuilder([...this.cases, next], this.input);
+  }
+
+  /** One handler for several patterns (OR). Handler input is the union of narrowed members. */
+  withOneOf<const Ps extends readonly Pattern<T>[], R2>(
+    patterns: Ps,
+    handler: (input: NarrowUnion<T, Ps>) => R2,
+  ): MatchBuilder<T, R | R2, HasInput> {
+    const next = caseForPatterns(patterns, handler as (input: T) => R | R2);
+    return new MatchBuilder([...this.cases, next], this.input);
+  }
+
+  /** `withOneOf` for exactly two patterns. */
+  withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>, R2>(
+    pattern1: P1,
+    pattern2: P2,
+    handler: (input: NarrowUnion<T, readonly [P1, P2]>) => R2,
+  ): MatchBuilder<T, R | R2, HasInput> {
+    return this.withOneOf([pattern1, pattern2], handler);
   }
 
   /**
@@ -133,6 +159,22 @@ export class LockedMatchBuilder<T, R, HasInput extends boolean = false> {
       run: handler as (input: T) => R,
     };
     return new LockedMatchBuilder([...this.cases, next], this.input);
+  }
+
+  withOneOf<const Ps extends readonly Pattern<T>[]>(
+    patterns: Ps,
+    handler: (input: NarrowUnion<T, Ps>) => R,
+  ): LockedMatchBuilder<T, R, HasInput> {
+    const next = caseForPatterns(patterns, handler as (input: T) => R);
+    return new LockedMatchBuilder([...this.cases, next], this.input);
+  }
+
+  withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>>(
+    pattern1: P1,
+    pattern2: P2,
+    handler: (input: NarrowUnion<T, readonly [P1, P2]>) => R,
+  ): LockedMatchBuilder<T, R, HasInput> {
+    return this.withOneOf([pattern1, pattern2], handler);
   }
 
   run(input?: T): R {

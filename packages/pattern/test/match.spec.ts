@@ -36,6 +36,27 @@ describe("match", () => {
     expect(out).toBe("x");
   });
 
+  it("withOneOf shares a handler across patterns", () => {
+    type Job =
+      | { kind: "queued"; id: string }
+      | { kind: "running"; id: string }
+      | { kind: "done"; ok: boolean };
+    const active = (j: { kind: "queued" | "running"; id: string }) => j.id;
+    const out = match({ kind: "running", id: "j1" } as Job)
+      .withOneOf([{ kind: "queued" }, { kind: "running" }], active)
+      .with({ kind: "done" }, (j) => (j.ok ? "yes" : "no"))
+      .exhaustive();
+    expect(out).toBe("j1");
+  });
+
+  it("withEither is sugar for two patterns", () => {
+    const pick = match<Provider>()
+      .withEither("ollama", "openrouter", (p) => p)
+      .exhaustive();
+    expect(pick("ollama")).toBe("ollama");
+    expect(pick("openrouter")).toBe("openrouter");
+  });
+
   it("otherwise is fallback", () => {
     expect(
       match({ type: "done" } as Event)

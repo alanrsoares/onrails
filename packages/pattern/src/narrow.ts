@@ -9,6 +9,9 @@ type GuardTarget<F> = F extends (input: any) => input is infer U ? U : never;
 // `status: JobStatus`).
 type NarrowObject<T, P> = [Extract<T, P>] extends [never] ? T & P : Extract<T, P>;
 
+/** Union of members narrowed by each pattern in `Ps` (multi-branch handlers). */
+export type NarrowUnion<T, Ps extends readonly unknown[]> = Narrow<T, Ps[number]>;
+
 /** Narrows `input` when `pattern` is a shallow object, literal discriminant, or type predicate. */
 export type Narrow<T, P> = P extends (input: T) => boolean
   ? [GuardTarget<P>] extends [never]

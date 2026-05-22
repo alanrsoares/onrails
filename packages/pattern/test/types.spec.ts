@@ -2,7 +2,7 @@ import { describe, it } from "bun:test";
 import { ok, type Result } from "@onrails/result";
 import { expectType, type TypeEqual } from "ts-expect";
 import { match } from "../src/match.js";
-import type { Narrow } from "../src/narrow.js";
+import type { Narrow, NarrowUnion } from "../src/narrow.js";
 import { matchTag } from "../src/tag.js";
 import { when } from "../src/when.js";
 
@@ -19,6 +19,34 @@ describe("pattern types", () => {
     expectType<TypeEqual<Msg, { type: "message"; content: string }>>(true);
     type ErrEv = Narrow<Event, { type: "error" }>;
     expectType<TypeEqual<ErrEv, { type: "error"; message: string }>>(true);
+  });
+
+  it("NarrowUnion unions per-pattern narrowings", () => {
+    type Active = NarrowUnion<Event, readonly [{ type: "message" }, { type: "error" }]>;
+    expectType<
+      TypeEqual<Active, { type: "message"; content: string } | { type: "error"; message: string }>
+    >(true);
+  });
+
+  it("withOneOf narrows handler input to union of members", () => {
+    type Job = { kind: "queued"; id: string } | { kind: "running"; id: string } | { kind: "done" };
+    match<Job>()
+      .withOneOf([{ kind: "queued" }, { kind: "running" }], (j) => {
+        expectType<
+          TypeEqual<typeof j, { kind: "queued"; id: string } | { kind: "running"; id: string }>
+        >(true);
+        return j.id;
+      })
+      .with({ kind: "done" }, () => "");
+  });
+
+  it("withEither narrows two-pattern union", () => {
+    match<Provider>()
+      .withEither("ollama", "openrouter", (p) => {
+        expectType<TypeEqual<typeof p, Provider>>(true);
+        return p;
+      })
+      .exhaustive();
   });
 
   it("exhaustive on literal union returns handler union", () => {

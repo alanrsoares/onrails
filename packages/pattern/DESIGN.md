@@ -38,7 +38,7 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 
 | Subpath | Purpose |
 |---------|---------|
-| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder`, `Pattern`, `Narrow` |
+| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder`, `Pattern`, `Narrow`, `NarrowUnion` |
 | `@onrails/pattern/tag` | `matchTag` for `_tag` dispatch |
 
 ## Migration from ts-pattern
@@ -47,12 +47,16 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 |------------|------------------|
 | `match(x).with({ type: "a" }, fn).exhaustive()` | Same |
 | `match(x).with("a", fn).exhaustive()` | Same (primitive / literal union) |
-| `match(x).with(p1, p2, fn)` (multi-pattern) | Split into separate `.with()` calls or extract a handler const |
+| `match(x).with(p1, p2, fn)` (multi-pattern) | `.withOneOf([p1, p2], fn)` or `.withEither(p1, p2, fn)` |
 | `P.when(fn)` | `when(fn)` (preserves type-predicate narrowing) |
 | `match(x).returnType<R>()` | Same |
 | `P._` / nested selects | Not v1 — keep ts-pattern or refactor to `matchTag` |
 
+## Multi-pattern
+
+`.withOneOf([p1, p2, …], handler)` registers one case whose test ORs the patterns. Handler input is `NarrowUnion<T, Ps>` (union of per-pattern narrowings). `.withEither(p1, p2, handler)` is sugar for two patterns.
+
 ## Deferred
 
-- Multi-pattern `.with(p1, p2, fn)` overload
+- Variadic `.with(p1, p2, fn)` overload (ts-pattern arity style)
 - `compat/ts-pattern` re-export or codemod
