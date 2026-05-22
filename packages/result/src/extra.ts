@@ -3,10 +3,10 @@ import { isErr, isOk } from "./result.js";
 import type { Result } from "./types.js";
 
 /** Extract error type from a {@link Result} */
-export type ErrOf<R> = R extends Result<unknown, infer E> ? E : never;
+export type ErrOf<R> = R extends { _tag: "Err"; readonly error: infer E } ? E : never;
 
 /** Extract success type from a {@link Result} */
-export type OkOf<R> = R extends Result<infer T, unknown> ? T : never;
+export type OkOf<R> = R extends { _tag: "Ok"; readonly value: infer T } ? T : never;
 
 /** Union of error types from a tuple/readonly array of results */
 export type UnionErrors<R extends readonly Result<unknown, unknown>[]> = {

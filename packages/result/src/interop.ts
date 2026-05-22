@@ -2,12 +2,18 @@ import { ResultAsync } from "./async.js";
 import type { Result, UnexpectedError } from "./types.js";
 
 /** Success type of a {@link Result} or {@link ResultAsync} */
-export type InferOk<R> =
-  R extends Result<infer T, unknown> ? T : R extends ResultAsync<infer T, unknown> ? T : never;
+export type InferOk<R> = R extends { _tag: "Ok"; readonly value: infer T }
+  ? T
+  : R extends ResultAsync<infer T, unknown>
+    ? T
+    : never;
 
 /** Error type of a {@link Result} or {@link ResultAsync} */
-export type InferErr<R> =
-  R extends Result<unknown, infer E> ? E : R extends ResultAsync<unknown, infer E> ? E : never;
+export type InferErr<R> = R extends { _tag: "Err"; readonly error: infer E }
+  ? E
+  : R extends ResultAsync<unknown, infer E>
+    ? E
+    : never;
 
 type AnyResult = Result<unknown, unknown>;
 

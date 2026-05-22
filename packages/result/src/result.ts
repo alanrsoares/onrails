@@ -26,10 +26,10 @@ export const mapResult = <T, U, E>(result: Result<T, E>, fn: (value: T) => U): R
   return err<U, E>(result.error);
 };
 
-/** Curried `map` */
+/** Curried `map` — E is inferred at the inner call so `map(fn)(ok(1))` keeps `Result<U, never>` */
 export const map =
-  <T, U, E>(fn: (value: T) => U) =>
-  (result: Result<T, E>): Result<U, E> =>
+  <T, U>(fn: (value: T) => U) =>
+  <E>(result: Result<T, E>): Result<U, E> =>
     mapResult(result, fn);
 
 export const mapErrResult = <T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F> => {
@@ -39,9 +39,10 @@ export const mapErrResult = <T, E, F>(result: Result<T, E>, fn: (error: E) => F)
   return ok<T, F>(result.value);
 };
 
+/** Curried `mapErr` — T is inferred at the inner call so success type stays narrow */
 export const mapErr =
-  <T, E, F>(fn: (error: E) => F) =>
-  (result: Result<T, E>): Result<T, F> =>
+  <E, F>(fn: (error: E) => F) =>
+  <T>(result: Result<T, E>): Result<T, F> =>
     mapErrResult(result, fn);
 
 export const bimap = <T, U, E, F>(
@@ -160,9 +161,12 @@ export const combineTuple = <const R extends readonly Result<unknown, unknown>[]
   return ok(values) as CombineTuple<R>;
 };
 
+type _OkValue<R> = R extends { _tag: "Ok"; readonly value: infer T } ? T : never;
+type _ErrValue<R> = R extends { _tag: "Err"; readonly error: infer E } ? E : never;
+
 type CombineTuple<R extends readonly Result<unknown, unknown>[]> = Result<
-  { [K in keyof R]: R[K] extends Result<infer T, unknown> ? T : never },
-  { [K in keyof R]: R[K] extends Result<unknown, infer E> ? E : never }[number]
+  { [K in keyof R]: _OkValue<R[K]> },
+  { [K in keyof R]: _ErrValue<R[K]> }[number]
 >;
 
 export const pipe = <A, B>(value: A, fn: (value: A) => B): B => fn(value);
