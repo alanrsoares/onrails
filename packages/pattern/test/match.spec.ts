@@ -69,11 +69,13 @@ describe("match", () => {
     expect(len({ type: "message", content: "ab" })).toBe(2);
   });
 
-  it("exhaustive throws on no match", () => {
-    const fail = match<number>()
-      .with(2, () => "two")
-      .exhaustive();
-    expect(() => fail(1)).toThrow("Non-exhaustive match");
+  it("run throws when no case matches", () => {
+    type OneTwo = 1 | 2;
+    expect(() =>
+      match(1 as OneTwo)
+        .with(2, () => "two")
+        .run(),
+    ).toThrow("Non-exhaustive match");
   });
 
   it("when guard", () => {

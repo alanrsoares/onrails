@@ -1,3 +1,4 @@
+import type { ExhaustiveResult, ExhaustMatched } from "./exhaustive.js";
 import type { Narrow, NarrowUnion } from "./narrow.js";
 
 export type Pattern<T> = T | ObjectPattern<T> | PatternGuard<T>;
@@ -63,30 +64,45 @@ const caseForPatterns = <T, R>(
   run: handler,
 });
 
-export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
+export class MatchBuilder<
+  T,
+  R = never,
+  HasInput extends boolean = false,
+  Handled extends readonly unknown[] = [],
+> {
   constructor(
     private readonly cases: readonly Case<T, unknown>[] = [],
     private readonly input?: T,
+    // Safe: phantom tuple — only used for compile-time exhaustiveness tracking.
+    readonly _handled: Handled = [] as unknown as Handled,
   ) {}
 
   with<const P extends Pattern<T>, R2>(
     pattern: P,
     handler: (input: Narrow<T, P>) => R2,
-  ): MatchBuilder<T, R | R2, HasInput> {
+  ): MatchBuilder<T, R | R2, HasInput, readonly [...Handled, ExhaustMatched<T, P>]> {
     const next: Case<T, R | R2> = {
       test: (input) => matches(input, pattern),
       run: handler as (input: T) => R | R2,
     };
-    return new MatchBuilder([...this.cases, next], this.input);
+    return new MatchBuilder<T, R | R2, HasInput, readonly [...Handled, ExhaustMatched<T, P>]>(
+      [...this.cases, next],
+      this.input,
+      [...this._handled] as unknown as readonly [...Handled, ExhaustMatched<T, P>],
+    );
   }
 
   /** One handler for several patterns (OR). Handler input is the union of narrowed members. */
   withOneOf<const Ps extends readonly Pattern<T>[], R2>(
     patterns: Ps,
     handler: (input: NarrowUnion<T, Ps>) => R2,
-  ): MatchBuilder<T, R | R2, HasInput> {
+  ): MatchBuilder<T, R | R2, HasInput, readonly [...Handled, NarrowUnion<T, Ps>]> {
     const next = caseForPatterns(patterns, handler as (input: T) => R | R2);
-    return new MatchBuilder([...this.cases, next], this.input);
+    return new MatchBuilder<T, R | R2, HasInput, readonly [...Handled, NarrowUnion<T, Ps>]>(
+      [...this.cases, next],
+      this.input,
+      [...this._handled] as unknown as readonly [...Handled, NarrowUnion<T, Ps>],
+    );
   }
 
   /** `withOneOf` for exactly two patterns. */
@@ -94,7 +110,7 @@ export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
     pattern1: P1,
     pattern2: P2,
     handler: (input: NarrowUnion<T, readonly [P1, P2]>) => R2,
-  ): MatchBuilder<T, R | R2, HasInput> {
+  ): MatchBuilder<T, R | R2, HasInput, readonly [...Handled, NarrowUnion<T, readonly [P1, P2]>]> {
     return this.withOneOf([pattern1, pattern2], handler);
   }
 
@@ -103,8 +119,8 @@ export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
    * Useful when branch return-type inference widens to a union narrower than
    * the slot the match feeds into (e.g. `ReactNode`).
    */
-  returnType<R2>(): LockedMatchBuilder<T, R2, HasInput> {
-    return new LockedMatchBuilder<T, R2, HasInput>(this.cases, this.input);
+  returnType<R2>(): LockedMatchBuilder<T, R2, HasInput, Handled> {
+    return new LockedMatchBuilder<T, R2, HasInput, Handled>(this.cases, this.input, this._handled);
   }
 
   /** Run on the value passed to {@link match}, or on `input` when curried. */
@@ -120,11 +136,11 @@ export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
     return out as R;
   }
 
-  exhaustive(): HasInput extends true ? R : (input: T) => R {
+  exhaustive(): ExhaustiveResult<T, Handled, R, HasInput> {
     if (this.input !== undefined) {
-      return this.run() as HasInput extends true ? R : (input: T) => R;
+      return this.run() as ExhaustiveResult<T, Handled, R, HasInput>;
     }
-    return ((value: T) => this.run(value)) as HasInput extends true ? R : (input: T) => R;
+    return ((value: T) => this.run(value)) as ExhaustiveResult<T, Handled, R, HasInput>;
   }
 
   otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R {
@@ -144,36 +160,50 @@ export class MatchBuilder<T, R = never, HasInput extends boolean = false> {
  * `match(...).returnType<R>()`. All `.with()` handlers are constrained to
  * return `R`; the accumulator never widens.
  */
-export class LockedMatchBuilder<T, R, HasInput extends boolean = false> {
+export class LockedMatchBuilder<
+  T,
+  R,
+  HasInput extends boolean = false,
+  Handled extends readonly unknown[] = [],
+> {
   constructor(
     private readonly cases: readonly Case<T, unknown>[] = [],
     private readonly input?: T,
+    readonly _handled: Handled = [] as unknown as Handled,
   ) {}
 
   with<const P extends Pattern<T>>(
     pattern: P,
     handler: (input: Narrow<T, P>) => R,
-  ): LockedMatchBuilder<T, R, HasInput> {
+  ): LockedMatchBuilder<T, R, HasInput, readonly [...Handled, ExhaustMatched<T, P>]> {
     const next: Case<T, R> = {
       test: (input) => matches(input, pattern),
       run: handler as (input: T) => R,
     };
-    return new LockedMatchBuilder([...this.cases, next], this.input);
+    return new LockedMatchBuilder<T, R, HasInput, readonly [...Handled, ExhaustMatched<T, P>]>(
+      [...this.cases, next],
+      this.input,
+      [...this._handled] as unknown as readonly [...Handled, ExhaustMatched<T, P>],
+    );
   }
 
   withOneOf<const Ps extends readonly Pattern<T>[]>(
     patterns: Ps,
     handler: (input: NarrowUnion<T, Ps>) => R,
-  ): LockedMatchBuilder<T, R, HasInput> {
+  ): LockedMatchBuilder<T, R, HasInput, readonly [...Handled, NarrowUnion<T, Ps>]> {
     const next = caseForPatterns(patterns, handler as (input: T) => R);
-    return new LockedMatchBuilder([...this.cases, next], this.input);
+    return new LockedMatchBuilder<T, R, HasInput, readonly [...Handled, NarrowUnion<T, Ps>]>(
+      [...this.cases, next],
+      this.input,
+      [...this._handled] as unknown as readonly [...Handled, NarrowUnion<T, Ps>],
+    );
   }
 
   withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>>(
     pattern1: P1,
     pattern2: P2,
     handler: (input: NarrowUnion<T, readonly [P1, P2]>) => R,
-  ): LockedMatchBuilder<T, R, HasInput> {
+  ): LockedMatchBuilder<T, R, HasInput, readonly [...Handled, NarrowUnion<T, readonly [P1, P2]>]> {
     return this.withOneOf([pattern1, pattern2], handler);
   }
 
@@ -189,11 +219,11 @@ export class LockedMatchBuilder<T, R, HasInput extends boolean = false> {
     return out as R;
   }
 
-  exhaustive(): HasInput extends true ? R : (input: T) => R {
+  exhaustive(): ExhaustiveResult<T, Handled, R, HasInput> {
     if (this.input !== undefined) {
-      return this.run() as HasInput extends true ? R : (input: T) => R;
+      return this.run() as ExhaustiveResult<T, Handled, R, HasInput>;
     }
-    return ((value: T) => this.run(value)) as HasInput extends true ? R : (input: T) => R;
+    return ((value: T) => this.run(value)) as ExhaustiveResult<T, Handled, R, HasInput>;
   }
 
   otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R {

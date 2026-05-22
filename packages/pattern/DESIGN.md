@@ -28,17 +28,26 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 
 `test/types.spec.ts` uses `ts-expect` (`expectType` + `TypeEqual`) — same approach as styled-cva.
 
+## Compile-time exhaustiveness
+
+`.exhaustive()` is only typed when every member of union `T` is covered by prior `.with` / `.withOneOf` / `.withEither` branches. The builder tracks `Matched`; `RemainingCases<T, Matched>` must be `never`.
+
+- Object/literal patterns use `Extract<T, P>`.
+- `when(predicate)` with a **type predicate** narrows like `.with`; plain boolean guards do **not** advance exhaustiveness (use `.otherwise()` or add explicit branches).
+- **Single object types** with an enum/status field (not a top-level union) are not proven exhaustive — model as a discriminated union or use `.otherwise()`.
+
+Runtime still throws if a value slips through (e.g. unsound cast on input).
+
 ## Non-goals (v1)
 
 - Deep/spread patterns, `P.select`, `P.not`, nested unwrapping
-- Compile-time proof of exhaustiveness (use `assertNever` + discipline; runtime throw on miss)
 - Replacing `if` for two-branch checks or nullable guards
 
 ## Exports
 
 | Subpath | Purpose |
 |---------|---------|
-| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder`, `Pattern`, `Narrow`, `NarrowUnion` |
+| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder`, `Pattern`, `Narrow`, `NarrowUnion`, `RemainingCases`, `IsExhaustive`, `NonExhaustiveError` |
 | `@onrails/pattern/tag` | `matchTag` for `_tag` dispatch |
 
 ## Migration from ts-pattern
