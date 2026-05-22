@@ -1,0 +1,60 @@
+{
+  "name": "@onrails/maybe",
+  "version": "0.0.0",
+  "description": "Tagged Maybe for expected absence — pure tagged unions, Result interop, tree-shakeable",
+  "license": "MIT",
+  "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/maybe#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git",
+    "directory": "packages/maybe"
+  },
+  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "keywords": [
+    "maybe",
+    "optional",
+    "tagged-union",
+    "discriminated-union",
+    "typescript",
+    "bun",
+    "functional"
+  ],
+  "engines": { "node": ">=18", "bun": ">=1.0" },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "sideEffects": false,
+  "files": ["src", "DESIGN.md", "README.md", "LICENSE"],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./fluent": {
+      "types": "./src/fluent.ts",
+      "default": "./src/fluent.ts"
+    },
+    "./interop": {
+      "types": "./src/interop.ts",
+      "default": "./src/interop.ts"
+    }
+  },
+  "peerDependencies": {
+    "@onrails/result": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@onrails/result": { "optional": true }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "check": "bun typecheck && bun test"
+  },
+  "devDependencies": {
+    "@onrails/result": "workspace:*",
+    "ts-expect": "^1.3.0"
+  }
+}
