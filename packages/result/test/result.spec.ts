@@ -8,8 +8,11 @@ import {
   map,
   mapErr,
   match,
+  matchResult,
   ok,
   trySync,
+  unwrapErr,
+  unwrapOk,
   unwrapOr,
 } from "../src/result.js";
 
@@ -52,9 +55,30 @@ describe("sync Result", () => {
     ).toBe("err:0");
   });
 
+  it("matchResult is an alias for match", () => {
+    expect(
+      matchResult(
+        ok(1),
+        (n) => `ok:${n}`,
+        (e) => `err:${e}`,
+      ),
+    ).toBe("ok:1");
+  });
+
   it("unwrapOr supplies default on Err", () => {
     expect(unwrapOr(ok(5), 0)).toBe(5);
     expect(unwrapOr(err("x"), 0)).toBe(0);
+  });
+
+  it("unwrapOk returns Ok value and throws Err value", () => {
+    expect(unwrapOk(ok(5))).toBe(5);
+    const error = new Error("nope");
+    expect(() => unwrapOk(err(error))).toThrow(error);
+  });
+
+  it("unwrapErr returns Err value and throws on Ok", () => {
+    expect(unwrapErr(err("x"))).toBe("x");
+    expect(() => unwrapErr(ok(5))).toThrow(TypeError);
   });
 
   it("trySync catches throws", () => {

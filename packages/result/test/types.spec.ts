@@ -1,8 +1,18 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
-import { ResultAsync } from "../src/async.js";
+import { combineTupleAsync, ResultAsync, tryAsync } from "../src/async.js";
 import type { ErrOf, OkOf, UnionErrors } from "../src/extra.js";
-import { fromAsync, type InferErr, type InferOk } from "../src/interop.js";
+import { asyncAfter, fromAsync, fromResult, type InferErr, type InferOk } from "../src/interop.js";
+import {
+  deriveNamed,
+  fromPromiseNamed,
+  parallelNamed,
+  parseWith,
+  Railway,
+  railway,
+  requireNamed,
+  select,
+} from "../src/railway.js";
 import {
   type andThen,
   bimap,
@@ -19,11 +29,15 @@ import {
   mapErr,
   mapResult,
   match,
+  type matchResult,
   matchWith,
   ok,
   trySync,
+  unwrapErr,
+  unwrapOk,
   unwrapOr,
 } from "../src/result.js";
+import { $, tryGen, yieldResult } from "../src/try-gen.js";
 import type { Err, Ok, Result, UnexpectedError } from "../src/types.js";
 
 describe("Result sync types", () => {
@@ -104,9 +118,20 @@ describe("Result sync types", () => {
     expectType<TypeEqual<typeof curried, number>>(true);
   });
 
+  it("matchResult is the same type as match", () => {
+    expectType<TypeEqual<typeof matchResult, typeof match>>(true);
+  });
+
   it("unwrapOr returns Ok type on success", () => {
     const v = unwrapOr(ok(1), 0);
     expectType<TypeEqual<typeof v, number>>(true);
+  });
+
+  it("unwrap helpers return the unwrapped side type", () => {
+    const okValue = unwrapOk(ok(1) as Result<number, string>);
+    const errValue = unwrapErr(err("x") as Result<number, string>);
+    expectType<TypeEqual<typeof okValue, number>>(true);
+    expectType<TypeEqual<typeof errValue, string>>(true);
   });
 
   it("combine collects values or first Err", () => {
@@ -147,6 +172,20 @@ describe("ResultAsync types", () => {
     expectType<TypeEqual<typeof ra, ResultAsync<number, string>>>(true);
   });
 
+  it("tryAsync defaults rejection type to Error", () => {
+    const ra = tryAsync(Promise.resolve(1));
+    const rb = tryAsync(Promise.resolve(1), (e) => String(e));
+    expectType<TypeEqual<typeof ra, ResultAsync<number, Error>>>(true);
+    expectType<TypeEqual<typeof rb, ResultAsync<number, string>>>(true);
+  });
+
+  it("combineTupleAsync preserves tuple shape and unions errors", () => {
+    const a = ResultAsync.ok<number, "a">(1);
+    const b = ResultAsync.ok<string, "b">("x");
+    const combined = combineTupleAsync([a, b] as const);
+    expectType<TypeEqual<typeof combined, ResultAsync<readonly [number, string], "a" | "b">>>(true);
+  });
+
   it("flatMap unions errors from inner Result", () => {
     const ra = ResultAsync.ok(1).flatMap((n) =>
       n > 0 ? ok(String(n)) : err({ code: 1 as const }),
@@ -174,6 +213,18 @@ describe("Result interop types", () => {
     const lifted = fromAsync(returnsResult);
     expectType<(s: string) => ResultAsync<string, number | UnexpectedError>>(lifted);
   });
+
+  it("fromResult lifts sync Result without UnexpectedError widening", () => {
+    const lifted = fromResult(ok(1) as Result<number, "domain">);
+    expectType<TypeEqual<typeof lifted, ResultAsync<number, "domain">>>(true);
+  });
+
+  it("asyncAfter unions sync and async errors", () => {
+    const lifted = asyncAfter(ok(1) as Result<number, "sync">, (n) =>
+      n > 0 ? ResultAsync.ok(String(n)) : ResultAsync.err("async" as const),
+    );
+    expectType<TypeEqual<typeof lifted, ResultAsync<string, "sync" | "async">>>(true);
+  });
 });
 
 describe("Result extra types", () => {
@@ -186,5 +237,118 @@ describe("Result extra types", () => {
   it("UnionErrors unions tuple errors", () => {
     type U = UnionErrors<[Result<number, "a">, Result<string, "b">]>;
     expectType<TypeEqual<U, "a" | "b">>(true);
+  });
+});
+
+describe("Railway types", () => {
+  it("sync-only workflows return Result", () => {
+    const out = Railway.fromResult("id", () => ok("profile-1" as const))
+      .derive("slug", ({ id }) => `${id}-slug`)
+      .select(({ id, slug }) => ({ id, slug }));
+
+    expectType<Result<{ id: "profile-1"; slug: string }, never>>(out);
+  });
+
+  it("promise steps upgrade output to ResultAsync", () => {
+    const out = Railway.fromResult("id", () => ok("profile-1" as const))
+      .fromPromise("row", ({ id }) => Promise.resolve({ id, name: "Ada" }), String)
+      .select(({ row }) => row.name);
+
+    expectType<ResultAsync<string, string>>(out);
+  });
+
+  it("require narrows nullable source under a new key", () => {
+    const out = Railway.fromResult("row", () =>
+      ok<{ id: string } | null, "missing">({ id: "profile-1" }),
+    )
+      .require("profile", "row", () => "missing" as const)
+      .select(({ profile }) => profile.id);
+
+    expectType<Result<string, "missing">>(out);
+  });
+
+  it("parallel adds branch output keys and upgrades to ResultAsync", () => {
+    const out = Railway.fromResult("id", () => ok("profile-1" as const))
+      .parallel({
+        recent: ({ id }) => ResultAsync.ok([id]),
+        metrics: () => ResultAsync.ok({ jobs: 2 }),
+      })
+      .select(({ recent, metrics }) => ({ recent, metrics }));
+
+    expectType<ResultAsync<{ recent: "profile-1"[]; metrics: { jobs: number } }, never>>(out);
+  });
+
+  it("unions errors across workflow steps", () => {
+    const out = Railway.fromResult("id", () => ok<string, "parse">("profile-1"))
+      .fromResult("row", ({ id }) => ok<{ id: string }, "missing">({ id }))
+      .fromAsync("saved", ({ row }) => ResultAsync.ok<{ id: string }, "write">(row))
+      .select(({ saved }) => saved.id);
+
+    expectType<ResultAsync<string, "parse" | "missing" | "write">>(out);
+  });
+
+  it("functional railway composes reusable steps", () => {
+    const parseProfileId = parseWith(
+      (input: string) => input.trim() as "profile-1",
+      () => "parse" as const,
+    ).as("profileId");
+
+    const loadProfileRow = fromPromiseNamed(
+      "row",
+      ({ profileId }: { readonly profileId: "profile-1" }) =>
+        Promise.resolve<{ id: "profile-1"; name: "Ada" } | null>({
+          id: profileId,
+          name: "Ada",
+        }),
+      () => "db" as const,
+    );
+
+    const requireProfile = requireNamed("profile", "row", () => "missing" as const);
+
+    const normalize = deriveNamed(
+      "normalized",
+      ({ profile }: { readonly profile: { readonly id: "profile-1"; readonly name: string } }) =>
+        profile.id,
+    );
+
+    const loadSummaryInputs = parallelNamed({
+      recent: ({ normalized }: { readonly normalized: "profile-1" }) =>
+        ResultAsync.ok([normalized]),
+      metrics: () => ResultAsync.ok({ jobs: 2 }),
+    });
+
+    const out = railway(
+      " profile-1 ",
+      parseProfileId,
+      loadProfileRow,
+      requireProfile,
+      normalize,
+      loadSummaryInputs,
+      select(({ normalized, recent, metrics }) => ({ normalized, recent, metrics })),
+    );
+
+    expectType<
+      ResultAsync<
+        { normalized: "profile-1"; recent: "profile-1"[]; metrics: { jobs: number } },
+        "parse" | "db" | "missing"
+      >
+    >(out);
+  });
+});
+
+describe("tryGen types", () => {
+  it("$ aliases yieldResult without changing inference", () => {
+    const withName = tryGen(() => {
+      const value = yieldResult(ok(1));
+      return ok(value + 1);
+    });
+
+    const withAlias = tryGen(() => {
+      const value = $(ok(1));
+      return ok(value + 1);
+    });
+
+    expectType<Result<number, never>>(withName);
+    expectType<Result<number, never>>(withAlias);
   });
 });

@@ -100,6 +100,9 @@ export const match = <T, E, U>(
   return onErr(result.error);
 };
 
+/** Collision-free alias for files that also import `match` from ts-pattern. */
+export const matchResult = match;
+
 /** Curried `match` */
 export const matchWith =
   <T, E, U>(onOk: (value: T) => U, onErr: (error: E) => U) =>
@@ -112,6 +115,22 @@ export const unwrapOr = <T, E>(result: Result<T, E>, defaultValue: T): T => {
   }
   return defaultValue;
 };
+
+/** Test/assert helper — throws the original Err value when called on Err. */
+export function unwrapOk<T, E>(result: Result<T, E>): T {
+  if (isErr(result)) {
+    throw result.error;
+  }
+  return result.value;
+}
+
+/** Test/assert helper — throws TypeError when called on Ok. */
+export function unwrapErr<T, E>(result: Result<T, E>): E {
+  if (isOk(result)) {
+    throw new TypeError("unwrapErr called on Ok");
+  }
+  return result.error;
+}
 
 /** Wrap a throwing sync function — neverthrow `Result.fromThrowable` */
 export function trySync<A extends readonly unknown[], T, E>(

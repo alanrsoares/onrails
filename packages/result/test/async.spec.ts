@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { errAsync, fromPromise, fromSafePromise, okAsync, ResultAsync } from "../src/async.js";
+import {
+  combineTupleAsync,
+  errAsync,
+  fromPromise,
+  fromSafePromise,
+  okAsync,
+  ResultAsync,
+  tryAsync,
+} from "../src/async.js";
 import { err, ok } from "../src/result.js";
 
 describe("ResultAsync", () => {
@@ -12,6 +20,22 @@ describe("ResultAsync", () => {
 
   it("fromSafePromise never rejects", async () => {
     expect(await fromSafePromise(Promise.resolve(42)).resolve()).toEqual(ok(42));
+  });
+
+  it("tryAsync normalizes rejection to Error by default", async () => {
+    const result = await tryAsync(Promise.reject("boom")).resolve();
+    expect(result._tag).toBe("Err");
+    if (result._tag === "Err") {
+      expect(result.error).toBeInstanceOf(Error);
+      expect(result.error.message).toBe("boom");
+    }
+  });
+
+  it("tryAsync honors custom rejection mapping", async () => {
+    const result = await tryAsync(Promise.reject(new Error("boom")), (e) =>
+      e instanceof Error ? e.message : "unknown",
+    ).resolve();
+    expect(result).toEqual(err("boom"));
   });
 
   it("await ra resolves to bare tagged-union Result (thenable)", async () => {
@@ -35,6 +59,20 @@ describe("ResultAsync", () => {
   it("combine aggregates async results", async () => {
     const combined = ResultAsync.combine([okAsync(1), okAsync(2)]);
     expect(await combined.resolve()).toEqual(ok([1, 2]));
+  });
+
+  it("combineTupleAsync preserves value order at runtime", async () => {
+    const combined = combineTupleAsync([okAsync(1), okAsync("a")] as const);
+    expect(await combined.resolve()).toEqual(ok([1, "a"]));
+  });
+
+  it("combineTupleAsync returns first Err in input order", async () => {
+    const combined = combineTupleAsync([
+      okAsync(1),
+      errAsync("first"),
+      errAsync("second"),
+    ] as const);
+    expect(await combined.resolve()).toEqual(err("first"));
   });
 
   it("match returns a plain value", async () => {

@@ -18,14 +18,16 @@ export const yieldResult = <T, E>(result: Result<T, E>): T => {
   return result.value;
 };
 
+export const $ = yieldResult;
+
 /**
  * Run a block that uses {@link yieldResult}; returns the final `Result` or the first Err.
  *
  * @example
  * ```ts
  * const out = tryGen(() => {
- *   const a = yieldResult(parseA());
- *   const b = yieldResult(parseB());
+ *   const a = $(parseA());
+ *   const b = $(parseB());
  *   return ok(a + b);
  * });
  * ```

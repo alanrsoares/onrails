@@ -1,13 +1,17 @@
 export {
+  combineTupleAsync,
   errAsync,
   fromPromise,
   fromSafePromise,
   okAsync,
   ResultAsync,
+  tryAsync,
 } from "./async.js";
 export {
+  asyncAfter,
   fromAsync,
   fromPromiseResult,
+  fromResult,
   type InferErr,
   type InferOk,
   makeResultAsync,
@@ -30,12 +34,15 @@ export {
   mapErrResult,
   mapResult,
   match,
+  matchResult,
   matchWith,
   of,
   ok,
   pipe,
   trySync,
+  unwrapErr,
+  unwrapOk,
   unwrapOr,
 } from "./result.js";
-export { tryGen, yieldResult } from "./try-gen.js";
+export { $, tryGen, yieldResult } from "./try-gen.js";
 export type { Err, Ok, Result, UnexpectedError } from "./types.js";

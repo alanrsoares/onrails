@@ -11,7 +11,16 @@ bun add @onrails/result@file:../onrails/packages/result
 ## Quick start (value-first — best inference)
 
 ```ts
-import { err, flatMapResult, fromAsync, mapResult, match, ok, trySync } from "@onrails/result";
+import {
+  asyncAfter,
+  err,
+  flatMapResult,
+  fromAsync,
+  mapResult,
+  match,
+  ok,
+  trySync,
+} from "@onrails/result";
 
 const parse = trySync(
   (raw: string) => JSON.parse(raw),
@@ -22,6 +31,46 @@ const pipeline = flatMapResult(parse('{"v":1}'), (data) => ok(data.v));
 ```
 
 Long chains: `fluent()` from `@onrails/result/fluent` or `flatMapResult` (not curried `flatMap`) for TS inference.
+
+## Sync → async boundaries
+
+Use `fromResult` when a sync `Result` needs to enter a `ResultAsync` pipeline without widening the error channel:
+
+```ts
+import { fromResult, ok, type Result } from "@onrails/result";
+
+const parsed: Result<number, "parse"> = ok(1);
+const asyncParsed = fromResult(parsed);
+// ResultAsync<number, "parse"> — no UnexpectedError widening
+```
+
+Use `asyncAfter` for the common "validate synchronously, then run async IO" shape:
+
+```ts
+import { asyncAfter, tryAsync, trySync } from "@onrails/result";
+
+return asyncAfter(
+  trySync(() => ArtifactSchema.parse(artifact), toError)(),
+  (validated) =>
+    tryAsync(
+      getDb()
+        .insert(artifacts)
+        .values(validated)
+        .then(() => undefined),
+    ),
+);
+```
+
+Use `tryAsync` for Promise boundaries with default `Error` normalization, or pass a custom rejection mapper:
+
+```ts
+const body = tryAsync(fetch(url).then((res) => res.text()));
+
+const status = tryAsync(fetch(url), (error) => ({
+  kind: "network" as const,
+  message: String(error),
+}));
+```
 
 ## Tagged error style
 
@@ -63,6 +112,23 @@ if (isOk(r)) console.log(r.value.id);
 else console.error(r.error);
 ```
 
+## Match and unwrap helpers
+
+`matchResult` is an alias for `match` for files that also import `match` from `ts-pattern`:
+
+```ts
+import { matchResult } from "@onrails/result";
+import { match } from "ts-pattern";
+```
+
+`unwrapOk` and `unwrapErr` are test/assertion helpers. Prefer `match`, `isOk`, or `isErr` in production control flow.
+
+```ts
+import { unwrapOk } from "@onrails/result";
+
+expect(unwrapOk(parseConfig(raw))).toEqual(expected);
+```
+
 ## MCP / HTTP boundaries
 
 ```ts
@@ -77,19 +143,106 @@ return toToolResponseAsync(ra);
 
 ## `tryGen` — sync `?`
 
-Prefer `flatMap` / `fluent` for long pipelines. For short linear sync code:
+For short linear sync code:
 
 ```ts
-import { ok, tryGen, yieldResult } from "@onrails/result/try-gen";
+import { $, ok, tryGen } from "@onrails/result";
 
 const out = tryGen(() => {
-  const a = yieldResult(parseA());
-  const b = yieldResult(parseB());
+  const a = $(parseA());
+  const b = $(parseB());
   return ok(a + b);
 });
 ```
 
+Use `combineTupleAsync` when combining heterogeneous async results and destructuring the result:
+
+```ts
+import { combineTupleAsync } from "@onrails/result";
+
+const combined = combineTupleAsync([
+  loadSettings(),
+  loadModelCatalog(),
+] as const);
+
+const dto = combined.map(([settings, catalog]) =>
+  buildDto(settings, catalog),
+);
+```
+
 When TS only infers the first error in a generator-style flow, use `declareErrors<E1 | E2>()` from `/extra`.
+
+## `Railway` — named service workflows
+
+Use `Railway` from `@onrails/result/railway` when a service workflow has several named sync/async steps and would otherwise need manual context-carrying objects:
+
+```ts
+import { Railway } from "@onrails/result/railway";
+
+const summary = Railway.fromSync("profileId", () => ProfileIdSchema.parse(id), toError)
+  .fromPromise("row", ({ profileId }) => loadProfileRow(profileId), toError)
+  .require("profile", "row", ({ profileId }) => new Error(`Profile not found: ${profileId}`))
+  .derive("normalized", ({ profile }) => normalizeProfile(profile))
+  .fromResult("stats", ({ normalized }) => enrichProfileStats(normalized))
+  .parallel({
+    recentArtifacts: ({ normalized }) => loadRecentArtifacts(normalized.id),
+    jobMetrics: ({ normalized }) => loadJobMetrics(normalized.id),
+  })
+  .select(({ normalized, stats, recentArtifacts, jobMetrics }) =>
+    toProfileSummary({ normalized, stats, recentArtifacts, jobMetrics }),
+  );
+```
+
+Sync-only workflows return `Result<T, E>`. The first `fromPromise`, `fromAsync`, or `parallel` step upgrades the output to `ResultAsync<T, E>`.
+
+Use lower-level helpers (`asyncAfter`, `fromResult`, `flatMapResult`) for one or two steps where a builder would add ceremony.
+
+## `railway(...)` — reusable workflow steps
+
+Use lowercase `railway(...)` when the steps should be named once and reused across workflows:
+
+```ts
+import {
+  deriveNamed,
+  fromPromiseNamed,
+  parallelNamed,
+  parseWith,
+  railway,
+  requireNamed,
+  select,
+} from "@onrails/result/railway";
+
+const parseProfileId = parseWith(ProfileIdSchema, toError).as("profileId");
+
+const loadProfileRow = fromPromiseNamed(
+  "row",
+  ({ profileId }) => loadProfileRowById(profileId),
+  toError,
+);
+
+const requireProfile = requireNamed("profile", "row", ({ profileId }) =>
+  new Error(`Profile not found: ${profileId}`),
+);
+
+const loadSummaryInputs = parallelNamed({
+  recentArtifacts: ({ profile }) => loadRecentArtifacts(profile.id),
+  jobMetrics: ({ profile }) => loadJobMetrics(profile.id),
+});
+
+const summary = railway(
+  id,
+  parseProfileId,
+  loadProfileRow,
+  requireProfile,
+  deriveNamed("normalized", ({ profile }) => normalizeProfile(profile)),
+  loadSummaryInputs,
+  select(({ normalized, recentArtifacts, jobMetrics }) =>
+    toProfileSummary({ normalized, recentArtifacts, jobMetrics }),
+  ),
+);
+```
+
+`railway(input, ...steps)` starts from `{ input }`. `parseWith(...).as(key)` is the usual first step for raw input. The final output is still mode-aware: sync-only steps return `Result`, while async steps return `ResultAsync`.
 
 ## Pipe
 
@@ -124,10 +277,11 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result` | Core + interop exports |
 | `@onrails/result/fluent` | `fluent()`, `fluentAsync()` |
 | `@onrails/result/extra` | Error-type utilities |
-| `@onrails/result/interop` | `fromAsync` only |
+| `@onrails/result/interop` | `fromAsync`, `fromResult`, `asyncAfter` |
 | `@onrails/result/mcp` | MCP / openapi-fetch helpers |
 | `@onrails/result/pipe` | `flow`, `pipeResult` |
-| `@onrails/result/try-gen` | `tryGen`, `yieldResult` |
+| `@onrails/result/railway` | `Railway`, `railway`, named workflow helpers |
+| `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |
 | `@onrails/result/compat/neverthrow` | Migration shim |
 
 See [DESIGN.md](./DESIGN.md).

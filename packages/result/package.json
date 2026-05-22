@@ -57,6 +57,10 @@
       "types": "./src/pipe.ts",
       "default": "./src/pipe.ts"
     },
+    "./railway": {
+      "types": "./src/railway.ts",
+      "default": "./src/railway.ts"
+    },
     "./try-gen": {
       "types": "./src/try-gen.ts",
       "default": "./src/try-gen.ts"

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { fromAsync, type InferErr, type InferOk, makeResultAsync } from "../src/interop.js";
+import {
+  asyncAfter,
+  fromAsync,
+  fromResult,
+  type InferErr,
+  type InferOk,
+  makeResultAsync,
+} from "../src/interop.js";
 import { err, ok } from "../src/result.js";
 import type { Result } from "../src/types.js";
 
@@ -54,5 +61,38 @@ describe("fromAsync", () => {
         () => -1,
       ),
     ).toBe(2);
+  });
+});
+
+describe("fromResult", () => {
+  it("lifts Ok into ResultAsync without changing the value", async () => {
+    expect(await fromResult(ok(1)).resolve()).toEqual(ok(1));
+  });
+
+  it("lifts Err into ResultAsync without wrapping the error", async () => {
+    const error = new Error("domain");
+    expect(await fromResult(err(error)).resolve()).toEqual(err(error));
+  });
+});
+
+describe("asyncAfter", () => {
+  it("runs the async step on Ok", async () => {
+    const result = await asyncAfter(ok(1), (n) => fromResult(ok(n + 1))).resolve();
+    expect(result).toEqual(ok(2));
+  });
+
+  it("short-circuits on Err without calling the async step", async () => {
+    let called = false;
+    const result = await asyncAfter(err("stop"), () => {
+      called = true;
+      return fromResult(ok(1));
+    }).resolve();
+    expect(result).toEqual(err("stop"));
+    expect(called).toBe(false);
+  });
+
+  it("propagates async step errors", async () => {
+    const result = await asyncAfter(ok(1), () => fromResult(err("async"))).resolve();
+    expect(result).toEqual(err("async"));
   });
 });

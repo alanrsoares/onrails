@@ -17,6 +17,16 @@ export type InferErr<R> = R extends { _tag: "Err"; readonly error: infer E }
 
 type AnyResult = Result<unknown, unknown>;
 
+/** Lift an already-known sync {@link Result} into {@link ResultAsync}. */
+export const fromResult = <T, E>(result: Result<T, E>): ResultAsync<T, E> =>
+  ResultAsync.fromResult(result);
+
+/** Bind a sync {@link Result} into an async step without widening defects. */
+export const asyncAfter = <T, U, E, F>(
+  result: Result<T, E>,
+  fn: (value: T) => ResultAsync<U, F>,
+): ResultAsync<U, E | F> => fromResult(result).flatMap(fn);
+
 /**
  * Lift `(...args) => Promise<Result<T, E>>` to `(...args) => ResultAsync<T, E>`.
  * Catches unexpected promise rejections (defects) via `onDefect` or {@link UnexpectedError}.

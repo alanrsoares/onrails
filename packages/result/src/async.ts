@@ -3,6 +3,12 @@ import type { Result } from "./types.js";
 import { UnexpectedError } from "./types.js";
 
 type PromiseFactory<T, E> = () => Promise<Result<T, E>>;
+type AsyncOk<R> = R extends ResultAsync<infer T, unknown> ? T : never;
+type AsyncErr<R> = R extends ResultAsync<unknown, infer E> ? E : never;
+type CombineTupleAsync<R extends readonly ResultAsync<unknown, unknown>[]> = ResultAsync<
+  { [K in keyof R]: AsyncOk<R[K]> },
+  { [K in keyof R]: AsyncErr<R[K]> }[number]
+>;
 
 const liftPromiseResult = async <T, E>(
   promise: Promise<Result<T, E>>,
@@ -32,6 +38,10 @@ const liftPromiseResult = async <T, E>(
 export class ResultAsync<T, E> {
   protected constructor(protected readonly run: PromiseFactory<T, E>) {}
 
+  static fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E> {
+    return new ResultAsync(async () => result);
+  }
+
   static fromPromise<T, E>(
     promise: PromiseLike<T>,
     onReject: (error: unknown) => E,
@@ -49,6 +59,8 @@ export class ResultAsync<T, E> {
     return new ResultAsync(async () => ok(await promise));
   }
 
+  static ok<T>(value: T): ResultAsync<T, never>;
+  static ok<T, E>(value: T): ResultAsync<T, E>;
   static ok<T, E = never>(value: T): ResultAsync<T, E> {
     return new ResultAsync(async () => ok(value));
   }
@@ -79,6 +91,28 @@ export class ResultAsync<T, E> {
       }
       return ok(values);
     });
+  }
+
+  static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(
+    results: R,
+  ): CombineTupleAsync<R> {
+    return new ResultAsync(async () => {
+      const values: unknown[] = [];
+      for (const ra of results) {
+        const result = await ra.resolve();
+        if (isErr(result)) {
+          return err(result.error) as Result<
+            { [K in keyof R]: AsyncOk<R[K]> },
+            { [K in keyof R]: AsyncErr<R[K]> }[number]
+          >;
+        }
+        values.push(result.value);
+      }
+      return ok(values) as Result<
+        { [K in keyof R]: AsyncOk<R[K]> },
+        { [K in keyof R]: AsyncErr<R[K]> }[number]
+      >;
+    }) as CombineTupleAsync<R>;
   }
 
   map<U>(fn: (value: T) => U): ResultAsync<U, E> {
@@ -205,3 +239,22 @@ export const okAsync = ResultAsync.ok;
 export const errAsync = ResultAsync.err;
 export const fromPromise = ResultAsync.fromPromise;
 export const fromSafePromise = ResultAsync.fromSafePromise;
+export const combineTupleAsync = ResultAsync.combineTuple;
+
+const toError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
+
+export function tryAsync<T>(promise: PromiseLike<T>): ResultAsync<T, Error>;
+export function tryAsync<T, E>(
+  promise: PromiseLike<T>,
+  onReject: (error: unknown) => E,
+): ResultAsync<T, E>;
+export function tryAsync<T, E>(
+  promise: PromiseLike<T>,
+  onReject?: (error: unknown) => E,
+): ResultAsync<T, E | Error> {
+  if (onReject) {
+    return ResultAsync.fromPromise(promise, onReject);
+  }
+  return ResultAsync.fromPromise(promise, toError);
+}
