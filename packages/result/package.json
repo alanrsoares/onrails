@@ -1,0 +1,74 @@
+{
+  "name": "@onrails/result",
+  "version": "0.0.0",
+  "description": "Tagged Result / ResultAsync for railway-oriented TypeScript — pure tagged unions, neverthrow-shaped compat shim, FL-friendly",
+  "license": "MIT",
+  "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/result#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git",
+    "directory": "packages/result"
+  },
+  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "keywords": [
+    "result",
+    "neverthrow",
+    "tagged-union",
+    "discriminated-union",
+    "either",
+    "maybe",
+    "railway-oriented-programming",
+    "rop",
+    "typescript",
+    "bun",
+    "functional"
+  ],
+  "engines": { "node": ">=18", "bun": ">=1.0" },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "sideEffects": false,
+  "files": ["src", "DESIGN.md", "README.md", "LICENSE"],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./fluent": {
+      "types": "./src/fluent.ts",
+      "default": "./src/fluent.ts"
+    },
+    "./extra": {
+      "types": "./src/extra.ts",
+      "default": "./src/extra.ts"
+    },
+    "./interop": {
+      "types": "./src/interop.ts",
+      "default": "./src/interop.ts"
+    },
+    "./mcp": {
+      "types": "./src/mcp.ts",
+      "default": "./src/mcp.ts"
+    },
+    "./pipe": {
+      "types": "./src/pipe.ts",
+      "default": "./src/pipe.ts"
+    },
+    "./try-gen": {
+      "types": "./src/try-gen.ts",
+      "default": "./src/try-gen.ts"
+    },
+    "./compat/neverthrow": {
+      "types": "./src/compat/neverthrow.ts",
+      "default": "./src/compat/neverthrow.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "check": "bun typecheck && bun test"
+  }
+}

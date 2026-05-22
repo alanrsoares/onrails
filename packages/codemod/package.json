@@ -1,0 +1,39 @@
+{
+  "name": "@onrails/codemod",
+  "version": "0.0.0",
+  "description": "Codemods for migrating onto @onrails/result (neverthrow → compat shim, and beyond)",
+  "license": "MIT",
+  "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/codemod#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git",
+    "directory": "packages/codemod"
+  },
+  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "keywords": [
+    "codemod",
+    "neverthrow",
+    "migration",
+    "result",
+    "onrails",
+    "bun"
+  ],
+  "engines": { "bun": ">=1.0" },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "onrails-codemod-neverthrow": "./src/index.ts"
+  },
+  "files": ["src", "README.md", "LICENSE"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

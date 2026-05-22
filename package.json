@@ -1,0 +1,32 @@
+{
+  "name": "onrails",
+  "private": true,
+  "type": "module",
+  "description": "Tagged Result / ResultAsync + railway-oriented utilities for TypeScript",
+  "license": "MIT",
+  "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git"
+  },
+  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "workspaces": ["packages/*"],
+  "engines": { "bun": ">=1.0" },
+  "scripts": {
+    "typecheck": "bun run --filter '@onrails/*' typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "bun run --filter '@onrails/*' test",
+    "check": "bun typecheck && bun lint && bun test",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@types/bun": "latest",
+    "husky": "^9.1.7",
+    "typescript": "^5.7.0"
+  }
+}

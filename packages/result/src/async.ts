@@ -1,0 +1,207 @@
+import { err, flatMapResultErr, isErr, mapErrResult, mapResult, ok } from "./result.js";
+import type { Result } from "./types.js";
+import { UnexpectedError } from "./types.js";
+
+type PromiseFactory<T, E> = () => Promise<Result<T, E>>;
+
+const liftPromiseResult = async <T, E>(
+  promise: Promise<Result<T, E>>,
+  onDefect: (error: unknown) => E | UnexpectedError,
+): Promise<Result<T, E | UnexpectedError>> => {
+  try {
+    const result = await promise;
+    if (isErr(result)) {
+      return result;
+    }
+    const inner = result.value;
+    if (inner && typeof inner === "object" && "_tag" in inner) {
+      if (inner._tag === "Ok" || inner._tag === "Err") {
+        return inner as unknown as Result<T, E | UnexpectedError>;
+      }
+    }
+    return result;
+  } catch (error) {
+    return err(onDefect(error));
+  }
+};
+
+/**
+ * Async result — public API never exposes `Promise<Result<…>>` directly;
+ * await via `.resolve()` or `.match()`.
+ */
+export class ResultAsync<T, E> {
+  protected constructor(protected readonly run: PromiseFactory<T, E>) {}
+
+  static fromPromise<T, E>(
+    promise: PromiseLike<T>,
+    onReject: (error: unknown) => E,
+  ): ResultAsync<T, E> {
+    return new ResultAsync(async () => {
+      try {
+        return ok(await promise);
+      } catch (error) {
+        return err(onReject(error));
+      }
+    });
+  }
+
+  static fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, E> {
+    return new ResultAsync(async () => ok(await promise));
+  }
+
+  static ok<T, E = never>(value: T): ResultAsync<T, E> {
+    return new ResultAsync(async () => ok(value));
+  }
+
+  static err<T = never, E = unknown>(error: E): ResultAsync<T, E> {
+    return new ResultAsync(async () => err(error));
+  }
+
+  /** @see {@link fromAsync} from `@onrails/result/interop` */
+  static fromResultPromise<T, E>(
+    promise: Promise<Result<T, E>>,
+    onDefect?: (error: unknown) => E | UnexpectedError,
+  ): ResultAsync<T, E | UnexpectedError> {
+    const mapDefect =
+      onDefect ?? ((error: unknown) => new UnexpectedError("Unexpected async defect", error));
+    return new ResultAsync(() => liftPromiseResult(promise, mapDefect));
+  }
+
+  static combine<T, E>(results: readonly ResultAsync<T, E>[]): ResultAsync<T[], E> {
+    return new ResultAsync(async () => {
+      const values: T[] = [];
+      for (const ra of results) {
+        const result = await ra.resolve();
+        if (isErr(result)) {
+          return err(result.error);
+        }
+        values.push(result.value);
+      }
+      return ok(values);
+    });
+  }
+
+  map<U>(fn: (value: T) => U): ResultAsync<U, E> {
+    return new ResultAsync(async () => mapResult(await this.run(), fn));
+  }
+
+  mapErr<F>(fn: (error: E) => F): ResultAsync<T, F> {
+    return new ResultAsync(async () => mapErrResult(await this.run(), fn));
+  }
+
+  flatMap<U, F = E>(
+    fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
+  ): ResultAsync<U, E | F> {
+    return new ResultAsync(async () => {
+      const first = await this.run();
+      if (isErr(first)) {
+        return err(first.error) as Result<U, E | F>;
+      }
+      const next = fn(first.value);
+      if (next instanceof ResultAsync) {
+        return next.resolve() as Promise<Result<U, E | F>>;
+      }
+      if (isResultLike(next)) {
+        return next as Result<U, E | F>;
+      }
+      if (isCompatLike(next)) {
+        return next.inner as Result<U, E | F>;
+      }
+      return next as Result<U, E | F>;
+    });
+  }
+
+  andThen<U, F = E>(
+    fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
+  ): ResultAsync<U, E | F> {
+    return this.flatMap(fn);
+  }
+
+  chain<U, F = E>(
+    fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
+  ): ResultAsync<U, E | F> {
+    return this.flatMap(fn);
+  }
+
+  flatMapResult<U, F>(fn: (value: T) => Result<U, F>): ResultAsync<U, E | F> {
+    return new ResultAsync(async () => flatMapResultErr(await this.run(), fn));
+  }
+
+  andThenResult<U, F>(fn: (value: T) => Result<U, F>): ResultAsync<U, E | F> {
+    return this.flatMapResult(fn);
+  }
+
+  orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
+    return new ResultAsync(async () => {
+      const first = await this.run();
+      if (!isErr(first)) {
+        return first as Result<T, F>;
+      }
+      const next = fn(first.error);
+      if (next instanceof ResultAsync) {
+        return next.resolve();
+      }
+      return next;
+    });
+  }
+
+  unwrapOr<U>(defaultValue: U): Promise<T | U> {
+    return this.run().then((result) => (isErr(result) ? defaultValue : result.value));
+  }
+
+  isOk(): Promise<boolean> {
+    return this.run().then((result) => !isErr(result));
+  }
+
+  isErr(): Promise<boolean> {
+    return this.run().then((result) => isErr(result));
+  }
+
+  match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2> {
+    return this.run().then((result) =>
+      isErr(result) ? onErr(result.error) : onOk(result.value),
+    ) as Promise<U1 | U2>;
+  }
+
+  resolve(): Promise<Result<T, E>> {
+    return this.run();
+  }
+
+  /**
+   * Thenable shim — `await ra` resolves to a bare tagged-union `Result<T, E>`.
+   * Narrow with `isOk(r)` / `isErr(r)` to read `.value` / `.error`.
+   */
+  // biome-ignore lint/suspicious/noThenProperty: makes ResultAsync awaitable
+  then<R1 = Result<T, E>, R2 = never>(
+    onfulfilled?: ((value: Result<T, E>) => R1 | PromiseLike<R1>) | undefined | null,
+    onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | undefined | null,
+  ): Promise<R1 | R2> {
+    return this.run().then(
+      (r) => (onfulfilled ? onfulfilled(r) : (r as unknown as R1)),
+      onrejected ?? undefined,
+    );
+  }
+}
+
+function isResultLike<U, F>(v: unknown): v is Result<U, F> {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "_tag" in v &&
+    ((v as { _tag: unknown })._tag === "Ok" || (v as { _tag: unknown })._tag === "Err")
+  );
+}
+
+function isCompatLike<U, F>(v: unknown): v is { inner: Result<U, F> } {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "inner" in v &&
+    isResultLike((v as { inner: unknown }).inner)
+  );
+}
+
+export const okAsync = ResultAsync.ok;
+export const errAsync = ResultAsync.err;
+export const fromPromise = ResultAsync.fromPromise;
+export const fromSafePromise = ResultAsync.fromSafePromise;

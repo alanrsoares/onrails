@@ -1,0 +1,45 @@
+{
+  "name": "@onrails/eslint-plugin",
+  "version": "0.0.0",
+  "description": "ESLint rules for @onrails/result boundaries — flags Promise<Result<…>> in public APIs and _unsafeUnwrap*. Replaces unmaintained eslint-plugin-neverthrow.",
+  "license": "MIT",
+  "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/eslint-plugin#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git",
+    "directory": "packages/eslint-plugin"
+  },
+  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "result",
+    "neverthrow",
+    "onrails",
+    "boundary",
+    "lint"
+  ],
+  "engines": { "node": ">=18" },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": ["src", "README.md", "LICENSE"],
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@typescript-eslint/parser": { "optional": true }
+  },
+  "scripts": {
+    "typecheck": "echo 'noop (js plugin)'",
+    "test": "echo 'no tests yet'"
+  }
+}
