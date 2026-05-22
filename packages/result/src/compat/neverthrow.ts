@@ -1,10 +1,6 @@
-/**
- * Temporary neverthrow-shaped API for phased migration.
- * @deprecated Prefer `@onrails/result` and `@onrails/result/fluent`.
- */
+/** @deprecated Migration shim — prefer `@onrails/result` and `@onrails/result/fluent`. */
 import { ResultAsync as CoreResultAsync } from "../async.js";
 import {
-  combine,
   combineTuple,
   err as coreErr,
   ok as coreOk,
@@ -18,7 +14,20 @@ import {
 } from "../result.js";
 import type { Result as ResultType } from "../types.js";
 
-/** Class-shaped Result for neverthrow call sites (`.andThen`, etc.) */
+type TupleOk<R extends readonly CompatResult<unknown, unknown>[]> = {
+  [K in keyof R]: R[K] extends CompatResult<infer T, unknown> ? T : never;
+};
+type TupleErr<R extends readonly CompatResult<unknown, unknown>[]> = {
+  [K in keyof R]: R[K] extends CompatResult<unknown, infer F> ? F : never;
+}[number];
+
+type AsyncTupleOk<R extends readonly CompatResultAsync<unknown, unknown>[]> = {
+  [K in keyof R]: R[K] extends CompatResultAsync<infer T, unknown> ? T : never;
+};
+type AsyncTupleErr<R extends readonly CompatResultAsync<unknown, unknown>[]> = {
+  [K in keyof R]: R[K] extends CompatResultAsync<unknown, infer F> ? F : never;
+}[number];
+
 export class CompatResult<T, E> {
   constructor(readonly inner: ResultType<T, E>) {}
 
@@ -32,33 +41,18 @@ export class CompatResult<T, E> {
 
   static combine<const R extends readonly CompatResult<unknown, unknown>[]>(
     results: R,
-  ): CompatResult<
-    { [K in keyof R]: R[K] extends CompatResult<infer T, unknown> ? T : never },
-    { [K in keyof R]: R[K] extends CompatResult<unknown, infer F> ? F : never }[number]
-  > {
-    const inners = results.map((r) => r.inner);
+  ): CompatResult<TupleOk<R>, TupleErr<R>> {
     return new CompatResult(
-      combineTuple(inners) as ResultType<
-        { [K in keyof R]: R[K] extends CompatResult<infer T, unknown> ? T : never },
-        { [K in keyof R]: R[K] extends CompatResult<unknown, infer F> ? F : never }[number]
-      >,
+      combineTuple(results.map((r) => r.inner)) as ResultType<TupleOk<R>, TupleErr<R>>,
     );
   }
 
-  /** Throws when accessed on Err — guard with `isOk()` first. */
   get value(): T {
-    if (isErr(this.inner)) {
-      throw new Error("Accessed .value on Err");
-    }
-    return this.inner.value;
+    return this._unsafeUnwrap();
   }
 
-  /** Throws when accessed on Ok — guard with `isErr()` first. */
   get error(): E {
-    if (isOk(this.inner)) {
-      throw new Error("Accessed .error on Ok");
-    }
-    return this.inner.error;
+    return this._unsafeUnwrapErr();
   }
 
   isOk(): boolean {
@@ -85,12 +79,9 @@ export class CompatResult<T, E> {
     fn: (value: T) => CompatResultAsync<U, F> | CoreResultAsync<U, F>,
   ): CompatResultAsync<U, E | F> {
     if (isErr(this.inner)) {
-      return CompatResultAsync.err<U, E | F>(this.inner.error);
+      return CompatResultAsync.err(this.inner.error);
     }
-    const next = fn(this.inner.value);
-    return CompatResultAsync.fromInner(
-      next instanceof CompatResultAsync ? next.toCore() : (next as CoreResultAsync<U, F>),
-    ) as CompatResultAsync<U, E | F>;
+    return CompatResultAsync.fromInner(coerceToCore(fn(this.inner.value)) as CoreResultAsync<U, F>);
   }
 
   orElse<F>(fn: (error: E) => CompatResult<T, F>): CompatResult<T, F> {
@@ -123,24 +114,14 @@ export class CompatResult<T, E> {
   }
 }
 
-/** neverthrow `Result` class (static methods + instance type) */
 export const Result = CompatResult;
-
 export type Result<T, E> = CompatResult<T, E>;
 
 export const ok = <T, E = never>(value: T): CompatResult<T, E> => new CompatResult(coreOk(value));
-
 export const err = <T = never, E = unknown>(error: E): CompatResult<T, E> =>
   new CompatResult(coreErr(error));
 
-export const combineResults = <T, E>(results: CompatResult<T, E>[]): CompatResult<T[], E> =>
-  new CompatResult(combine(results.map((r) => r.inner)));
-
-/**
- * Awaitable, neverthrow-shaped async result.
- * `await` resolves to a `CompatResult<T, E>` so `.isOk()`, `.value`, `.error`,
- * `.match()` work without an extra `.resolve()` call.
- */
+/** `await` yields `CompatResult` so `.isOk()` / `.value` / `.match()` work without `.resolve()`. */
 export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> {
   private constructor(private readonly inner: CoreResultAsync<T, E>) {}
 
@@ -175,24 +156,16 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
     fn: (...args: A) => Promise<U>,
     onThrow: (error: unknown) => F,
   ): (...args: A) => CompatResultAsync<U, F> {
-    return (...args: A) =>
-      CompatResultAsync.fromPromise(
-        Promise.resolve().then(() => fn(...args)),
-        onThrow,
-      );
+    return (...args: A) => CompatResultAsync.fromPromise(fn(...args), onThrow);
   }
 
   static combine<const R extends readonly CompatResultAsync<unknown, unknown>[]>(
     results: R,
-  ): CompatResultAsync<
-    { [K in keyof R]: R[K] extends CompatResultAsync<infer T, unknown> ? T : never },
-    { [K in keyof R]: R[K] extends CompatResultAsync<unknown, infer F> ? F : never }[number]
-  > {
-    const cores = results.map((r) => r.inner) as readonly CoreResultAsync<unknown, unknown>[];
+  ): CompatResultAsync<AsyncTupleOk<R>, AsyncTupleErr<R>> {
     return new CompatResultAsync(
-      CoreResultAsync.combine(cores) as CoreResultAsync<
-        { [K in keyof R]: R[K] extends CompatResultAsync<infer T, unknown> ? T : never },
-        { [K in keyof R]: R[K] extends CompatResultAsync<unknown, infer F> ? F : never }[number]
+      CoreResultAsync.combine(results.map((r) => r.inner)) as CoreResultAsync<
+        AsyncTupleOk<R>,
+        AsyncTupleErr<R>
       >,
     );
   }
@@ -231,15 +204,11 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
     );
   }
 
-  chain<R extends AnyAsyncOrSyncResult>(
-    fn: (value: T) => R,
-  ): CompatResultAsync<UnwrapOk<R>, E | UnwrapErr<R>> {
+  chain<R extends AnyAsyncOrSyncResult>(fn: (value: T) => R) {
     return this.andThen(fn);
   }
 
-  flatMap<R extends AnyAsyncOrSyncResult>(
-    fn: (value: T) => R,
-  ): CompatResultAsync<UnwrapOk<R>, E | UnwrapErr<R>> {
+  flatMap<R extends AnyAsyncOrSyncResult>(fn: (value: T) => R) {
     return this.andThen(fn);
   }
 
@@ -247,17 +216,18 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
     return new CompatResultAsync(this.inner.flatMapResult(fn));
   }
 
-  andThenResult<U, F>(fn: (value: T) => ResultType<U, F>): CompatResultAsync<U, E | F> {
+  andThenResult<U, F>(fn: (value: T) => ResultType<U, F>) {
     return this.flatMapResult(fn);
   }
 
   orElse<R extends AnyAsyncOrSyncResult>(
     fn: (error: E) => R,
   ): CompatResultAsync<T | UnwrapOk<R>, UnwrapErr<R>> {
-    const coerced = (error: E) =>
-      coerceToCore(fn(error)) as CoreResultAsync<T, UnwrapErr<R>> | ResultType<T, UnwrapErr<R>>;
     return new CompatResultAsync(
-      this.inner.orElse(coerced) as CoreResultAsync<T | UnwrapOk<R>, UnwrapErr<R>>,
+      this.inner.orElse(
+        (error) =>
+          coerceToCore(fn(error)) as CoreResultAsync<T, UnwrapErr<R>> | ResultType<T, UnwrapErr<R>>,
+      ) as CoreResultAsync<T | UnwrapOk<R>, UnwrapErr<R>>,
     );
   }
 
@@ -274,22 +244,15 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   }
 
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2> {
-    return this.inner.resolve().then((r) => (isOk(r) ? onOk(r.value) : onErr(r.error)));
+    return this.inner.match(onOk, onErr);
   }
 
-  /** Tap on success — runs side-effect with the value, passes through. */
   andTee(fn: (value: T) => void | Promise<void>): CompatResultAsync<T, E> {
-    return new CompatResultAsync(
-      CoreResultAsync.fromResultPromise(
-        this.inner.resolve().then(async (r) => {
-          if (!isErr(r)) await fn(r.value);
-          return r;
-        }),
-      ) as CoreResultAsync<T, E>,
+    return this.andThen((value) =>
+      CompatResultAsync.fromSafePromise(Promise.resolve(fn(value)).then(() => value)),
     );
   }
 
-  /** Tap on failure — runs side-effect with the error, passes through. */
   orTee(fn: (error: E) => void | Promise<void>): CompatResultAsync<T, E> {
     return new CompatResultAsync(
       CoreResultAsync.fromResultPromise(
@@ -302,7 +265,6 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   }
 }
 
-/** Any sync or async result-like value accepted by `andThen` / `orElse`. */
 type AnyAsyncOrSyncResult =
   | CompatResultAsync<unknown, unknown>
   | CoreResultAsync<unknown, unknown>
@@ -337,7 +299,7 @@ function coerceToCore<U, F>(
   if (next instanceof CompatResultAsync) return next.toCore();
   if (next instanceof CoreResultAsync) return next;
   if (next instanceof CompatResult) return next.inner;
-  return next as ResultType<U, F>;
+  return next;
 }
 
 export { CompatResultAsync as ResultAsync };

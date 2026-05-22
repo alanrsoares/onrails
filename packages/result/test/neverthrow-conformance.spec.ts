@@ -79,4 +79,15 @@ describe("neverthrow compat — async", () => {
       ),
     ).toBe("net");
   });
+
+  it("andTee runs side effect without changing value", async () => {
+    const seen: number[] = [];
+    const ra = ResultAsync.fromSafePromise(Promise.resolve(3)).andTee((n) => {
+      seen.push(n);
+    });
+    const r = await ra;
+    expect(r.isOk()).toBe(true);
+    expect(r._unsafeUnwrap()).toBe(3);
+    expect(seen).toEqual([3]);
+  });
 });
