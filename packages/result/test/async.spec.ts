@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   combineTupleAsync,
+  combineTupleParallel,
   errAsync,
   fromPromise,
   fromSafePromise,
@@ -73,6 +74,51 @@ describe("ResultAsync", () => {
       errAsync("second"),
     ] as const);
     expect(await combined.resolve()).toEqual(err("first"));
+  });
+
+  it("combineTupleParallel returns first Err in input order", async () => {
+    const combined = combineTupleParallel([
+      okAsync(1),
+      errAsync("first"),
+      errAsync("second"),
+    ] as const);
+    expect(await combined.resolve()).toEqual(err("first"));
+  });
+
+  it("combineTupleParallel overlaps lazy branch work", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    const lazy = (value: number) =>
+      ResultAsync.defer(async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        inFlight -= 1;
+        return ok(value);
+      });
+
+    const result = await combineTupleParallel([lazy(1), lazy(2)] as const).resolve();
+    expect(result).toEqual(ok([1, 2]));
+    expect(maxInFlight).toBe(2);
+  });
+
+  it("combineTupleAsync runs lazy branches one at a time", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    const lazy = (value: number) =>
+      ResultAsync.defer(async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        inFlight -= 1;
+        return ok(value);
+      });
+
+    const result = await combineTupleAsync([lazy(1), lazy(2)] as const).resolve();
+    expect(result).toEqual(ok([1, 2]));
+    expect(maxInFlight).toBe(1);
   });
 
   it("match returns a plain value", async () => {

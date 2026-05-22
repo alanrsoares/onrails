@@ -59,6 +59,14 @@ export class ResultAsync<T, E> {
     return new ResultAsync(async () => ok(await promise));
   }
 
+  /**
+   * Defers work until {@link resolve}. Unlike {@link fromPromise}, nothing runs
+   * until the `ResultAsync` is resolved (e.g. by `combineTuple` / `combineTupleParallel`).
+   */
+  static defer<T, E>(fn: () => Promise<Result<T, E>>): ResultAsync<T, E> {
+    return new ResultAsync(fn);
+  }
+
   static ok<T>(value: T): ResultAsync<T, never>;
   static ok<T, E>(value: T): ResultAsync<T, E>;
   static ok<T, E = never>(value: T): ResultAsync<T, E> {
@@ -100,6 +108,32 @@ export class ResultAsync<T, E> {
       const values: unknown[] = [];
       for (const ra of results) {
         const result = await ra.resolve();
+        if (isErr(result)) {
+          return err(result.error) as Result<
+            { [K in keyof R]: AsyncOk<R[K]> },
+            { [K in keyof R]: AsyncErr<R[K]> }[number]
+          >;
+        }
+        values.push(result.value);
+      }
+      return ok(values) as Result<
+        { [K in keyof R]: AsyncOk<R[K]> },
+        { [K in keyof R]: AsyncErr<R[K]> }[number]
+      >;
+    }) as CombineTupleAsync<R>;
+  }
+
+  /**
+   * Like {@link combineTuple}, but starts every branch before awaiting (wall-clock
+   * parallel for independent IO). On failure, returns the first `Err` in input order.
+   */
+  static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknown>[]>(
+    results: R,
+  ): CombineTupleAsync<R> {
+    return new ResultAsync(async () => {
+      const settled = await Promise.all(results.map((ra) => ra.resolve()));
+      const values: unknown[] = [];
+      for (const result of settled) {
         if (isErr(result)) {
           return err(result.error) as Result<
             { [K in keyof R]: AsyncOk<R[K]> },
@@ -240,6 +274,7 @@ export const errAsync = ResultAsync.err;
 export const fromPromise = ResultAsync.fromPromise;
 export const fromSafePromise = ResultAsync.fromSafePromise;
 export const combineTupleAsync = ResultAsync.combineTuple;
+export const combineTupleParallel = ResultAsync.combineTupleParallel;
 
 const toError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));

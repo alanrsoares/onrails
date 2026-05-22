@@ -1,5 +1,6 @@
 export {
   combineTupleAsync,
+  combineTupleParallel,
   errAsync,
   fromPromise,
   fromSafePromise,

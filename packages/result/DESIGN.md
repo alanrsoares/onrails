@@ -51,7 +51,7 @@ This is intentionally small; larger ETL workflows can use the `Railway.*` workfl
 - `Railway.fromSync`, `.fromResult`, and `.derive` preserve sync mode.
 - `.fromPromise`, `.fromAsync`, and `.parallel` upgrade the workflow to async mode.
 - `.require(key, source, onMissing)` converts a nullable context field into a required non-null field.
-- `.parallel(record)` runs independent `ResultAsync` branches and merges named outputs back into context.
+- `.parallel(record)` runs independent `ResultAsync` branches concurrently (`combineTupleParallel`) and merges named outputs back into context. On multiple failures, the first `Err` in record iteration order wins (same rule as `combineTuple`).
 - `.select(fn)` projects the final context.
 - `.done()` returns the accumulated context.
 
@@ -85,7 +85,9 @@ Both APIs share the same `Railway` runtime. The functional surface is for reusab
 - `ResultAsync.combine(results)` collects homogeneous async results into `ResultAsync<T[], E>`.
 - `combineTupleAsync(results)` preserves heterogeneous async tuple positions.
 
-`combineTupleAsync` preserves input order and returns the first `Err` in input order.
+`combineTupleAsync` and `ResultAsync.combine` resolve branches **sequentially** (left-to-right). Use `combineTupleParallel` / `Railway.parallel` when independent async work should overlap in wall-clock time.
+
+`combineTupleAsync` preserves input order and returns the first `Err` in input order. `combineTupleParallel` awaits every branch, then applies the same input-order error rule.
 
 ## Errors
 

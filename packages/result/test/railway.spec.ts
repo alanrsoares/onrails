@@ -127,6 +127,37 @@ describe("Railway", () => {
 
     expect(await result.resolve()).toEqual(err("metrics-failed"));
   });
+
+  it("parallel overlaps lazy branch work", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    const lazy = <T>(value: T) =>
+      ResultAsync.defer(async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        inFlight -= 1;
+        return ok(value);
+      });
+
+    const out = await Railway.fromSync("id", () => "profile-1", toError)
+      .parallel({
+        recent: () => lazy(["a"]),
+        metrics: () => lazy({ jobs: 1 }),
+      })
+      .done()
+      .resolve();
+
+    expect(out).toEqual(
+      ok({
+        id: "profile-1",
+        recent: ["a"],
+        metrics: { jobs: 1 },
+      }),
+    );
+    expect(maxInFlight).toBe(2);
+  });
 });
 
 describe("functional railway", () => {

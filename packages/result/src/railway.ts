@@ -158,15 +158,15 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     return new Railway({
       mode: "async",
       result: current.flatMap((ctx) =>
-        ResultAsync.combineTuple(Object.entries(branches).map(([, branch]) => branch(ctx))).map(
-          (values) => {
-            const next = { ...ctx } as C & ParallelOutput<R>;
-            Object.keys(branches).forEach((key, index) => {
-              (next as Record<string, unknown>)[key] = values[index];
-            });
-            return next;
-          },
-        ),
+        ResultAsync.combineTupleParallel(
+          Object.entries(branches).map(([, branch]) => branch(ctx)),
+        ).map((values) => {
+          const next = { ...ctx } as C & ParallelOutput<R>;
+          Object.keys(branches).forEach((key, index) => {
+            (next as Record<string, unknown>)[key] = values[index];
+          });
+          return next;
+        }),
       ),
     }) as Railway<C & ParallelOutput<R>, E | ParallelError<R>, "async">;
   }
