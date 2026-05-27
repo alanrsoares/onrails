@@ -264,6 +264,92 @@ const fetchWithBackoff = (url: string) =>
 
 ---
 
+## 9. Pure error unification (no-lookback recover)
+
+When `recover` only inspects the error, the whole pipeline collapses into one `flow`. The resulting function's input type infers from the first step.
+
+```ts
+import { flow } from "@onrails/result/pipe";
+import { recover, err, ok, type Result } from "@onrails/result";
+
+type NetworkError = { kind: "network"; retryable: boolean };
+type Fatal        = { kind: "fatal"; message: string };
+
+declare const fetchSync: (url: string) => Result<Body, NetworkError | Fatal>;
+declare const emptyBody: Body;
+
+const fetchOrEmpty = flow(
+  fetchSync,
+  recover((e: NetworkError | Fatal) =>
+    e.kind === "fatal" ? err(e) : ok(emptyBody),
+  ),
+);
+// (url: string) => Result<Body, Fatal>
+```
+
+The error union narrows automatically — `NetworkError` is absorbed into the Ok track, only `Fatal` remains.
+
+---
+
+## 10. Strategy-parametrised flows (closure ladder)
+
+When `recover` needs configuration, take it on the *outer* factory. The inner `flow` still composes point-free over the data.
+
+```ts
+import { flow } from "@onrails/result/pipe";
+import { map, recover, ok, err, type Result } from "@onrails/result";
+
+type FetchError = { kind: "network" } | { kind: "fatal"; message: string };
+
+const fetchWith = (cfg: { fallback?: Body; rethrow: (e: FetchError) => boolean }) =>
+  flow(
+    fetchSync,
+    recover((e: FetchError) =>
+      cfg.rethrow(e) || !cfg.fallback ? err(e) : ok(cfg.fallback),
+    ),
+    map((body: Body) => body.byteLength),
+  );
+
+const fetchOrEmpty   = fetchWith({ fallback: emptyBody, rethrow: (e) => e.kind === "fatal" });
+const fetchOrThrow   = fetchWith({ rethrow: () => true });
+// both: (url: string) => Result<number, FetchError>
+```
+
+Outer closure captures things that don't change per-call (config); the inner `flow` stays point-free over the per-call data (`url`). Best of both.
+
+---
+
+## 11. Composing flows
+
+`flow` is associative — `flow(flow(a, b), c) === flow(a, b, c)`. Break long pipelines into named mini-pipelines and compose them.
+
+```ts
+import { flow } from "@onrails/result/pipe";
+import { flatMap, map, type Result } from "@onrails/result";
+
+type Saved = { id: string; at: number };
+type ParseError  = { kind: "parse"; message: string };
+type SchemaError = { kind: "schema"; field: string };
+type DbError     = { kind: "db"; cause: unknown };
+
+declare const parseJson:      (raw: string)  => Result<unknown, ParseError>;
+declare const validateSchema: (x: unknown)   => Result<Validated, SchemaError>;
+declare const addTimestamp:   (v: Validated) => Validated & { ts: number };
+declare const persist:        (v: Validated & { ts: number }) => Result<Saved, DbError>;
+
+// Result-track mini-pipeline — takes raw, returns Result.
+const parseAndValidate = flow(parseJson, flatMap(validateSchema));
+// Value-track mini-pipeline — takes Ok value, returns Result. Lifted by `flatMap`.
+const enrichAndPersist = flow(addTimestamp, persist);
+
+const ingest = flow(parseAndValidate, flatMap(enrichAndPersist));
+// (raw: string) => Result<Saved, ParseError | SchemaError | DbError>
+```
+
+Each sub-flow has a clear purpose; the top-level `ingest` reads as a sentence. Errors union automatically through `flatMap`'s `E | F` rule.
+
+---
+
 ## When NOT to go point-free
 
 Pipelines should read top-to-bottom and each step should do one obvious thing. Reach for `pipe` when:
