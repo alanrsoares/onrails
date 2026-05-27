@@ -1,3 +1,83 @@
+/**
+ * @onrails/eslint-plugin — boundary rules for `@onrails/result`.
+ *
+ * Rules are written against the TypeScript-ESLint AST (`TSTypeReference`,
+ * `MemberExpression`, …). Consumers must use `@typescript-eslint/parser`
+ * for TypeScript files; without it the rules never fire.
+ */
+
+const isIdentifierNamed = (node, name) =>
+  node && node.type === "Identifier" && node.name === name;
+
+const noPromiseResult = {
+  meta: {
+    type: "problem",
+    fixable: "code",
+    docs: {
+      description:
+        "Disallow Promise<Result<…>> in public signatures — return ResultAsync<T, E> instead.",
+    },
+    schema: [],
+    messages: {
+      use: "Promise<Result<{{ok}}, {{err}}>> in public API — return ResultAsync<{{ok}}, {{err}}> and use fromAsync()/tryAsync() at the boundary.",
+    },
+  },
+  create(context) {
+    const sourceCode = context.sourceCode;
+    return {
+      TSTypeReference(node) {
+        if (!isIdentifierNamed(node.typeName, "Promise")) return;
+        const args = node.typeArguments?.params;
+        const inner = args?.[0];
+        if (!inner || inner.type !== "TSTypeReference") return;
+        if (!isIdentifierNamed(inner.typeName, "Result")) return;
+
+        const innerArgs = inner.typeArguments?.params;
+        const okT = innerArgs?.[0];
+        const errT = innerArgs?.[1];
+        const okText = okT ? sourceCode.getText(okT) : "T";
+        const errText = errT ? sourceCode.getText(errT) : "E";
+
+        context.report({
+          node,
+          messageId: "use",
+          data: { ok: okText, err: errText },
+          fix: (fixer) => fixer.replaceText(node, `ResultAsync<${okText}, ${errText}>`),
+        });
+      },
+    };
+  },
+};
+
+const noUnsafeUnwrap = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Discourage _unsafeUnwrap / _unsafeUnwrapErr outside tests.",
+    },
+    schema: [],
+    messages: {
+      unsafe: "Avoid _unsafeUnwrap* — use match(), resolve(), or yieldResult() in tryGen.",
+    },
+  },
+  create(context) {
+    const filename = context.filename.replace(/\\/g, "/");
+    if (filename.includes(".spec.") || filename.includes(".test.")) {
+      return {};
+    }
+    return {
+      MemberExpression(node) {
+        if (
+          node.property.type === "Identifier" &&
+          (node.property.name === "_unsafeUnwrap" || node.property.name === "_unsafeUnwrapErr")
+        ) {
+          context.report({ node, messageId: "unsafe" });
+        }
+      },
+    };
+  },
+};
+
 /** @type {import('eslint').ESLint.Plugin} */
 const plugin = {
   meta: {
@@ -5,76 +85,8 @@ const plugin = {
     version: "0.0.0",
   },
   rules: {
-    "no-promise-result": {
-      meta: {
-        type: "problem",
-        docs: {
-          description:
-            "Disallow Promise<Result<…>> in public signatures — use ResultAsync (Alanstack boundary rule)",
-        },
-        schema: [],
-        messages: {
-          noPromiseResult:
-            "Avoid Promise<Result<{{types}}>> in exported APIs. Return ResultAsync<T, E> and use fromAsync() inside handlers.",
-        },
-      },
-      create(context) {
-        const source = context.sourceCode.getText();
-
-        return {
-          Program() {
-            const pattern = /Promise\s*<\s*Result\s*</g;
-            let match = pattern.exec(source);
-            while (match !== null) {
-              const start = match.index;
-              const line = source.slice(0, start).split("\n").length;
-              const lineStart = source.lastIndexOf("\n", start) + 1;
-              const lineText = source.slice(lineStart, source.indexOf("\n", start));
-              if (lineText.trimStart().startsWith("//")) {
-                match = pattern.exec(source);
-                continue;
-              }
-              context.report({
-                loc: { line, column: match.index - lineStart },
-                messageId: "noPromiseResult",
-                data: { types: "…" },
-              });
-              match = pattern.exec(source);
-            }
-          },
-        };
-      },
-    },
-    "no-unsafe-unwrap": {
-      meta: {
-        type: "suggestion",
-        docs: {
-          description: "Discourage _unsafeUnwrap / _unsafeUnwrapErr outside tests",
-        },
-        schema: [],
-        messages: {
-          unsafe:
-            "Avoid _unsafeUnwrap* — use match(), resolve(), or yieldResult() in tryGen.",
-        },
-      },
-      create(context) {
-        const filename = context.filename.replace(/\\/g, "/");
-        if (filename.includes(".spec.") || filename.includes(".test.")) {
-          return {};
-        }
-        return {
-          MemberExpression(node) {
-            if (
-              node.property.type === "Identifier" &&
-              (node.property.name === "_unsafeUnwrap" ||
-                node.property.name === "_unsafeUnwrapErr")
-            ) {
-              context.report({ node, messageId: "unsafe" });
-            }
-          },
-        };
-      },
-    },
+    "no-promise-result": noPromiseResult,
+    "no-unsafe-unwrap": noUnsafeUnwrap,
   },
 };
 
