@@ -1,4 +1,4 @@
-import { err, flatMapResultErr, isErr, mapErrResult, mapResult, ok } from "./result.js";
+import { err, isErr, map, mapErr, ok } from "./result.js";
 import type { Result } from "./types.js";
 import { UnexpectedError } from "./types.js";
 
@@ -150,11 +150,11 @@ export class ResultAsync<T, E> {
   }
 
   map<U>(fn: (value: T) => U): ResultAsync<U, E> {
-    return new ResultAsync(async () => mapResult(await this.run(), fn));
+    return new ResultAsync(async () => map(await this.run(), fn));
   }
 
   mapErr<F>(fn: (error: E) => F): ResultAsync<T, F> {
-    return new ResultAsync(async () => mapErrResult(await this.run(), fn));
+    return new ResultAsync(async () => mapErr(await this.run(), fn));
   }
 
   flatMap<U, F = E>(
@@ -191,15 +191,7 @@ export class ResultAsync<T, E> {
     return this.flatMap(fn);
   }
 
-  flatMapResult<U, F>(fn: (value: T) => Result<U, F>): ResultAsync<U, E | F> {
-    return new ResultAsync(async () => flatMapResultErr(await this.run(), fn));
-  }
-
-  andThenResult<U, F>(fn: (value: T) => Result<U, F>): ResultAsync<U, E | F> {
-    return this.flatMapResult(fn);
-  }
-
-  orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
+  recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
     return new ResultAsync(async () => {
       const first = await this.run();
       if (!isErr(first)) {
@@ -210,6 +202,30 @@ export class ResultAsync<T, E> {
         return next.resolve();
       }
       return next;
+    });
+  }
+
+  orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
+    return this.recover(fn);
+  }
+
+  tap(fn: (value: T) => void): ResultAsync<T, E> {
+    return new ResultAsync(async () => {
+      const result = await this.run();
+      if (!isErr(result)) {
+        fn(result.value);
+      }
+      return result;
+    });
+  }
+
+  tapErr(fn: (error: E) => void): ResultAsync<T, E> {
+    return new ResultAsync(async () => {
+      const result = await this.run();
+      if (isErr(result)) {
+        fn(result.error);
+      }
+      return result;
     });
   }
 
@@ -273,8 +289,8 @@ export const okAsync = ResultAsync.ok;
 export const errAsync = ResultAsync.err;
 export const fromPromise = ResultAsync.fromPromise;
 export const fromSafePromise = ResultAsync.fromSafePromise;
-export const combineTupleAsync = ResultAsync.combineTuple;
-export const combineTupleParallel = ResultAsync.combineTupleParallel;
+export const sequenceTupleAsync = ResultAsync.combineTuple;
+export const parallelTupleAsync = ResultAsync.combineTupleParallel;
 
 const toError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));

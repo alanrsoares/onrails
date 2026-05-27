@@ -1,5 +1,5 @@
 import type { ResultAsync } from "./async.js";
-import { flatMapResult, mapErrResult, mapResult, matchWith, unwrapOr } from "./result.js";
+import { flatMap, map, mapErr, match, unwrapOr } from "./result.js";
 import type { Result } from "./types.js";
 
 /** Opt-in dot chaining over a sync {@link Result} */
@@ -16,12 +16,12 @@ export type FluentResult<T, E> = {
 
 export const fluent = <T, E>(result: Result<T, E>): FluentResult<T, E> => ({
   result,
-  map: (fn) => fluent(mapResult(result, fn)),
-  mapErr: (fn) => fluent(mapErrResult(result, fn)),
-  flatMap: (fn) => fluent(flatMapResult(result, fn)),
-  andThen: (fn) => fluent(flatMapResult(result, fn)),
-  chain: (fn) => fluent(flatMapResult(result, fn)),
-  match: (onOk, onErr) => matchWith(onOk, onErr)(result),
+  map: (fn) => fluent(map(result, fn)),
+  mapErr: (fn) => fluent(mapErr(result, fn)),
+  flatMap: (fn) => fluent(flatMap(result, fn)),
+  andThen: (fn) => fluent(flatMap(result, fn)),
+  chain: (fn) => fluent(flatMap(result, fn)),
+  match: (onOk, onErr) => match(onOk, onErr)(result),
   unwrapOr: (defaultValue) => unwrapOr(result, defaultValue),
 });
 

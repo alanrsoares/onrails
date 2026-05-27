@@ -19,116 +19,188 @@ export const isErr = <T, E>(result: Result<T, E>): result is Err<T, E> => result
 /** Fantasy Land `of` */
 export const of = ok;
 
-export const mapResult = <T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> => {
-  if (isOk(result)) {
-    return ok<U, E>(fn(result.value));
-  }
-  return err<U, E>(result.error);
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// Dual-form helpers — each export accepts either shape:
+//   data-first: `map(result, fn)`
+//   curried:    `map(fn)(result)`
+// Arity at the call site selects the overload.
+// ─────────────────────────────────────────────────────────────────────────────
 
-/** Curried `map` — E is inferred at the inner call so `map(fn)(ok(1))` keeps `Result<U, never>` */
-export const map =
-  <T, U>(fn: (value: T) => U) =>
-  <E>(result: Result<T, E>): Result<U, E> =>
-    mapResult(result, fn);
+const mapImpl = <T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> =>
+  isOk(result) ? ok(fn(result.value)) : err(result.error);
 
-export const mapErrResult = <T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F> => {
-  if (isErr(result)) {
-    return err<T, F>(fn(result.error));
-  }
-  return ok<T, F>(result.value);
-};
+export function map<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E>;
+export function map<T, U>(fn: (value: T) => U): <E>(result: Result<T, E>) => Result<U, E>;
+export function map(
+  ...args: [Result<unknown, unknown>, (value: unknown) => unknown] | [(value: unknown) => unknown]
+): unknown {
+  if (args.length === 2) return mapImpl(args[0], args[1]);
+  const fn = args[0];
+  return (result: Result<unknown, unknown>) => mapImpl(result, fn);
+}
 
-/** Curried `mapErr` — T is inferred at the inner call so success type stays narrow */
-export const mapErr =
-  <E, F>(fn: (error: E) => F) =>
-  <T>(result: Result<T, E>): Result<T, F> =>
-    mapErrResult(result, fn);
+const mapErrImpl = <T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F> =>
+  isErr(result) ? err(fn(result.error)) : ok(result.value);
 
-export const bimap = <T, U, E, F>(
+export function mapErr<T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F>;
+export function mapErr<E, F>(fn: (error: E) => F): <T>(result: Result<T, E>) => Result<T, F>;
+export function mapErr(
+  ...args: [Result<unknown, unknown>, (error: unknown) => unknown] | [(error: unknown) => unknown]
+): unknown {
+  if (args.length === 2) return mapErrImpl(args[0], args[1]);
+  const fn = args[0];
+  return (result: Result<unknown, unknown>) => mapErrImpl(result, fn);
+}
+
+const bimapImpl = <T, U, E, F>(
   result: Result<T, E>,
   onOk: (value: T) => U,
   onErr: (error: E) => F,
-): Result<U, F> => {
-  if (isOk(result)) {
-    return ok(onOk(result.value));
-  }
-  return err(onErr(result.error));
-};
+): Result<U, F> => (isOk(result) ? ok(onOk(result.value)) : err(onErr(result.error)));
 
-export const flatMapResult = <T, U, E>(
+export function bimap<T, U, E, F>(
   result: Result<T, E>,
-  fn: (value: T) => Result<U, E>,
-): Result<U, E> => {
-  if (isOk(result)) {
-    return fn(result.value);
-  }
-  return err<U, E>(result.error);
-};
+  onOk: (value: T) => U,
+  onErr: (error: E) => F,
+): Result<U, F>;
+export function bimap<T, U, E, F>(
+  onOk: (value: T) => U,
+  onErr: (error: E) => F,
+): (result: Result<T, E>) => Result<U, F>;
+export function bimap(
+  ...args:
+    | [Result<unknown, unknown>, (value: unknown) => unknown, (error: unknown) => unknown]
+    | [(value: unknown) => unknown, (error: unknown) => unknown]
+): unknown {
+  if (args.length === 3) return bimapImpl(args[0], args[1], args[2]);
+  const [onOk, onErr] = args;
+  return (result: Result<unknown, unknown>) => bimapImpl(result, onOk, onErr);
+}
 
-/** Canonical bind — Fantasy Land `chain` */
-export const flatMap =
-  <T, U, E>(fn: (value: T) => Result<U, E>) =>
-  (result: Result<T, E>): Result<U, E> =>
-    flatMapResult(result, fn);
-
-/** neverthrow / muscle-memory alias */
-export const andThen = flatMap;
-
-/** Fantasy Land alias */
-export const chain = flatMap;
-
-/** Bind with a sync step that may change the error type */
-export const flatMapResultErr = <T, U, E, F>(
+const flatMapImpl = <T, U, E, F>(
   result: Result<T, E>,
   fn: (value: T) => Result<U, F>,
-): Result<U, E | F> => {
-  if (isOk(result)) {
-    return fn(result.value);
-  }
-  return err<U, E | F>(result.error);
+): Result<U, E | F> => (isOk(result) ? fn(result.value) : err(result.error));
+
+export function flatMap<T, U, E, F>(
+  result: Result<T, E>,
+  fn: (value: T) => Result<U, F>,
+): Result<U, E | F>;
+export function flatMap<T, U, F>(
+  fn: (value: T) => Result<U, F>,
+): <E>(result: Result<T, E>) => Result<U, E | F>;
+export function flatMap(
+  ...args:
+    | [Result<unknown, unknown>, (value: unknown) => Result<unknown, unknown>]
+    | [(value: unknown) => Result<unknown, unknown>]
+): unknown {
+  if (args.length === 2) return flatMapImpl(args[0], args[1]);
+  const fn = args[0];
+  return (result: Result<unknown, unknown>) => flatMapImpl(result, fn);
+}
+
+const recoverImpl = <T, E, F>(
+  result: Result<T, E>,
+  fn: (error: E) => Result<T, F>,
+): Result<T, F> => (isErr(result) ? fn(result.error) : ok(result.value));
+
+export function recover<T, E, F>(
+  result: Result<T, E>,
+  fn: (error: E) => Result<T, F>,
+): Result<T, F>;
+export function recover<T, E, F>(
+  fn: (error: E) => Result<T, F>,
+): (result: Result<T, E>) => Result<T, F>;
+export function recover(
+  ...args:
+    | [Result<unknown, unknown>, (error: unknown) => Result<unknown, unknown>]
+    | [(error: unknown) => Result<unknown, unknown>]
+): unknown {
+  if (args.length === 2) return recoverImpl(args[0], args[1]);
+  const fn = args[0];
+  return (result: Result<unknown, unknown>) => recoverImpl(result, fn);
+}
+
+const tapImpl = <T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E> => {
+  if (isOk(result)) fn(result.value);
+  return result;
 };
 
-export const match = <T, E, U>(
+export function tap<T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E>;
+export function tap<T>(fn: (value: T) => void): <E>(result: Result<T, E>) => Result<T, E>;
+export function tap(
+  ...args: [Result<unknown, unknown>, (value: unknown) => void] | [(value: unknown) => void]
+): unknown {
+  if (args.length === 2) return tapImpl(args[0], args[1]);
+  const fn = args[0];
+  return (result: Result<unknown, unknown>) => tapImpl(result, fn);
+}
+
+const tapErrImpl = <T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E> => {
+  if (isErr(result)) fn(result.error);
+  return result;
+};
+
+export function tapErr<T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E>;
+export function tapErr<E>(fn: (error: E) => void): <T>(result: Result<T, E>) => Result<T, E>;
+export function tapErr(
+  ...args: [Result<unknown, unknown>, (error: unknown) => void] | [(error: unknown) => void]
+): unknown {
+  if (args.length === 2) return tapErrImpl(args[0], args[1]);
+  const fn = args[0];
+  return (result: Result<unknown, unknown>) => tapErrImpl(result, fn);
+}
+
+const matchImpl = <T, E, U>(
   result: Result<T, E>,
   onOk: (value: T) => U,
   onErr: (error: E) => U,
-): U => {
-  if (isOk(result)) {
-    return onOk(result.value);
-  }
-  return onErr(result.error);
-};
+): U => (isOk(result) ? onOk(result.value) : onErr(result.error));
+
+export function match<T, E, U>(
+  result: Result<T, E>,
+  onOk: (value: T) => U,
+  onErr: (error: E) => U,
+): U;
+export function match<T, E, U>(
+  onOk: (value: T) => U,
+  onErr: (error: E) => U,
+): (result: Result<T, E>) => U;
+export function match(
+  ...args:
+    | [Result<unknown, unknown>, (value: unknown) => unknown, (error: unknown) => unknown]
+    | [(value: unknown) => unknown, (error: unknown) => unknown]
+): unknown {
+  if (args.length === 3) return matchImpl(args[0], args[1], args[2]);
+  const [onOk, onErr] = args;
+  return (result: Result<unknown, unknown>) => matchImpl(result, onOk, onErr);
+}
 
 /** Collision-free alias for files that also import `match` from ts-pattern. */
 export const matchResult = match;
 
-/** Curried `match` */
-export const matchWith =
-  <T, E, U>(onOk: (value: T) => U, onErr: (error: E) => U) =>
+/**
+ * Curried collapse with named slots — escape valve when positional `match`
+ * order is unclear at the call site (e.g. when both handlers return the same
+ * type and a transposed `match(r, onErr, onOk)` would silently compile).
+ */
+export const fold =
+  <T, E, U>(handlers: { readonly ok: (value: T) => U; readonly err: (error: E) => U }) =>
   (result: Result<T, E>): U =>
-    match(result, onOk, onErr);
+    matchImpl(result, handlers.ok, handlers.err);
 
-export const unwrapOr = <T, E>(result: Result<T, E>, defaultValue: T): T => {
-  if (isOk(result)) {
-    return result.value;
-  }
-  return defaultValue;
-};
+export const unwrapOr = <T, E>(result: Result<T, E>, defaultValue: T): T =>
+  isOk(result) ? result.value : defaultValue;
 
 /** Test/assert helper — throws the original Err value when called on Err. */
 export function unwrapOk<T, E>(result: Result<T, E>): T {
-  if (isErr(result)) {
-    throw result.error;
-  }
+  if (isErr(result)) throw result.error;
   return result.value;
 }
 
 /** Test/assert helper — throws TypeError when called on Ok. */
 export function unwrapErr<T, E>(result: Result<T, E>): E {
-  if (isOk(result)) {
-    throw new TypeError("unwrapErr called on Ok");
-  }
+  if (isOk(result)) throw new TypeError("unwrapErr called on Ok");
   return result.error;
 }
 
@@ -158,9 +230,7 @@ export function trySync(
 export const combine = <T, E>(results: readonly Result<T, E>[]): Result<T[], E> => {
   const values: T[] = [];
   for (const result of results) {
-    if (isErr(result)) {
-      return err(result.error);
-    }
+    if (isErr(result)) return err(result.error);
     values.push(result.value);
   }
   return ok(values);
@@ -172,9 +242,7 @@ export const combineTuple = <const R extends readonly Result<unknown, unknown>[]
 ): CombineTuple<R> => {
   const values: unknown[] = [];
   for (const result of results) {
-    if (isErr(result)) {
-      return err(result.error) as CombineTuple<R>;
-    }
+    if (isErr(result)) return err(result.error) as CombineTuple<R>;
     values.push(result.value);
   }
   return ok(values) as CombineTuple<R>;
@@ -188,4 +256,71 @@ type CombineTuple<R extends readonly Result<unknown, unknown>[]> = Result<
   { [K in keyof R]: _ErrValue<R[K]> }[number]
 >;
 
-export const pipe = <A, B>(value: A, fn: (value: A) => B): B => fn(value);
+/**
+ * Variadic value-first pipe — threads `value` through up to nine unary fns.
+ *
+ * ```ts
+ * pipe(
+ *   parseConfig(raw),
+ *   map((cfg) => cfg.name),
+ *   flatMap((name) => name ? ok(name) : err({ kind: "empty" })),
+ *   tap(log),
+ * );
+ * ```
+ */
+export function pipe<A>(value: A): A;
+export function pipe<A, B>(value: A, ab: (a: A) => B): B;
+export function pipe<A, B, C>(value: A, ab: (a: A) => B, bc: (b: B) => C): C;
+export function pipe<A, B, C, D>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D): D;
+export function pipe<A, B, C, D, E>(
+  value: A,
+  ab: (a: A) => B,
+  bc: (b: B) => C,
+  cd: (c: C) => D,
+  de: (d: D) => E,
+): E;
+export function pipe<A, B, C, D, E, F>(
+  value: A,
+  ab: (a: A) => B,
+  bc: (b: B) => C,
+  cd: (c: C) => D,
+  de: (d: D) => E,
+  ef: (e: E) => F,
+): F;
+export function pipe<A, B, C, D, E, F, G>(
+  value: A,
+  ab: (a: A) => B,
+  bc: (b: B) => C,
+  cd: (c: C) => D,
+  de: (d: D) => E,
+  ef: (e: E) => F,
+  fg: (f: F) => G,
+): G;
+export function pipe<A, B, C, D, E, F, G, H>(
+  value: A,
+  ab: (a: A) => B,
+  bc: (b: B) => C,
+  cd: (c: C) => D,
+  de: (d: D) => E,
+  ef: (e: E) => F,
+  fg: (f: F) => G,
+  gh: (g: G) => H,
+): H;
+export function pipe<A, B, C, D, E, F, G, H, I>(
+  value: A,
+  ab: (a: A) => B,
+  bc: (b: B) => C,
+  cd: (c: C) => D,
+  de: (d: D) => E,
+  ef: (e: E) => F,
+  fg: (f: F) => G,
+  gh: (g: G) => H,
+  hi: (h: H) => I,
+): I;
+export function pipe(value: unknown, ...fns: ReadonlyArray<(x: unknown) => unknown>): unknown {
+  let acc = value;
+  for (const fn of fns) {
+    acc = fn(acc);
+  }
+  return acc;
+}

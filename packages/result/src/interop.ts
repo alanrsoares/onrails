@@ -41,21 +41,3 @@ export function fromAsync<A extends readonly unknown[], R extends AnyResult>(
       InferErr<R> | UnexpectedError
     >;
 }
-
-/** Alias for {@link fromAsync} (neverthrow #608 / #662 naming) */
-export const fromPromiseResult = fromAsync;
-
-/**
- * Lift a nullary `Promise<Result<T, E>>` factory to {@link ResultAsync}.
- */
-export const makeResultAsync = <R extends AnyResult>(
-  fn: () => Promise<R>,
-  onDefect?: (error: unknown) => InferErr<R> | UnexpectedError,
-): ResultAsync<InferOk<R>, InferErr<R> | UnexpectedError> =>
-  ResultAsync.fromResultPromise(fn(), onDefect) as ResultAsync<
-    InferOk<R>,
-    InferErr<R> | UnexpectedError
-  >;
-
-/** Alias used in Alanstack repos (neverthrow #514) */
-export const resultAsyncFn = fromAsync;

@@ -1,12 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  asyncAfter,
-  fromAsync,
-  fromResult,
-  type InferErr,
-  type InferOk,
-  makeResultAsync,
-} from "../src/interop.js";
+import { asyncAfter, fromAsync, fromResult, type InferErr, type InferOk } from "../src/interop.js";
 import { err, ok } from "../src/result.js";
 import type { Result } from "../src/types.js";
 
@@ -51,16 +44,6 @@ describe("fromAsync", () => {
     if (result._tag === "Err") {
       expect(result.error.name).toBe("UnexpectedError");
     }
-  });
-
-  it("makeResultAsync works for nullary factories", async () => {
-    const ra = makeResultAsync(() => returnsPromisedResult("ab"));
-    expect(
-      await ra.match(
-        (v) => v,
-        () => -1,
-      ),
-    ).toBe(2);
   });
 });
 

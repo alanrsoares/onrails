@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import {
-  combineTupleAsync,
-  combineTupleParallel,
   errAsync,
   fromPromise,
   fromSafePromise,
   okAsync,
+  parallelTupleAsync,
   ResultAsync,
+  sequenceTupleAsync,
   tryAsync,
 } from "../src/async.js";
 import { err, ok } from "../src/result.js";
@@ -62,13 +62,18 @@ describe("ResultAsync", () => {
     expect(await combined.resolve()).toEqual(ok([1, 2]));
   });
 
-  it("combineTupleAsync preserves value order at runtime", async () => {
-    const combined = combineTupleAsync([okAsync(1), okAsync("a")] as const);
+  it("sequenceTupleAsync preserves value order at runtime", async () => {
+    const combined = sequenceTupleAsync([okAsync(1), okAsync("a")] as const);
     expect(await combined.resolve()).toEqual(ok([1, "a"]));
   });
 
-  it("combineTupleAsync returns first Err in input order", async () => {
-    const combined = combineTupleAsync([
+  it("sequenceTupleAsync aliases sequential tuple combine", async () => {
+    const combined = sequenceTupleAsync([okAsync(1), okAsync("a")] as const);
+    expect(await combined.resolve()).toEqual(ok([1, "a"]));
+  });
+
+  it("sequenceTupleAsync returns first Err in input order", async () => {
+    const combined = sequenceTupleAsync([
       okAsync(1),
       errAsync("first"),
       errAsync("second"),
@@ -76,8 +81,8 @@ describe("ResultAsync", () => {
     expect(await combined.resolve()).toEqual(err("first"));
   });
 
-  it("combineTupleParallel returns first Err in input order", async () => {
-    const combined = combineTupleParallel([
+  it("parallelTupleAsync returns first Err in input order", async () => {
+    const combined = parallelTupleAsync([
       okAsync(1),
       errAsync("first"),
       errAsync("second"),
@@ -85,7 +90,16 @@ describe("ResultAsync", () => {
     expect(await combined.resolve()).toEqual(err("first"));
   });
 
-  it("combineTupleParallel overlaps lazy branch work", async () => {
+  it("parallelTupleAsync aliases parallel tuple combine", async () => {
+    const combined = parallelTupleAsync([
+      okAsync(1),
+      errAsync("first"),
+      errAsync("second"),
+    ] as const);
+    expect(await combined.resolve()).toEqual(err("first"));
+  });
+
+  it("parallelTupleAsync overlaps lazy branch work", async () => {
     let inFlight = 0;
     let maxInFlight = 0;
 
@@ -98,12 +112,12 @@ describe("ResultAsync", () => {
         return ok(value);
       });
 
-    const result = await combineTupleParallel([lazy(1), lazy(2)] as const).resolve();
+    const result = await parallelTupleAsync([lazy(1), lazy(2)] as const).resolve();
     expect(result).toEqual(ok([1, 2]));
     expect(maxInFlight).toBe(2);
   });
 
-  it("combineTupleAsync runs lazy branches one at a time", async () => {
+  it("sequenceTupleAsync runs lazy branches one at a time", async () => {
     let inFlight = 0;
     let maxInFlight = 0;
 
@@ -116,7 +130,7 @@ describe("ResultAsync", () => {
         return ok(value);
       });
 
-    const result = await combineTupleAsync([lazy(1), lazy(2)] as const).resolve();
+    const result = await sequenceTupleAsync([lazy(1), lazy(2)] as const).resolve();
     expect(result).toEqual(ok([1, 2]));
     expect(maxInFlight).toBe(1);
   });
@@ -127,5 +141,39 @@ describe("ResultAsync", () => {
       () => "fail",
     );
     expect(value).toBe("X");
+  });
+
+  it("recover can return failed async values to the success track", async () => {
+    expect(
+      await errAsync<number, string>("missing")
+        .recover(() => okAsync(0))
+        .resolve(),
+    ).toEqual(ok(0));
+    expect(
+      await errAsync<number, string>("bad")
+        .orElse((error) => err(error.length))
+        .resolve(),
+    ).toEqual(err(3));
+    expect(
+      await okAsync<number, string>(1)
+        .recover(() => err("never"))
+        .resolve(),
+    ).toEqual(ok(1));
+  });
+
+  it("tap helpers observe only their matching async track", async () => {
+    const seen: string[] = [];
+
+    expect(
+      await okAsync<number, string>(1)
+        .tap((value) => seen.push(`ok:${value}`))
+        .resolve(),
+    ).toEqual(ok(1));
+    expect(
+      await errAsync<number, string>("bad")
+        .tapErr((error) => seen.push(`err:${error}`))
+        .resolve(),
+    ).toEqual(err("bad"));
+    expect(seen).toEqual(["ok:1", "err:bad"]);
   });
 });

@@ -1,15 +1,18 @@
 import { describe, expect, it } from "bun:test";
 import {
-  andThen,
   combine,
   combineTuple,
   err,
   flatMap,
+  fold,
   map,
   mapErr,
   match,
   matchResult,
   ok,
+  recover,
+  tap,
+  tapErr,
   trySync,
   unwrapErr,
   unwrapOk,
@@ -34,8 +37,10 @@ describe("sync Result", () => {
     expect(doubled(err("skip"))).toEqual(err("skip"));
   });
 
-  it("andThen is flatMap", () => {
-    expect(andThen((n: number) => ok(String(n)))(ok(7))).toEqual(ok("7"));
+  it("flatMap widens and short-circuits errors", () => {
+    expect(flatMap(ok(1), (n) => ok(String(n)))).toEqual(ok("1"));
+    expect(flatMap(ok(0), () => err({ kind: "zero" }))).toEqual(err({ kind: "zero" }));
+    expect(flatMap(err({ kind: "parse" }), () => ok("never"))).toEqual(err({ kind: "parse" }));
   });
 
   it("match dispatches", () => {
@@ -63,6 +68,21 @@ describe("sync Result", () => {
         (e) => `err:${e}`,
       ),
     ).toBe("ok:1");
+  });
+
+  it("fold collapses with named-slot handlers", () => {
+    expect(
+      fold({
+        ok: (value: number) => `ok:${value}`,
+        err: (error: string) => `err:${error}`,
+      })(ok(1)),
+    ).toBe("ok:1");
+    expect(
+      fold({
+        ok: (value: number) => `ok:${value}`,
+        err: (error: string) => `err:${error}`,
+      })(err("nope")),
+    ).toBe("err:nope");
   });
 
   it("unwrapOr supplies default on Err", () => {
@@ -103,5 +123,22 @@ describe("sync Result", () => {
   it("mapErr maps Err only", () => {
     expect(mapErr((s: string) => s.length)(err("ab"))).toEqual(err(2));
     expect(mapErr((s: string) => s.length)(ok(1))).toEqual(ok(1));
+  });
+
+  it("recover can return failed values to the success track", () => {
+    expect(recover(err("missing"), () => ok(0))).toEqual(ok(0));
+    expect(recover((error: string) => err(error.length))(err("bad"))).toEqual(err(3));
+    expect(recover(ok(1), () => err("never"))).toEqual(ok(1));
+  });
+
+  it("tap helpers observe only their matching track", () => {
+    const seen: string[] = [];
+    expect(tap(ok(1), (value) => seen.push(`ok:${value}`))).toEqual(ok(1));
+    expect(tapErr(err("bad"), (error) => seen.push(`err:${error}`))).toEqual(err("bad"));
+    expect(tap((value: number) => seen.push(`curried:${value}`))(ok(2))).toEqual(ok(2));
+    expect(tapErr((error: string) => seen.push(`curried-err:${error}`))(err("no"))).toEqual(
+      err("no"),
+    );
+    expect(seen).toEqual(["ok:1", "err:bad", "curried:2", "curried-err:no"]);
   });
 });

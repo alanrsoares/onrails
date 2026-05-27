@@ -4,11 +4,11 @@ import {
   combineTuple,
   err as coreErr,
   ok as coreOk,
-  flatMapResultErr,
+  flatMap,
   isErr,
   isOk,
-  mapErrResult,
-  mapResult,
+  map,
+  mapErr,
   trySync,
   unwrapOr,
 } from "../result.js";
@@ -64,15 +64,15 @@ export class CompatResult<T, E> {
   }
 
   map<U>(fn: (value: T) => U): CompatResult<U, E> {
-    return new CompatResult(mapResult(this.inner, fn));
+    return new CompatResult(map(this.inner, fn));
   }
 
   mapErr<F>(fn: (error: E) => F): CompatResult<T, F> {
-    return new CompatResult(mapErrResult(this.inner, fn));
+    return new CompatResult(mapErr(this.inner, fn));
   }
 
   andThen<U, F = E>(fn: (value: T) => CompatResult<U, F>): CompatResult<U, E | F> {
-    return new CompatResult(flatMapResultErr(this.inner, (value) => fn(value).inner));
+    return new CompatResult(flatMap(this.inner, (value) => fn(value).inner));
   }
 
   asyncAndThen<U, F = E>(
@@ -210,14 +210,6 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
 
   flatMap<R extends AnyAsyncOrSyncResult>(fn: (value: T) => R) {
     return this.andThen(fn);
-  }
-
-  flatMapResult<U, F>(fn: (value: T) => ResultType<U, F>): CompatResultAsync<U, E | F> {
-    return new CompatResultAsync(this.inner.flatMapResult(fn));
-  }
-
-  andThenResult<U, F>(fn: (value: T) => ResultType<U, F>) {
-    return this.flatMapResult(fn);
   }
 
   orElse<R extends AnyAsyncOrSyncResult>(
