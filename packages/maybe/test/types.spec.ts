@@ -2,9 +2,9 @@ import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
 import {
   type andThen,
-  flatMapMaybe,
+  flatMap,
   fromNullable,
-  mapMaybe,
+  map,
   match,
   none,
   type of,
@@ -21,20 +21,20 @@ describe("Maybe types", () => {
     expectType<TypeEqual<typeof n, Maybe<string>>>(true);
   });
 
-  it("mapMaybe changes inner type", () => {
-    const m = mapMaybe(some(1), (n) => String(n));
+  it("map changes inner type", () => {
+    const m = map(some(1), (n) => String(n));
     type Out = typeof m;
     expectType<TypeEqual<Out, Maybe<string>>>(true);
   });
 
-  it("flatMapMaybe unions inner types", () => {
-    const m = flatMapMaybe(some(1), (n) => (n > 0 ? some(String(n)) : none()));
+  it("flatMap unions inner types", () => {
+    const m = flatMap(some(1), (n) => (n > 0 ? some(String(n)) : none()));
     type Out = typeof m;
     expectType<TypeEqual<Out, Maybe<string>>>(true);
   });
 
-  it("andThen is flatMapMaybe", () => {
-    expectType<TypeEqual<typeof andThen, typeof flatMapMaybe>>(true);
+  it("andThen is flatMap", () => {
+    expectType<TypeEqual<typeof andThen, typeof flatMap>>(true);
   });
 
   it("of is some", () => {
@@ -48,10 +48,11 @@ describe("Maybe types", () => {
   });
 
   it("match preserves handler return type", () => {
-    const out = match(some(1), {
-      some: (v) => v + 1,
-      none: () => 0,
-    });
+    const out = match(
+      some(1),
+      (v) => v + 1,
+      () => 0,
+    );
     expectType<TypeEqual<typeof out, number>>(true);
   });
 

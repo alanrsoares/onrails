@@ -7,10 +7,10 @@ describe("fluent Maybe", () => {
     const out = fluent(some(2))
       .map((n) => n * 2)
       .andThen((n) => some(String(n)))
-      .match({
-        some: (v) => v,
-        none: () => "",
-      });
+      .match(
+        (v) => v,
+        () => "",
+      );
     expect(out).toBe("4");
   });
 

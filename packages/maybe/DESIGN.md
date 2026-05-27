@@ -4,9 +4,9 @@ Expected absence as a tagged union — not failure. Pairs with `@onrails/result`
 
 ## Goals
 
-- Same runtime model as `@onrails/result`: `{ _tag }` variants, module functions, `sideEffects: false`
-- **Some / None** — not Ok/Err; do not use Maybe for parse/IO/auth failures
-- Optional `@onrails/result/interop` bridge (`toResult`, `fromResult`)
+- Same runtime model as `@onrails/result`: `{ _tag }` variants, dual-form module functions, `sideEffects: false`.
+- **Some / None** — not Ok/Err. Do not use Maybe for parse/IO/auth failures.
+- Optional `@onrails/maybe/interop` bridge (`toResult`, `fromResult`) keyed on `@onrails/result`.
 
 ## Runtime model
 
@@ -22,20 +22,17 @@ type Maybe<T> =
 |--------|-------|
 | `ok` / `err` | `some` / `none` |
 | `of` | `of` (= `some`) |
-| `map` / `mapResult` | `map` / `mapMaybe` |
-| `flatMap` / `andThen` | `flatMap` / `andThen` |
-| `match` | `match` (`{ some, none }` handlers) |
+| `map` (dual) | `map` (dual) |
+| `flatMap` (dual) | `flatMap` (dual) |
+| `match` (positional, dual) | `match` (positional, dual) |
+| `matchResult` | `matchMaybe` (collision-free alias) |
 | `unwrapOr` | `unwrapOr` (= `getOrElse`) |
 | — | `compactMap` (`compact` ∘ `map`) |
 | — | `optional` (`flatMap` ∘ `fromNullable`) |
 
-## vs RecallOS `Maybe`
-
-RecallOS used `Result<T, None>` via neverthrow compat. This package is a **standalone** optional type with the same ergonomics (`fromNullable`, `match`, `compact`, `toResult`) and onrails `_tag` naming.
-
 ## Type tests
 
-`test/types.spec.ts` uses `ts-expect` (`expectType` + `TypeEqual`) like styled-cva — compile-time assertions, no runtime cost.
+`test/types.spec.ts` uses `ts-expect` (`expectType` + `TypeEqual`) — compile-time assertions, no runtime cost.
 
 ## Exports
 
@@ -47,5 +44,4 @@ RecallOS used `Result<T, None>` via neverthrow compat. This package is a **stand
 
 ## Deferred
 
-- `compat` shim for RecallOS `Result<T, None>` call sites
-- Fantasy Land instances
+- Fantasy Land instances.
