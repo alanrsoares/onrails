@@ -1,0 +1,19 @@
+// @onrails/biome-plugin: no-unsafe-unwrap
+//
+// Flag `._unsafeUnwrap()` and `._unsafeUnwrapErr()` calls — they throw
+// on the unhappy branch and bypass railway semantics. Prefer `match`,
+// `resolve`, or `yieldResult` inside `tryGen`.
+
+engine biome(1.0)
+language js
+
+or {
+  `$_._unsafeUnwrap()` as $call,
+  `$_._unsafeUnwrapErr()` as $call
+} where {
+  register_diagnostic(
+    span = $call,
+    message = "Avoid _unsafeUnwrap* — use match(), resolve(), or yieldResult() in tryGen.",
+    severity = "warn"
+  )
+}
