@@ -9,6 +9,8 @@ This skill documents the intended ergonomic layers for `@onrails/result`.
 
 The goal is expressive safe code without exposing plumbing at every composition site. Low-level `Result` and `ResultAsync` remain the foundation. Higher-level workflow syntax exists only where it makes complex service code easier to read.
 
+> Below the workflow-builder layer — pipe/flow point-free composition, dual-form transforms, the closure ladder — see the [`result-composition`](../result-composition/SKILL.md) skill.
+
 ## Decision Tree
 
 Use the smallest layer that makes the code clear:
