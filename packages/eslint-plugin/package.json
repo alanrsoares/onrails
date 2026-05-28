@@ -1,6 +1,6 @@
 {
   "name": "@onrails/eslint-plugin",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "ESLint rules for @onrails/result boundaries — flags Promise<Result<…>> in public APIs and _unsafeUnwrap*. Replaces unmaintained eslint-plugin-neverthrow.",
   "license": "MIT",
   "author": "Alan R. Soares",
@@ -35,7 +35,11 @@
   "exports": {
     ".": "./src/index.js"
   },
-  "files": ["src", "README.md", "LICENSE"],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "peerDependencies": {
     "eslint": "^10.4.0"
   },

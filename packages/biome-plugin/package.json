@@ -1,6 +1,6 @@
 {
   "name": "@onrails/biome-plugin",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Biome GritQL plugin: boundary diagnostics for @onrails/result (Promise<Result<…>>, _unsafeUnwrap*).",
   "license": "MIT",
@@ -11,7 +11,9 @@
     "url": "git+https://github.com/alanrsoares/onrails.git",
     "directory": "packages/biome-plugin"
   },
-  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "bugs": {
+    "url": "https://github.com/alanrsoares/onrails/issues"
+  },
   "keywords": [
     "biome",
     "biome-plugin",
@@ -21,12 +23,19 @@
     "boundary",
     "lint"
   ],
-  "engines": { "node": ">=18", "bun": ">=1.0" },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.0"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
   },
-  "files": ["rules", "README.md", "LICENSE"],
+  "files": [
+    "rules",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     "./rules/no-promise-result.grit": "./rules/no-promise-result.grit",
     "./rules/no-unsafe-unwrap.grit": "./rules/no-unsafe-unwrap.grit"
