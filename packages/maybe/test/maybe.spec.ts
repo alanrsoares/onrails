@@ -3,13 +3,12 @@ import {
   andThen,
   compact,
   compactMap,
-  flatMapMaybe,
+  flatMap,
   fromNullable,
-  fromThrowable,
   getOrElse,
   isNone,
   isSome,
-  mapMaybe,
+  map,
   match,
   none,
   of,
@@ -32,39 +31,29 @@ describe("Maybe", () => {
     expect(isNone(fromNullable(undefined))).toBe(true);
   });
 
-  it("fromThrowable", () => {
-    const m = fromThrowable(() => 1);
-    expect(isSome(m) && m.value).toBe(1);
-    expect(
-      isNone(
-        fromThrowable(() => {
-          throw new Error("boom");
-        }),
-      ),
-    ).toBe(true);
-  });
-
   it("map / flatMap / andThen", () => {
-    const mapped = mapMaybe(some(2), (n) => n + 1);
+    const mapped = map(some(2), (n) => n + 1);
     expect(isSome(mapped) && mapped.value).toBe(3);
-    expect(isNone(mapMaybe(none<number>(), (n) => n + 1))).toBe(true);
-    const chained = flatMapMaybe(some(2), (n) => some(String(n)));
+    expect(isNone(map(none<number>(), (n) => n + 1))).toBe(true);
+    const chained = flatMap(some(2), (n) => some(String(n)));
     expect(isSome(chained) && chained.value).toBe("2");
     expect(isNone(andThen(none<number>(), () => some("x")))).toBe(true);
   });
 
   it("match", () => {
     expect(
-      match(some(1), {
-        some: (v) => v + 1,
-        none: () => 0,
-      }),
+      match(
+        some(1),
+        (v) => v + 1,
+        () => 0,
+      ),
     ).toBe(2);
     expect(
-      match(none<number>(), {
-        some: () => 1,
-        none: () => 0,
-      }),
+      match(
+        none<number>(),
+        () => 1,
+        () => 0,
+      ),
     ).toBe(0);
   });
 

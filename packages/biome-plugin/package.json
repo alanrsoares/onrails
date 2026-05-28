@@ -1,0 +1,45 @@
+{
+  "name": "@onrails/biome-plugin",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Biome GritQL plugin: boundary diagnostics for @onrails/result (Promise<Result<…>>, _unsafeUnwrap*).",
+  "license": "MIT",
+  "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/biome-plugin#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git",
+    "directory": "packages/biome-plugin"
+  },
+  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "keywords": [
+    "biome",
+    "biome-plugin",
+    "gritql",
+    "result",
+    "onrails",
+    "boundary",
+    "lint"
+  ],
+  "engines": { "node": ">=18", "bun": ">=1.0" },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": ["rules", "README.md", "LICENSE"],
+  "exports": {
+    "./rules/no-promise-result.grit": "./rules/no-promise-result.grit",
+    "./rules/no-unsafe-unwrap.grit": "./rules/no-unsafe-unwrap.grit"
+  },
+  "scripts": {
+    "typecheck": "echo 'noop (grit files only)'",
+    "test": "bun test",
+    "check": "bun test"
+  },
+  "peerDependencies": {
+    "@biomejs/biome": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15"
+  }
+}

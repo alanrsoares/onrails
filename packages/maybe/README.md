@@ -15,10 +15,11 @@ import { compactMap, fromNullable, isSome, match, some } from "@onrails/maybe";
 
 const row = fromNullable(db.get(id));
 
-const name = match(row, {
-  some: (r) => r.name,
-  none: () => "guest",
-});
+const name = match(
+  row,
+  (r) => r.name,
+  () => "guest",
+);
 ```
 
 ## Result boundary

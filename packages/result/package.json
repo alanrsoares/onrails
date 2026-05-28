@@ -31,7 +31,7 @@
   },
   "type": "module",
   "sideEffects": false,
-  "files": ["src", "DESIGN.md", "README.md", "LICENSE"],
+  "files": ["src", "DESIGN.md", "README.md", "RECIPES.md", "LICENSE"],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -64,6 +64,10 @@
     "./try-gen": {
       "types": "./src/try-gen.ts",
       "default": "./src/try-gen.ts"
+    },
+    "./validation": {
+      "types": "./src/validation.ts",
+      "default": "./src/validation.ts"
     },
     "./compat/neverthrow": {
       "types": "./src/compat/neverthrow.ts",

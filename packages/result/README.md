@@ -32,6 +32,25 @@ const pipeline = flatMapResult(parse('{"v":1}'), (data) => ok(data.v));
 
 Long chains: `fluent()` from `@onrails/result/fluent` or `flatMapResult` (not curried `flatMap`) for TS inference.
 
+For worked examples of multi-step pipelines, parser builders, validator ladders, and parallel sub-workflows see [RECIPES.md](./RECIPES.md).
+
+## When to use what
+
+| Shape                              | Reach for                                                            |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| One or two sync steps              | `flatMapResult`, `mapResult`, `match`                                |
+| One or two async steps             | `ResultAsync.flatMap`, `asyncAfter`                                  |
+| Long sync chain, value-first        | `pipe(r, map(...), flatMap(...), ...)`                              |
+| Long sync chain, dot-style preferred | `fluent(r)` from `@onrails/result/fluent`                          |
+| Reusable composed function          | `flow(...)` from `@onrails/result/pipe`                             |
+| Several named sync/async steps     | `Railway.*` (fluent) or `railway(...)` (functional, reusable steps)  |
+| Linear sync with early-return feel | `tryGen` + `$` from `@onrails/result/try-gen`                        |
+| Independent validations, accumulated failures | `validateAll` / `validateTuple` from `@onrails/result/validation` |
+| Sync → async lift, keep error type | `fromResult`, `asyncAfter` (do **not** use `fromAsync` here)         |
+| `Promise<Result<…>>` boundary lift | `fromAsync` / `tryAsync`                                             |
+
+Rule of thumb: pick the smallest tool that removes nesting. Reach for `Railway` only when named context replaces positional tuple plumbing.
+
 ## Sync → async boundaries
 
 Use `fromResult` when a sync `Result` needs to enter a `ResultAsync` pipeline without widening the error channel:
@@ -100,7 +119,6 @@ async function getItem(): Promise<Result<{ id: string }, HttpError>> {
 export const getItemAsync = fromAsync(getItem);
 ```
 
-Aliases: `fromPromiseResult`, `makeResultAsync`, `resultAsyncFn` (neverthrow [#514](https://github.com/supermacro/neverthrow/issues/514) / [#608](https://github.com/supermacro/neverthrow/issues/608)).
 
 ## Awaitable `ResultAsync`
 
@@ -155,12 +173,12 @@ const out = tryGen(() => {
 });
 ```
 
-Use `combineTupleAsync` when combining heterogeneous async results and destructuring the result:
+Use `sequenceTupleAsync` (or `parallelTupleAsync` when branches should overlap) when combining heterogeneous async results and destructuring the result:
 
 ```ts
-import { combineTupleAsync } from "@onrails/result";
+import { sequenceTupleAsync } from "@onrails/result";
 
-const combined = combineTupleAsync([
+const combined = sequenceTupleAsync([
   loadSettings(),
   loadModelCatalog(),
 ] as const);
@@ -247,7 +265,25 @@ const summary = railway(
 ## Pipe
 
 ```ts
-import { flow, pipeResult } from "@onrails/result/pipe";
+import { pipe } from "@onrails/result";
+import { flow } from "@onrails/result/pipe";
+
+// Value-first variadic pipe — threads a starting value through unary steps.
+const name = pipe(
+  parseConfig(raw),
+  map((cfg) => cfg.user),
+  flatMap((u) => (u.name ? ok(u.name) : err({ kind: "missing" }))),
+  recover((e) => (e.kind === "missing" ? ok("anon") : err(e))),
+  tap((n) => log(n)),
+);
+
+// Variadic point-free composition — define a reusable pipeline.
+const parseUserName = flow(
+  (raw: string) => parseConfig(raw),
+  map((cfg) => cfg.user),
+  flatMap((u) => (u.name ? ok(u.name) : err({ kind: "missing" }))),
+);
+parseUserName(raw);
 ```
 
 ## ESLint
@@ -279,7 +315,7 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result/extra` | Error-type utilities |
 | `@onrails/result/interop` | `fromAsync`, `fromResult`, `asyncAfter` |
 | `@onrails/result/mcp` | MCP / openapi-fetch helpers |
-| `@onrails/result/pipe` | `flow`, `pipeResult` |
+| `@onrails/result/pipe` | `flow` (variadic point-free composition) |
 | `@onrails/result/railway` | `Railway`, `railway`, named workflow helpers |
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |
 | `@onrails/result/compat/neverthrow` | Migration shim |
