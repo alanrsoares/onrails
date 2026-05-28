@@ -1,6 +1,6 @@
 {
   "name": "@onrails/pattern",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Lightweight exhaustive matching for owned tagged unions — ts-pattern-shaped DX, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
@@ -10,7 +10,9 @@
     "url": "git+https://github.com/alanrsoares/onrails.git",
     "directory": "packages/pattern"
   },
-  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "bugs": {
+    "url": "https://github.com/alanrsoares/onrails/issues"
+  },
   "keywords": [
     "pattern-matching",
     "exhaustive",
@@ -20,7 +22,10 @@
     "bun",
     "functional"
   ],
-  "engines": { "node": ">=18", "bun": ">=1.0" },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.0"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -30,7 +35,12 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "DESIGN.md", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "DESIGN.md",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

@@ -1,8 +1,8 @@
 {
-  "packages/result": "0.0.0",
-  "packages/maybe": "0.0.0",
-  "packages/pattern": "0.0.0",
-  "packages/codemod": "0.0.0",
-  "packages/eslint-plugin": "0.0.0",
-  "packages/biome-plugin": "0.0.0"
+  "packages/result": "1.0.0",
+  "packages/maybe": "1.0.0",
+  "packages/pattern": "1.0.0",
+  "packages/codemod": "1.0.0",
+  "packages/eslint-plugin": "1.0.0",
+  "packages/biome-plugin": "1.0.0"
 }

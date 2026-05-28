@@ -1,6 +1,6 @@
 {
   "name": "@onrails/result",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Tagged Result / ResultAsync for railway-oriented TypeScript — pure tagged unions, neverthrow-shaped compat shim, FL-friendly",
   "license": "MIT",
   "author": "Alan R. Soares",
@@ -10,7 +10,9 @@
     "url": "git+https://github.com/alanrsoares/onrails.git",
     "directory": "packages/result"
   },
-  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "bugs": {
+    "url": "https://github.com/alanrsoares/onrails/issues"
+  },
   "keywords": [
     "result",
     "neverthrow",
@@ -24,7 +26,10 @@
     "bun",
     "functional"
   ],
-  "engines": { "node": ">=18", "bun": ">=1.0" },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.0"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -34,7 +39,13 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "DESIGN.md", "README.md", "RECIPES.md", "LICENSE"],
+  "files": [
+    "dist",
+    "DESIGN.md",
+    "README.md",
+    "RECIPES.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
