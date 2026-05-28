@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "onrails",
+  "entryPointStrategy": "packages",
+  "entryPoints": ["packages/result", "packages/maybe", "packages/pattern"],
+  "out": "docs",
+  "includeVersion": true,
+  "readme": "README.md",
+  "categorizeByGroup": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/alanrsoares/onrails",
+    "npm": "https://www.npmjs.com/org/onrails"
+  },
+  "githubPages": true,
+  "hideGenerator": false
+}

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts", "src/fluent.ts", "src/interop.ts"],
+  "entryPointStrategy": "expand",
+  "readme": "README.md"
+}

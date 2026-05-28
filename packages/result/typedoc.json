@@ -1,0 +1,17 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "src/index.ts",
+    "src/fluent.ts",
+    "src/extra.ts",
+    "src/interop.ts",
+    "src/mcp.ts",
+    "src/pipe.ts",
+    "src/railway.ts",
+    "src/try-gen.ts",
+    "src/validation.ts",
+    "src/compat/neverthrow.ts"
+  ],
+  "entryPointStrategy": "expand",
+  "readme": "README.md"
+}
