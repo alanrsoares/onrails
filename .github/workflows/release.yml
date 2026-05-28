@@ -32,12 +32,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: result,        path: packages/result,        build: true  }
-          - { name: maybe,         path: packages/maybe,         build: true  }
-          - { name: pattern,       path: packages/pattern,       build: true  }
-          - { name: codemod,       path: packages/codemod,       build: false }
-          - { name: eslint-plugin, path: packages/eslint-plugin, build: false }
-          - { name: biome-plugin,  path: packages/biome-plugin,  build: false }
+          - { name: result,        path: packages/result,        build: true,  needs_result: false }
+          - { name: maybe,         path: packages/maybe,         build: true,  needs_result: true  }
+          - { name: pattern,       path: packages/pattern,       build: true,  needs_result: false }
+          - { name: codemod,       path: packages/codemod,       build: false, needs_result: false }
+          - { name: eslint-plugin, path: packages/eslint-plugin, build: false, needs_result: false }
+          - { name: biome-plugin,  path: packages/biome-plugin,  build: false, needs_result: false }
     steps:
       - id: gate
         env:
@@ -58,6 +58,9 @@ jobs:
           bun-version: latest
       - if: steps.gate.outputs.released == 'true'
         run: bun install --frozen-lockfile
+      - if: steps.gate.outputs.released == 'true' && matrix.needs_result
+        name: Build @onrails/result (provides .d.ts for downstream dts)
+        run: bun run --filter '@onrails/result' build
       - if: steps.gate.outputs.released == 'true' && matrix.build
         name: Build ${{ matrix.name }}
         working-directory: ${{ matrix.path }}
