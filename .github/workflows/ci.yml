@@ -21,6 +21,8 @@ jobs:
           bun-version: latest
       - name: Install
         run: bun install --frozen-lockfile
+      - name: Build TS packages (publishes dist/ for cross-package type resolution)
+        run: bun run --filter '@onrails/result' --filter '@onrails/maybe' --filter '@onrails/pattern' build
       - name: Typecheck
         run: bun run typecheck
       - name: Lint
