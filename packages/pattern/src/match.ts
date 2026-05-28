@@ -1,6 +1,24 @@
 import type { ExhaustiveResult, ExhaustMatched } from "./exhaustive.js";
 import type { Narrow, NarrowUnion } from "./narrow.js";
 
+/**
+ * A pattern that matches a value of type `T`. One of:
+ *
+ * - **Literal** — a primitive (`"a"`, `42`, `true`) matched by `===`.
+ * - **Object pattern** — a `Partial<T>` of shallow key/value pairs that
+ *   must all match by strict equality. Only available when `T` is an
+ *   object type.
+ * - **Guard** — a function `(input: T) => boolean`. Type predicates
+ *   (`(x): x is U`) narrow the handler input via {@link Narrow}.
+ *
+ * @example
+ * ```ts
+ * type Event = { kind: "click"; x: number } | { kind: "key"; code: string };
+ *
+ * const p1: Pattern<Event> = { kind: "click" };         // object pattern
+ * const p2: Pattern<Event> = (e) => e.kind === "key";   // guard
+ * ```
+ */
 export type Pattern<T> = T | ObjectPattern<T> | PatternGuard<T>;
 
 // Shallow partial of `T`; restricted to object types so primitive `T`
@@ -72,6 +90,23 @@ type NextResult<Locked extends boolean, R, R2> = Locked extends true ? R : R | R
 // when open, the handler can return any type and the result widens to include it.
 type HandlerReturn<Locked extends boolean, R, R2> = Locked extends true ? R : R2;
 
+/**
+ * Fluent builder for {@link match}. Tracks the handled cases at the type
+ * level so `.exhaustive()` only compiles when every union member is covered.
+ *
+ * The `Locked` phantom flag (set via `.returnType<R>()`) constrains every
+ * subsequent handler to return `R`, useful when branch return-type
+ * inference would widen to a union narrower than the target slot
+ * (e.g. `ReactNode`, an API DTO).
+ *
+ * @example
+ * ```ts
+ * const describe = match<Event>()
+ *   .with({ kind: "click" }, (e) => `click @ ${e.x},${e.y}`)
+ *   .with({ kind: "key" },   (e) => `key ${e.code}`)
+ *   .exhaustive();
+ * ```
+ */
 export class MatchBuilder<
   T,
   R = never,
@@ -190,6 +225,29 @@ export type LockedMatchBuilder<
   Handled extends readonly unknown[] = [],
 > = MatchBuilder<T, R, HasInput, Handled, true>;
 
+/**
+ * Start a pattern-matching expression. Two call shapes:
+ *
+ * - `match(value)` — data-first; subsequent `.exhaustive()` or
+ *   `.otherwise(fn)` runs immediately against `value`.
+ * - `match<T>()` — curried; subsequent `.exhaustive()` returns a function
+ *   `(value: T) => R` for use in `pipe(...)` or as a reusable matcher.
+ *
+ * @example
+ * ```ts
+ * // Data-first
+ * const out = match({ kind: "click", x: 1, y: 2 } as Event)
+ *   .with({ kind: "click" }, (e) => e.x + e.y)
+ *   .with({ kind: "key" },   () => -1)
+ *   .exhaustive();
+ *
+ * // Curried — build a reusable matcher
+ * const describe = match<Event>()
+ *   .with({ kind: "click" }, (e) => `click @ ${e.x},${e.y}`)
+ *   .with({ kind: "key" },   (e) => `key ${e.code}`)
+ *   .exhaustive();
+ * ```
+ */
 export function match<T>(input: T): MatchBuilder<T, never, true>;
 export function match<T = never>(): MatchBuilder<T, never, false>;
 export function match<T>(input?: T): MatchBuilder<T, never, boolean> {

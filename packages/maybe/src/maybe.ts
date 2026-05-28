@@ -2,17 +2,56 @@ import type { Maybe, None, Some } from "./types.js";
 
 export type { Maybe, None, Some } from "./types.js";
 
+/**
+ * Lifts a value into the `Some` branch.
+ *
+ * @example
+ * ```ts
+ * const m = some(1);   // Maybe<number>
+ * ```
+ */
 export const some = <T>(value: T): Maybe<T> => ({ _tag: "Some", value });
 
-/** Fantasy Land `of` */
+/** Fantasy Land `of` — alias of {@link some}. */
 export const of = some;
 
+/**
+ * The `None` value — represents expected absence. Not a failure.
+ *
+ * @example
+ * ```ts
+ * const cached: Maybe<User> = cache.has(id) ? some(cache.get(id)) : none();
+ * ```
+ */
 export const none = <T = never>(): Maybe<T> => ({ _tag: "None" });
 
+/**
+ * Type-narrowing predicate: returns `true` when the value is `Some`.
+ *
+ * @example
+ * ```ts
+ * if (isSome(m)) {
+ *   console.log(m.value);   // narrowed to Some branch
+ * }
+ * ```
+ */
 export const isSome = <T>(maybe: Maybe<T>): maybe is Some<T> => maybe._tag === "Some";
 
+/**
+ * Type-narrowing predicate: returns `true` when the value is `None`.
+ */
 export const isNone = <T>(maybe: Maybe<T>): maybe is None => maybe._tag === "None";
 
+/**
+ * Lift a nullable value into `Maybe<T>` — `null` and `undefined` become
+ * `None`; anything else becomes `Some`.
+ *
+ * @example
+ * ```ts
+ * fromNullable(map.get(key));     // Maybe<V>
+ * fromNullable(null);             // None
+ * ```
+ */
 export const fromNullable = <T>(value: T | null | undefined): Maybe<T> =>
   value == null ? none<T>() : some(value);
 
@@ -25,6 +64,15 @@ export const fromNullable = <T>(value: T | null | undefined): Maybe<T> =>
 const mapImpl = <T, U>(maybe: Maybe<T>, fn: (value: T) => U): Maybe<U> =>
   isSome(maybe) ? some(fn(maybe.value)) : none<U>();
 
+/**
+ * Transform the `Some` value, passing `None` through unchanged. Dual-form.
+ *
+ * @example
+ * ```ts
+ * map(some(2), (n) => n * 3);                      // Some 6 — data-first
+ * pipe(fromNullable(input), map((s) => s.trim())); // curried
+ * ```
+ */
 export function map<T, U>(maybe: Maybe<T>, fn: (value: T) => U): Maybe<U>;
 export function map<T, U>(fn: (value: T) => U): (maybe: Maybe<T>) => Maybe<U>;
 export function map(
@@ -38,6 +86,17 @@ export function map(
 const flatMapImpl = <T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U> =>
   isSome(maybe) ? fn(maybe.value) : none<U>();
 
+/**
+ * Canonical bind for `Maybe`. Chains a `Maybe`-returning step;
+ * short-circuits on `None`. Dual-form.
+ *
+ * @example
+ * ```ts
+ * flatMap(fromNullable(user), (u) =>
+ *   u.active ? some(u) : none(),
+ * );
+ * ```
+ */
 export function flatMap<T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U>;
 export function flatMap<T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U>;
 export function flatMap(
@@ -56,6 +115,22 @@ export const andThen = flatMap;
 const matchImpl = <T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U =>
   isSome(maybe) ? onSome(maybe.value) : onNone();
 
+/**
+ * Terminal collapse — fold both branches into a single value. Positional,
+ * dual-form. Same shape as `Result.match` for sibling consistency.
+ *
+ * For files that also import `match` from `ts-pattern`, the alias
+ * {@link matchMaybe} is identical.
+ *
+ * @example
+ * ```ts
+ * const greeting = match(
+ *   fromNullable(user),
+ *   (u) => `hello ${u.name}`,
+ *   () => "hello guest",
+ * );
+ * ```
+ */
 export function match<T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U;
 export function match<T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U;
 export function match(
@@ -71,12 +146,30 @@ export function match(
 /** Collision-free alias — mirrors `matchResult` on `@onrails/result`. */
 export const matchMaybe = match;
 
+/**
+ * Returns the `Some` value, or `defaultValue` when the value is `None`.
+ *
+ * @example
+ * ```ts
+ * getOrElse(fromNullable(user), { name: "guest" });
+ * ```
+ */
 export const getOrElse = <T>(maybe: Maybe<T>, defaultValue: T): T =>
   isSome(maybe) ? maybe.value : defaultValue;
 
-/** Alias — mirrors `@onrails/result` {@link unwrapOr} */
+/** Alias — mirrors `@onrails/result` `unwrapOr`. Same as {@link getOrElse}. */
 export const unwrapOr = getOrElse;
 
+/**
+ * Unwraps the `Some` value or throws if the value is `None`. Use in tests
+ * or at the boundary of an assertion; prefer `match` / `getOrElse` in
+ * production code paths.
+ *
+ * @example
+ * ```ts
+ * expect(unwrap(parseUser(raw))).toEqual(expected);
+ * ```
+ */
 export const unwrap = <T>(maybe: Maybe<T>): T => {
   if (isNone(maybe)) {
     throw new Error("Called unwrap on None");
@@ -84,6 +177,14 @@ export const unwrap = <T>(maybe: Maybe<T>): T => {
   return maybe.value;
 };
 
+/**
+ * Drop every `None` and collect the remaining `Some` values into an array.
+ *
+ * @example
+ * ```ts
+ * compact([some(1), none(), some(2)]);    // [1, 2]
+ * ```
+ */
 export const compact = <T>(maybes: readonly Maybe<T>[]): T[] => {
   const out: T[] = [];
   for (const m of maybes) {
@@ -94,10 +195,29 @@ export const compact = <T>(maybes: readonly Maybe<T>[]): T[] => {
   return out;
 };
 
-/** `compact(items.map(fn))` — map to Maybe, drop None. */
+/**
+ * `compact(items.map(fn))` — map each item to `Maybe`, drop `None`,
+ * collect the rest.
+ *
+ * @example
+ * ```ts
+ * compactMap(rawRows, (row) =>
+ *   row.deletedAt ? none() : some(row.id),
+ * );
+ * // string[]
+ * ```
+ */
 export const compactMap = <T, U>(items: readonly T[], fn: (item: T) => Maybe<U>): U[] =>
   compact(items.map(fn));
 
-/** `flatMapMaybe(fromNullable(value), fn)` — lift nullable then bind. */
+/**
+ * `flatMap(fromNullable(value), fn)` — lift a nullable then bind through
+ * a `Maybe`-returning step. Convenient for chaining lookups.
+ *
+ * @example
+ * ```ts
+ * optional(rawId, (id) => fromNullable(cache.get(id)));
+ * ```
+ */
 export const optional = <T, U>(value: T | null | undefined, fn: (value: T) => Maybe<U>): Maybe<U> =>
   flatMapImpl(fromNullable(value), fn);
