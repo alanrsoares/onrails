@@ -68,6 +68,15 @@ bunx @onrails/codemod /path/to/your-repo
 
 See [`packages/result/README.md`](./packages/result/README.md#migration-from-neverthrow) for the compat surface and chain-by-chain mapping.
 
+Once the compat shim compiles, start the native migration:
+
+```bash
+bunx @onrails/codemod /path/to/your-repo --to-native --dry
+```
+
+This rewrites safe compat imports to `@onrails/result` and reports TODO lines
+for compat-only method chains that need manual or future AST-codemod follow-up.
+
 ## Status
 
 Experimental. Versions stay in `0.x` until the public API + compat surface settle. Released and tagged per-package via [release-please](https://github.com/googleapis/release-please-action).

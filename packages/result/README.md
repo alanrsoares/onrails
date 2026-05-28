@@ -2,10 +2,10 @@
 
 Tagged `Result` / `ResultAsync` for railway-oriented TypeScript. Pure tagged unions, neverthrow-shaped compat shim, FL-friendly.
 
-## Install (local — pre-publish)
+## Install
 
 ```bash
-bun add @onrails/result@file:../onrails/packages/result
+bun add @onrails/result
 ```
 
 ## Quick start (value-first — best inference)
