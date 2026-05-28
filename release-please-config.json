@@ -31,6 +31,11 @@
       "package-name": "@onrails/eslint-plugin",
       "component": "eslint-plugin",
       "changelog-path": "CHANGELOG.md"
+    },
+    "packages/biome-plugin": {
+      "package-name": "@onrails/biome-plugin",
+      "component": "biome-plugin",
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": ["node-workspace"]

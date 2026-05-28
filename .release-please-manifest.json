@@ -3,5 +3,6 @@
   "packages/maybe": "0.0.0",
   "packages/pattern": "0.0.0",
   "packages/codemod": "0.0.0",
-  "packages/eslint-plugin": "0.0.0"
+  "packages/eslint-plugin": "0.0.0",
+  "packages/biome-plugin": "0.0.0"
 }

@@ -31,56 +31,73 @@
   },
   "type": "module",
   "sideEffects": false,
-  "files": ["src", "DESIGN.md", "README.md", "RECIPES.md", "LICENSE"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "DESIGN.md", "README.md", "RECIPES.md", "LICENSE"],
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./fluent": {
-      "types": "./src/fluent.ts",
-      "default": "./src/fluent.ts"
+      "types": "./dist/fluent.d.ts",
+      "import": "./dist/fluent.js",
+      "require": "./dist/fluent.cjs"
     },
     "./extra": {
-      "types": "./src/extra.ts",
-      "default": "./src/extra.ts"
+      "types": "./dist/extra.d.ts",
+      "import": "./dist/extra.js",
+      "require": "./dist/extra.cjs"
     },
     "./interop": {
-      "types": "./src/interop.ts",
-      "default": "./src/interop.ts"
+      "types": "./dist/interop.d.ts",
+      "import": "./dist/interop.js",
+      "require": "./dist/interop.cjs"
     },
     "./mcp": {
-      "types": "./src/mcp.ts",
-      "default": "./src/mcp.ts"
+      "types": "./dist/mcp.d.ts",
+      "import": "./dist/mcp.js",
+      "require": "./dist/mcp.cjs"
     },
     "./pipe": {
-      "types": "./src/pipe.ts",
-      "default": "./src/pipe.ts"
+      "types": "./dist/pipe.d.ts",
+      "import": "./dist/pipe.js",
+      "require": "./dist/pipe.cjs"
     },
     "./railway": {
-      "types": "./src/railway.ts",
-      "default": "./src/railway.ts"
+      "types": "./dist/railway.d.ts",
+      "import": "./dist/railway.js",
+      "require": "./dist/railway.cjs"
     },
     "./try-gen": {
-      "types": "./src/try-gen.ts",
-      "default": "./src/try-gen.ts"
+      "types": "./dist/try-gen.d.ts",
+      "import": "./dist/try-gen.js",
+      "require": "./dist/try-gen.cjs"
     },
     "./validation": {
-      "types": "./src/validation.ts",
-      "default": "./src/validation.ts"
+      "types": "./dist/validation.d.ts",
+      "import": "./dist/validation.js",
+      "require": "./dist/validation.cjs"
     },
     "./compat/neverthrow": {
-      "types": "./src/compat/neverthrow.ts",
-      "default": "./src/compat/neverthrow.ts"
+      "types": "./dist/compat/neverthrow.d.ts",
+      "import": "./dist/compat/neverthrow.js",
+      "require": "./dist/compat/neverthrow.cjs"
     }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check": "bun typecheck && bun test"
+    "check": "bun typecheck && bun test",
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "fast-check": "^3.23.2",
-    "ts-expect": "^1.3.0"
+    "ts-expect": "^1.3.0",
+    "tsup": "^8.5.1"
   }
 }
