@@ -35,6 +35,7 @@ export {
   type InferErr,
   type InferOk,
 } from "./interop.js";
+export { flow } from "./pipe.js";
 export {
   bimap,
   combine,
@@ -59,7 +60,6 @@ export {
   unwrapOk,
   unwrapOr,
 } from "./result.js";
-
 export { $, tryGen, yieldResult } from "./try-gen.js";
 
 export type { Err, Ok, Result, UnexpectedError } from "./types.js";

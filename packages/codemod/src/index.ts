@@ -3,14 +3,15 @@ import { relative, resolve } from "node:path";
 import {
   compactMap,
   fromNullable,
+  isSome,
   type Maybe,
   match as matchMaybe,
   none,
   some,
 } from "@onrails/maybe";
-import { match as matchResult, type Result, trySync } from "@onrails/result";
+import { flow, match as matchResult, type Result, trySync } from "@onrails/result";
 import { Glob } from "bun";
-import * as ts from "typescript";
+import ts from "typescript";
 
 type Mode = "compat" | "native";
 type Args = { target: string; dry: boolean; onrails: string; mode: Mode };
@@ -23,8 +24,8 @@ const NATIVE_SPEC = "@onrails/result";
 const DEP_KEYS = ["dependencies", "devDependencies", "peerDependencies"] as const;
 const TYPE_ONLY_NATIVE = new Set(["Result", "Ok", "Err", "UnexpectedError"]);
 const COMPAT_ONLY_PATTERNS = [
-  { pattern: /\bResult\.(combine|fromThrowable)\b/g, label: "Result static helper" },
-  { pattern: /\._unsafeUnwrap(Err)?\s*\(/g, label: "unsafe compat unwrap" },
+  { pattern: /\bResult\.(combine|fromThrowable)\b/, label: "Result static helper" },
+  { pattern: /\._unsafeUnwrap(Err)?\s*\(/, label: "unsafe compat unwrap" },
 ] as const;
 const RESULT_SPECIFIC_CHAIN_METHODS = new Set([
   "andThen",
@@ -64,29 +65,42 @@ const UNSAFE_UNWRAP_METHODS = new Map([
   ["_unsafeUnwrapErr", "unwrapErr"],
 ]);
 
+type ArgState = { positional: readonly string[]; dry: boolean; mode: Mode; onrails: string };
+
+const applyArg = (s: ArgState, a: string): ArgState =>
+  a === "--dry" || a === "-n"
+    ? { ...s, dry: true }
+    : a === "--to-native"
+      ? { ...s, mode: "native" }
+      : a.startsWith("--onrails=")
+        ? { ...s, onrails: resolve(a.slice("--onrails=".length)) }
+        : !a.startsWith("--")
+          ? { ...s, positional: [...s.positional, a] }
+          : s;
+
 function parseArgs(argv: string[]): Args {
-  const positional: string[] = [];
-  let dry = false;
-  let mode: Mode = "compat";
-  let onrails = resolve(import.meta.dir, "../../..", "packages/result");
-  for (const a of argv) {
-    if (a === "--dry" || a === "-n") dry = true;
-    else if (a === "--to-native") mode = "native";
-    else if (a.startsWith("--onrails=")) onrails = resolve(a.slice("--onrails=".length));
-    else if (!a.startsWith("--")) positional.push(a);
-  }
+  const initial: ArgState = {
+    positional: [],
+    dry: false,
+    mode: "compat",
+    onrails: resolve(import.meta.dir, "../../..", "packages/result"),
+  };
+  const { positional, dry, mode, onrails } = argv.reduce(applyArg, initial);
   if (positional.length !== 1) {
     console.error(
       "usage: onrails-codemod-neverthrow <target-dir> [--dry] [--to-native] [--onrails=<abs-path>]",
     );
     process.exit(2);
   }
-  return { target: resolve(positional[0] ?? "."), dry, onrails, mode };
+  return {
+    target: resolve(positional[0] ?? "."),
+    dry,
+    onrails,
+    mode,
+  };
 }
 
-function shouldSkip(path: string): boolean {
-  return path.split("/").some((seg) => SKIP.has(seg));
-}
+const shouldSkip = (path: string) => path.split("/").some((seg) => SKIP.has(seg));
 
 async function* walk(root: string): AsyncGenerator<string> {
   const glob = new Glob("**/*");
@@ -101,7 +115,7 @@ type FileChange = {
   before: number;
   after: number;
   changed: boolean;
-  warnings: Warning[];
+  warnings: readonly Warning[];
 };
 type Edit = { start: number; end: number; text: string; imports: readonly string[] };
 type ChainStep = { method: string; argsText: string; argCount: number };
@@ -113,6 +127,34 @@ const edit = (text: string, imports: readonly string[] = []): Edit => ({
   text,
   imports,
 });
+
+const lookupMap = <K, V, R>(m: Map<K, V>, k: K, f: (v: V) => R): Maybe<R> =>
+  matchMaybe(fromNullable(m.get(k)), (v) => some(f(v)), none);
+
+const concatCollectors =
+  <T, R>(...fns: Array<(t: T) => readonly R[]>) =>
+  (t: T): readonly R[] =>
+    fns.flatMap((f) => f(t));
+
+const walkSource = (src: string, visit: (node: ts.Node, sf: ts.SourceFile) => unknown): void => {
+  const sf = ts.createSourceFile("codemod.ts", src, ts.ScriptTarget.Latest, true);
+  const go = (n: ts.Node) => {
+    if (visit(n, sf)) return;
+    ts.forEachChild(n, go);
+  };
+  go(sf);
+};
+
+const spanEdit = (node: ts.Node, sf: ts.SourceFile, partial: Edit): Edit => ({
+  ...partial,
+  start: node.getStart(sf),
+  end: node.getEnd(),
+});
+
+const argsToText = (args: ts.NodeArray<ts.Expression>): string =>
+  args.map((a) => a.getText()).join(", ");
+
+const countOccurrences = (s: string, sub: string): number => s.split(sub).length - 1;
 
 const splitImportNames = (specifiers: string): readonly string[] =>
   specifiers
@@ -128,10 +170,12 @@ const importedName = (specifier: string): string =>
 const isTypeOnlyNative = (specifier: string): boolean =>
   specifier.startsWith("type ") || TYPE_ONLY_NATIVE.has(importedName(specifier));
 
+const isValueImport = (specifier: string): boolean => !isTypeOnlyNative(specifier);
+
 function toNativeImport(full: string, specifiers: string, quote: string): string {
   const imports = splitImportNames(specifiers);
   const typeNames = imports.filter(isTypeOnlyNative).map(stripInlineType);
-  const valueNames = imports.filter((name) => !isTypeOnlyNative(name));
+  const valueNames = imports.filter(isValueImport);
   const chunks: string[] = [];
 
   if (valueNames.length > 0) {
@@ -174,11 +218,7 @@ function isSupportedChainCall(node: ts.Node): node is ts.CallExpression {
 
 function helperCallToNative(node: ts.CallExpression): Maybe<Edit> {
   if (ts.isIdentifier(node.expression) && node.arguments.length === 0) {
-    return matchMaybe(
-      fromNullable(ZERO_ARG_HELPERS.get(node.expression.text)),
-      (text) => some(edit(text)),
-      none,
-    );
+    return lookupMap(ZERO_ARG_HELPERS, node.expression.text, (text) => edit(text));
   }
 
   if (!ts.isPropertyAccessExpression(node.expression)) return none();
@@ -187,19 +227,16 @@ function helperCallToNative(node: ts.CallExpression): Maybe<Edit> {
     .getText()
     .replaceAll(".andTee(", ".tap(")
     .replaceAll(".orTee(", ".tapErr(");
-  const argsText = node.arguments.map((arg) => arg.getText()).join(", ");
+  const argsText = argsToText(node.arguments);
 
-  const teeMethod = TEE_METHODS.get(method);
-  if (teeMethod) return some(edit(`${base}.${teeMethod}(${argsText})`));
+  const tee = lookupMap(TEE_METHODS, method, (t) => edit(`${base}.${t}(${argsText})`));
+  if (isSome(tee)) return tee;
 
   if (PREDICATE_METHODS.has(method)) {
     return some(edit(`${method}(${base})`, [method]));
   }
 
-  const unwrapMethod = UNSAFE_UNWRAP_METHODS.get(method);
-  if (unwrapMethod) return some(edit(`${unwrapMethod}(${base})`, [unwrapMethod]));
-
-  return none();
+  return lookupMap(UNSAFE_UNWRAP_METHODS, method, (u) => edit(`${u}(${base})`, [u]));
 }
 
 function isNestedInSupportedChain(node: ts.Node): boolean {
@@ -218,7 +255,7 @@ function collectChain(node: ts.CallExpression): { base: string; steps: ChainStep
     if (!CHAIN_METHODS.has(method) && !TERMINAL_METHODS.has(method)) break;
     steps.push({
       method,
-      argsText: current.arguments.map((arg) => arg.getText()).join(", "),
+      argsText: argsToText(current.arguments),
       argCount: current.arguments.length,
     });
     current = current.expression.expression;
@@ -233,24 +270,30 @@ function collectChain(node: ts.CallExpression): { base: string; steps: ChainStep
 const hasAsyncRootHint = (base: string): boolean =>
   ASYNC_ROOT_HINTS.some((hint) => base.includes(hint));
 
+const SAFE_BASE_PATTERNS = [/^(ok|err)\s*\(/, /^Result\./, /^[a-zA-Z_$][\w$]*$/] as const;
+
 const isSafeSyncChainBase = (base: string): boolean =>
-  /^(ok|err)\s*\(/.test(base) || /^Result\./.test(base) || /^[a-zA-Z_$][\w$]*$/.test(base);
+  SAFE_BASE_PATTERNS.some((re) => re.test(base));
+
+const isTerminalStep = (s: ChainStep): boolean => TERMINAL_METHODS.has(s.method);
+const isResultSpecificStep = (s: ChainStep): boolean => RESULT_SPECIFIC_CHAIN_METHODS.has(s.method);
+const isChainStep = (s: ChainStep): boolean => CHAIN_METHODS.has(s.method);
 
 function chainToNative(base: string, steps: readonly ChainStep[]): Maybe<Edit> {
   if (steps.length === 0 || hasAsyncRootHint(base)) return none();
-  const terminalStep = steps.find((step) => TERMINAL_METHODS.has(step.method));
+  const terminalStep = steps.find(isTerminalStep);
   if (!isSafeSyncChainBase(base)) return none();
-  if (!terminalStep && !steps.some((step) => RESULT_SPECIFIC_CHAIN_METHODS.has(step.method))) {
-    return none();
-  }
+  if (!terminalStep && !steps.some(isResultSpecificStep)) return none();
   if (terminalStep?.method === "match" && terminalStep.argCount !== 2) return none();
-  const pipelineSteps = steps.filter((step) => CHAIN_METHODS.has(step.method));
+  const pipelineSteps = steps.filter(isChainStep);
   const pipelineParts = compactMap(pipelineSteps, (step) =>
-    matchMaybe(
-      fromNullable(CHAIN_METHODS.get(step.method)),
-      (nativeName): Maybe<PipelinePart> =>
-        some({ importName: nativeName, text: `${nativeName}(${step.argsText})` }),
-      none,
+    lookupMap(
+      CHAIN_METHODS,
+      step.method,
+      (nativeName): PipelinePart => ({
+        importName: nativeName,
+        text: `${nativeName}(${step.argsText})`,
+      }),
     ),
   );
 
@@ -288,24 +331,15 @@ function addNativeValueImports(src: string, imports: readonly string[]): string 
 }
 
 export function rewriteCompatMethodChainsToNative(src: string): string {
-  const sourceFile = ts.createSourceFile("codemod.ts", src, ts.ScriptTarget.Latest, true);
   const edits: Edit[] = [];
 
-  const visit = (node: ts.Node): void => {
+  walkSource(src, (node, sf) => {
     if (ts.isCallExpression(node)) {
-      const handled = matchMaybe(
-        helperCallToNative(node),
-        (helperEdit) => {
-          edits.push({
-            ...helperEdit,
-            start: node.getStart(sourceFile),
-            end: node.getEnd(),
-          });
-          return true;
-        },
-        () => false,
-      );
-      if (handled) return;
+      const helper = helperCallToNative(node);
+      if (isSome(helper)) {
+        edits.push(spanEdit(node, sf, helper.value));
+        return true;
+      }
     }
 
     if (
@@ -314,125 +348,151 @@ export function rewriteCompatMethodChainsToNative(src: string): string {
       !ts.isPropertyAccessExpression(node.parent)
     ) {
       const chain = collectChain(node);
-      matchMaybe(
-        chainToNative(chain.base, chain.steps),
-        (edit) => {
-          edits.push({
-            ...edit,
-            start: node.getStart(sourceFile),
-            end: node.getEnd(),
-          });
-        },
-        () => undefined,
-      );
+      const chained = chainToNative(chain.base, chain.steps);
+      if (isSome(chained)) edits.push(spanEdit(node, sf, chained.value));
     }
+  });
 
-    ts.forEachChild(node, visit);
-  };
-
-  visit(sourceFile);
   if (edits.length === 0) return src;
 
-  let next = src;
-  const imports = new Set<string>();
-  for (const edit of edits.sort((a, b) => b.start - a.start)) {
-    next = `${next.slice(0, edit.start)}${edit.text}${next.slice(edit.end)}`;
-    for (const name of edit.imports) imports.add(name);
-  }
+  const { src: next, imports } = edits
+    .sort(byStartDesc)
+    .reduce(applyEditStep, { src, imports: new Set<string>() });
 
   return addNativeValueImports(next, [...imports]);
 }
 
-export function collectNativeMigrationWarnings(src: string): readonly Warning[] {
+type EditAcc = { src: string; imports: Set<string> };
+
+const byStartDesc = (a: Edit, b: Edit): number => b.start - a.start;
+
+const applyEditStep = (acc: EditAcc, e: Edit): EditAcc => ({
+  src: `${acc.src.slice(0, e.start)}${e.text}${acc.src.slice(e.end)}`,
+  imports: new Set([...acc.imports, ...e.imports]),
+});
+
+const collectRegexLineWarnings = (src: string): readonly Warning[] =>
+  src
+    .split(/\r?\n/)
+    .flatMap((line, i) =>
+      COMPAT_ONLY_PATTERNS.flatMap(({ pattern, label }) =>
+        pattern.test(line) ? [{ line: i + 1, label, text: line.trim() }] : [],
+      ),
+    );
+
+const collectAstCompatWarnings = (src: string): readonly Warning[] => {
   const warnings: Warning[] = [];
   const lines = src.split(/\r?\n/);
+  const lineTextAt = (sf: ts.SourceFile, node: ts.Node) => {
+    const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+    return { line, text: lines[line - 1]?.trim() ?? node.getText(sf) };
+  };
 
-  for (const [index, line] of lines.entries()) {
-    for (const { pattern, label } of COMPAT_ONLY_PATTERNS) {
-      pattern.lastIndex = 0;
-      if (pattern.test(line)) {
-        warnings.push({ line: index + 1, label, text: line.trim() });
-      }
-    }
-  }
-
-  const sourceFile = ts.createSourceFile("codemod.ts", src, ts.ScriptTarget.Latest, true);
-  const visit = (node: ts.Node): void => {
+  walkSource(src, (node, sf) => {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const method = node.expression.name.text;
       if (method === "isOk" || method === "isErr") {
-        const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-        warnings.push({
-          line,
-          label: "compat predicate method",
-          text: lines[line - 1]?.trim() ?? node.getText(sourceFile),
-        });
+        warnings.push({ ...lineTextAt(sf, node), label: "compat predicate method" });
       }
     }
 
     if (ts.isPropertyAccessExpression(node)) {
       const property = node.name.text;
       if (property === "value" || property === "error") {
-        const receiver = node.expression.getText(sourceFile);
+        const receiver = node.expression.getText(sf);
         if (/result$/i.test(receiver) || /^result$/i.test(receiver)) {
-          const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-          warnings.push({
-            line,
-            label: "compat value/error property",
-            text: lines[line - 1]?.trim() ?? node.getText(sourceFile),
-          });
+          warnings.push({ ...lineTextAt(sf, node), label: "compat value/error property" });
         }
       }
     }
-
-    ts.forEachChild(node, visit);
-  };
-
-  visit(sourceFile);
+  });
 
   return warnings;
-}
+};
 
-function collectUnsupportedCompatImportWarnings(src: string): readonly Warning[] {
-  const warnings: Warning[] = [];
-  const lines = src.split(/\r?\n/);
+export const collectNativeMigrationWarnings = concatCollectors(
+  collectRegexLineWarnings,
+  collectAstCompatWarnings,
+);
 
-  for (const [index, line] of lines.entries()) {
-    if (!line.includes(COMPAT_SPEC)) continue;
-    warnings.push({
-      line: index + 1,
-      label: "unsupported compat import",
-      text: line.trim(),
-    });
-  }
+const collectUnsupportedCompatImportWarnings = (src: string): readonly Warning[] =>
+  src.split(/\r?\n/).flatMap((line, i) =>
+    line.includes(COMPAT_SPEC)
+      ? [
+          {
+            line: i + 1,
+            label: "unsupported compat import",
+            text: line.trim(),
+          },
+        ]
+      : [],
+  );
 
-  return warnings;
-}
+const rewriteCompatToNative = flow(rewriteCompatImportsToNative, rewriteCompatMethodChainsToNative);
+
+const rewriteNeverthrowToCompat = (src: string): string =>
+  src.replace(IMPORT_RE, (_, lead, quote) => `${lead}${quote}${COMPAT_SPEC}${quote}`);
+
+const collectAllNativeWarnings = concatCollectors(
+  collectUnsupportedCompatImportWarnings,
+  collectNativeMigrationWarnings,
+);
+
+type ModeStrategy = {
+  countBefore: (src: string) => number;
+  earlyExit: (src: string, before: number) => boolean;
+  transform: (src: string) => string;
+  warnings: (next: string) => readonly Warning[];
+  countAfter: (next: string) => number;
+};
+
+const MODES: Record<Mode, ModeStrategy> = {
+  compat: {
+    countBefore: (src) => (src.match(IMPORT_RE) ?? []).length,
+    earlyExit: (_src, before) => before === 0,
+    transform: rewriteNeverthrowToCompat,
+    warnings: () => [],
+    countAfter: () => 0,
+  },
+  native: {
+    countBefore: (src) => countOccurrences(src, COMPAT_SPEC),
+    earlyExit: () => false,
+    transform: rewriteCompatToNative,
+    warnings: collectAllNativeWarnings,
+    countAfter: (next) => countOccurrences(next, NATIVE_SPEC),
+  },
+};
+
+type ComputedChange = {
+  next: string;
+  before: number;
+  after: number;
+  changed: boolean;
+  warnings: readonly Warning[];
+};
+
+export const computeFileChange = (src: string, mode: Mode): ComputedChange | null => {
+  const strat = MODES[mode];
+  const before = strat.countBefore(src);
+  if (strat.earlyExit(src, before)) return null;
+  const next = strat.transform(src);
+  const changed = next !== src;
+  const warnings = strat.warnings(next);
+  if (!changed && warnings.length === 0) return null;
+  return { next, before, after: strat.countAfter(next), changed, warnings };
+};
 
 async function rewriteCode(path: string, dry: boolean, mode: Mode): Promise<FileChange | null> {
   const src = await Bun.file(path).text();
-  const targetSpec = mode === "compat" ? "neverthrow" : COMPAT_SPEC;
-  if (mode === "compat" && !src.includes(targetSpec)) return null;
-  const before =
-    mode === "compat" ? (src.match(IMPORT_RE) ?? []).length : src.split(COMPAT_SPEC).length - 1;
-  if (mode === "compat" && before === 0) return null;
-  const next =
-    mode === "compat"
-      ? src.replace(IMPORT_RE, (_, lead, quote) => `${lead}${quote}${COMPAT_SPEC}${quote}`)
-      : rewriteCompatMethodChainsToNative(rewriteCompatImportsToNative(src));
-  const changed = next !== src;
-  const warnings =
-    mode === "native"
-      ? [...collectUnsupportedCompatImportWarnings(next), ...collectNativeMigrationWarnings(next)]
-      : [];
-  if (!changed && warnings.length === 0) return null;
-  if (changed && !dry) await Bun.write(path, next);
+  const result = computeFileChange(src, mode);
+  if (!result) return null;
+  if (result.changed && !dry) await Bun.write(path, result.next);
   return {
     path,
-    before,
-    after: mode === "native" ? next.split(NATIVE_SPEC).length - 1 : 0,
-    changed,
-    warnings,
+    before: result.before,
+    after: result.after,
+    changed: result.changed,
+    warnings: result.warnings,
   };
 }
 
@@ -447,6 +507,34 @@ const toError = (error: unknown): Error =>
 const parsePackageJson = (raw: string): Result<Record<string, unknown>, Error> =>
   trySync(() => JSON.parse(raw) as Record<string, unknown>, toError)();
 
+type PkgUpdate = { json: Record<string, unknown>; removed: readonly string[] };
+
+const applyDepRewrite =
+  (fileSpec: string) =>
+  (acc: PkgUpdate, key: string): PkgUpdate => {
+    const deps = acc.json[key] as Record<string, string> | undefined;
+    if (!deps || typeof deps !== "object" || !("neverthrow" in deps)) return acc;
+    const { neverthrow: _drop, ...rest } = deps;
+    return {
+      json: { ...acc.json, [key]: reorderDeps({ ...rest, "@onrails/result": fileSpec }) },
+      removed: [...acc.removed, key],
+    };
+  };
+
+type ComputedPkg = { json: Record<string, unknown>; removed: readonly string[]; fileSpec: string };
+
+export function computePkgRewrite(
+  json: Record<string, unknown>,
+  path: string,
+  onrailsAbs: string,
+): ComputedPkg | null {
+  const fileSpec = `file:${relative(path.replace(/\/package\.json$/, ""), onrailsAbs)}`;
+  const updated = DEP_KEYS.reduce(applyDepRewrite(fileSpec), { json, removed: [] } as PkgUpdate);
+  return updated.removed.length === 0
+    ? null
+    : { json: updated.json, removed: updated.removed, fileSpec };
+}
+
 async function rewritePkg(
   path: string,
   onrailsAbs: string,
@@ -456,25 +544,10 @@ async function rewritePkg(
   return matchResult(
     parsePackageJson(raw),
     async (json) => {
-      const removed: string[] = [];
-      let touched = false;
-      const pkgDir = path.replace(/\/package\.json$/, "");
-      const filePath = relative(pkgDir, onrailsAbs);
-      const fileSpec = `file:${filePath}`;
-      for (const key of DEP_KEYS) {
-        const deps = json[key] as Record<string, string> | undefined;
-        if (!deps || typeof deps !== "object") continue;
-        if (!("neverthrow" in deps)) continue;
-        delete deps.neverthrow;
-        removed.push(key);
-        deps["@onrails/result"] = fileSpec;
-        json[key] = reorderDeps(deps);
-        touched = true;
-      }
-      if (!touched) return null;
-      const out = `${JSON.stringify(json, null, 2)}\n`;
-      if (!dry) await Bun.write(path, out);
-      return { path, removed, addedAs: fileSpec };
+      const result = computePkgRewrite(json, path, onrailsAbs);
+      if (!result) return null;
+      if (!dry) await Bun.write(path, `${JSON.stringify(result.json, null, 2)}\n`);
+      return { path, removed: [...result.removed], addedAs: result.fileSpec };
     },
     async () => null,
   );
