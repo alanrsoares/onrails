@@ -14,12 +14,8 @@ jobs:
     name: release-please
     runs-on: ubuntu-latest
     outputs:
-      result_released: ${{ steps.release.outputs['packages/result--release_created'] }}
-      maybe_released: ${{ steps.release.outputs['packages/maybe--release_created'] }}
-      pattern_released: ${{ steps.release.outputs['packages/pattern--release_created'] }}
-      codemod_released: ${{ steps.release.outputs['packages/codemod--release_created'] }}
-      eslint_released: ${{ steps.release.outputs['packages/eslint-plugin--release_created'] }}
-      biome_released: ${{ steps.release.outputs['packages/biome-plugin--release_created'] }}
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      paths_released: ${{ steps.release.outputs.paths_released }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -28,107 +24,47 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  publish-result:
+  publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.result_released == 'true' }}
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: result,        path: packages/result,        build: true  }
+          - { name: maybe,         path: packages/maybe,         build: true  }
+          - { name: pattern,       path: packages/pattern,       build: true  }
+          - { name: codemod,       path: packages/codemod,       build: false }
+          - { name: eslint-plugin, path: packages/eslint-plugin, build: false }
+          - { name: biome-plugin,  path: packages/biome-plugin,  build: false }
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - id: gate
+        env:
+          PATHS: ${{ needs.release-please.outputs.paths_released }}
+          PATH_TO_CHECK: ${{ matrix.path }}
+        run: |
+          if echo "$PATHS" | grep -q "\"$PATH_TO_CHECK\""; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping ${{ matrix.name }} — not in release set."
+          fi
+      - if: steps.gate.outputs.released == 'true'
+        uses: actions/checkout@v4
+      - if: steps.gate.outputs.released == 'true'
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: Build
-        working-directory: packages/result
+      - if: steps.gate.outputs.released == 'true'
+        run: bun install --frozen-lockfile
+      - if: steps.gate.outputs.released == 'true' && matrix.build
+        name: Build ${{ matrix.name }}
+        working-directory: ${{ matrix.path }}
         run: bun run build
-      - name: Publish
-        working-directory: packages/result
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish-maybe:
-    needs: [release-please, publish-result]
-    if: ${{ always() && needs.release-please.outputs.maybe_released == 'true' && (needs.publish-result.result == 'success' || needs.publish-result.result == 'skipped') }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: Build
-        working-directory: packages/maybe
-        run: bun run build
-      - name: Publish
-        working-directory: packages/maybe
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish-pattern:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.pattern_released == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: Build
-        working-directory: packages/pattern
-        run: bun run build
-      - name: Publish
-        working-directory: packages/pattern
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish-codemod:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.codemod_released == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: Publish
-        working-directory: packages/codemod
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish-eslint:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.eslint_released == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: Publish
-        working-directory: packages/eslint-plugin
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish-biome:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.biome_released == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: Publish
-        working-directory: packages/biome-plugin
+      - if: steps.gate.outputs.released == 'true'
+        name: Publish ${{ matrix.name }}
+        working-directory: ${{ matrix.path }}
         run: bun publish --access public
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
