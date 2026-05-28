@@ -1,6 +1,6 @@
 {
   "name": "@onrails/maybe",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tagged Maybe for expected absence — pure tagged unions, Result interop, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
@@ -10,7 +10,9 @@
     "url": "git+https://github.com/alanrsoares/onrails.git",
     "directory": "packages/maybe"
   },
-  "bugs": { "url": "https://github.com/alanrsoares/onrails/issues" },
+  "bugs": {
+    "url": "https://github.com/alanrsoares/onrails/issues"
+  },
   "keywords": [
     "maybe",
     "optional",
@@ -20,7 +22,10 @@
     "bun",
     "functional"
   ],
-  "engines": { "node": ">=18", "bun": ">=1.0" },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.0"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -30,7 +35,12 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "DESIGN.md", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "DESIGN.md",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -52,7 +62,9 @@
     "@onrails/result": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@onrails/result": { "optional": true }
+    "@onrails/result": {
+      "optional": true
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
