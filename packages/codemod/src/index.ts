@@ -9,7 +9,7 @@ import {
   none,
   some,
 } from "@onrails/maybe";
-import { flow, match as matchResult, type Result, trySync } from "@onrails/result";
+import { flow, type Result, ResultAsync, trySync } from "@onrails/result";
 import { Glob } from "bun";
 import ts from "typescript";
 
@@ -471,30 +471,48 @@ type ComputedChange = {
   warnings: readonly Warning[];
 };
 
-export const computeFileChange = (src: string, mode: Mode): ComputedChange | null => {
+export const computeFileChange = (src: string, mode: Mode): Maybe<ComputedChange> => {
   const strat = MODES[mode];
   const before = strat.countBefore(src);
-  if (strat.earlyExit(src, before)) return null;
+  if (strat.earlyExit(src, before)) return none();
   const next = strat.transform(src);
   const changed = next !== src;
   const warnings = strat.warnings(next);
-  if (!changed && warnings.length === 0) return null;
-  return { next, before, after: strat.countAfter(next), changed, warnings };
+  if (!changed && warnings.length === 0) return none();
+  return some({ next, before, after: strat.countAfter(next), changed, warnings });
 };
 
-async function rewriteCode(path: string, dry: boolean, mode: Mode): Promise<FileChange | null> {
-  const src = await Bun.file(path).text();
-  const result = computeFileChange(src, mode);
-  if (!result) return null;
-  if (result.changed && !dry) await Bun.write(path, result.next);
-  return {
-    path,
-    before: result.before,
-    after: result.after,
-    changed: result.changed,
-    warnings: result.warnings,
-  };
-}
+const toFileChange = (path: string, c: ComputedChange): FileChange => ({
+  path,
+  before: c.before,
+  after: c.after,
+  changed: c.changed,
+  warnings: c.warnings,
+});
+
+const readFileText = (path: string): ResultAsync<string, Error> =>
+  ResultAsync.fromPromise(Bun.file(path).text(), toError);
+
+const writeFileText = (path: string, content: string): ResultAsync<unknown, Error> =>
+  ResultAsync.fromPromise(Bun.write(path, content), toError);
+
+const rewriteCode = (
+  path: string,
+  dry: boolean,
+  mode: Mode,
+): ResultAsync<Maybe<FileChange>, Error> =>
+  readFileText(path).flatMap((src) =>
+    matchMaybe(
+      computeFileChange(src, mode),
+      (c) => {
+        const change = toFileChange(path, c);
+        return c.changed && !dry
+          ? writeFileText(path, c.next).map(() => some(change))
+          : ResultAsync.ok<Maybe<FileChange>, Error>(some(change));
+      },
+      () => ResultAsync.ok<Maybe<FileChange>, Error>(none()),
+    ),
+  );
 
 type PkgChange = { path: string; removed: string[]; addedAs: string };
 
@@ -523,35 +541,43 @@ const applyDepRewrite =
 
 type ComputedPkg = { json: Record<string, unknown>; removed: readonly string[]; fileSpec: string };
 
-export function computePkgRewrite(
+export const computePkgRewrite = (
   json: Record<string, unknown>,
   path: string,
   onrailsAbs: string,
-): ComputedPkg | null {
+): Maybe<ComputedPkg> => {
   const fileSpec = `file:${relative(path.replace(/\/package\.json$/, ""), onrailsAbs)}`;
   const updated = DEP_KEYS.reduce(applyDepRewrite(fileSpec), { json, removed: [] } as PkgUpdate);
   return updated.removed.length === 0
-    ? null
-    : { json: updated.json, removed: updated.removed, fileSpec };
-}
+    ? none()
+    : some({ json: updated.json, removed: updated.removed, fileSpec });
+};
 
-async function rewritePkg(
+const toPkgChange = (path: string, c: ComputedPkg): PkgChange => ({
+  path,
+  removed: [...c.removed],
+  addedAs: c.fileSpec,
+});
+
+const rewritePkg = (
   path: string,
   onrailsAbs: string,
   dry: boolean,
-): Promise<PkgChange | null> {
-  const raw = await Bun.file(path).text();
-  return matchResult(
-    parsePackageJson(raw),
-    async (json) => {
-      const result = computePkgRewrite(json, path, onrailsAbs);
-      if (!result) return null;
-      if (!dry) await Bun.write(path, `${JSON.stringify(result.json, null, 2)}\n`);
-      return { path, removed: [...result.removed], addedAs: result.fileSpec };
-    },
-    async () => null,
-  );
-}
+): ResultAsync<Maybe<PkgChange>, Error> =>
+  readFileText(path)
+    .flatMap((raw) => ResultAsync.fromResult(parsePackageJson(raw)))
+    .flatMap((json) =>
+      matchMaybe(
+        computePkgRewrite(json, path, onrailsAbs),
+        (c) => {
+          const change = toPkgChange(path, c);
+          return dry
+            ? ResultAsync.ok<Maybe<PkgChange>, Error>(some(change))
+            : writeFileText(path, `${JSON.stringify(c.json, null, 2)}\n`).map(() => some(change));
+        },
+        () => ResultAsync.ok<Maybe<PkgChange>, Error>(none()),
+      ),
+    );
 
 async function main() {
   const { target, dry, onrails, mode } = parseArgs(Bun.argv.slice(2));
@@ -559,11 +585,25 @@ async function main() {
   const pkgChanges: PkgChange[] = [];
   for await (const file of walk(target)) {
     if (mode === "compat" && file.endsWith("/package.json")) {
-      const c = await rewritePkg(file, onrails, dry);
-      if (c) pkgChanges.push(c);
+      await rewritePkg(file, onrails, dry).match(
+        (m) =>
+          matchMaybe(
+            m,
+            (c) => void pkgChanges.push(c),
+            () => undefined,
+          ),
+        (e) => console.error(`error processing ${file}:`, e.message),
+      );
     } else if (CODE_EXT.test(file)) {
-      const c = await rewriteCode(file, dry, mode);
-      if (c) codeChanges.push(c);
+      await rewriteCode(file, dry, mode).match(
+        (m) =>
+          matchMaybe(
+            m,
+            (c) => void codeChanges.push(c),
+            () => undefined,
+          ),
+        (e) => console.error(`error processing ${file}:`, e.message),
+      );
     }
   }
   const label = dry ? "DRY" : "APPLY";
