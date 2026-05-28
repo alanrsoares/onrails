@@ -5,13 +5,17 @@ Tagged `Result` / `ResultAsync` + railway-oriented utilities for TypeScript. Pur
 | Package | npm | Description |
 |---|---|---|
 | [`@onrails/result`](./packages/result) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fresult.svg)](https://www.npmjs.com/package/@onrails/result) | Core `Result` / `ResultAsync` + neverthrow compat shim |
-| [`@onrails/maybe`](./packages/maybe) | — | Tagged `Maybe` for expected absence + `Result` interop |
-| [`@onrails/pattern`](./packages/pattern) | — | Exhaustive matching for owned unions (ts-pattern-shaped, lighter) |
+| [`@onrails/maybe`](./packages/maybe) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fmaybe.svg)](https://www.npmjs.com/package/@onrails/maybe) | Tagged `Maybe` for expected absence + `Result` interop |
+| [`@onrails/pattern`](./packages/pattern) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fpattern.svg)](https://www.npmjs.com/package/@onrails/pattern) | Exhaustive matching for owned unions (ts-pattern-shaped, lighter) |
 | [`@onrails/codemod`](./packages/codemod) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fcodemod.svg)](https://www.npmjs.com/package/@onrails/codemod) | Bun script: migrate `neverthrow` imports + `package.json` deps to `@onrails/result/compat/neverthrow` |
 | [`@onrails/eslint-plugin`](./packages/eslint-plugin) | [![npm](https://img.shields.io/npm/v/%40onrails%2Feslint-plugin.svg)](https://www.npmjs.com/package/@onrails/eslint-plugin) | ESLint rules for `@onrails/result` boundaries — flags `Promise<Result<…>>` + `_unsafeUnwrap*` |
+| [`@onrails/biome-plugin`](./packages/biome-plugin) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fbiome-plugin.svg)](https://www.npmjs.com/package/@onrails/biome-plugin) | GritQL plugin: same boundary rules for Biome users |
 
+[![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://alanrsoares.github.io/onrails/)
 [![CI](https://github.com/alanrsoares/onrails/actions/workflows/ci.yml/badge.svg)](https://github.com/alanrsoares/onrails/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+📚 **API reference**: [alanrsoares.github.io/onrails](https://alanrsoares.github.io/onrails/) — generated from tsdoc on every push to `main`.
 
 ## Why
 
@@ -26,14 +30,14 @@ bun add @onrails/result
 ```
 
 ```ts
-import { err, flatMapResult, isErr, isOk, mapResult, match, ok, trySync } from "@onrails/result";
+import { err, flatMap, isErr, isOk, map, match, ok, trySync } from "@onrails/result";
 
 const parse = trySync(
   (raw: string) => JSON.parse(raw) as { v: number },
   (e) => ({ kind: "parse" as const, message: String(e) }),
 );
 
-const out = mapResult(parse('{"v":1}'), (data) => data.v + 1);
+const out = map(parse('{"v":1}'), (data) => data.v + 1);
 
 if (isOk(out)) console.log(out.value);
 else console.error(out.error);
@@ -52,6 +56,8 @@ const fetchUser = fromAsync(async () => {
 const r = await fetchUser();   // bare tagged Result
 if (isOk(r)) console.log(r.value);
 ```
+
+For composition patterns (`pipe`, `flow`, dual-form transforms, point-free pipelines) see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
 
 ## Migrating from neverthrow
 

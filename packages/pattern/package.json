@@ -4,7 +4,7 @@
   "description": "Lightweight exhaustive matching for owned tagged unions — ts-pattern-shaped DX, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
-  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/pattern#readme",
+  "homepage": "https://alanrsoares.github.io/onrails/modules/_onrails_pattern.html",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alanrsoares/onrails.git",

@@ -4,6 +4,7 @@
   "entryPointStrategy": "packages",
   "entryPoints": ["packages/result", "packages/maybe", "packages/pattern"],
   "out": "docs",
+  "exclude": ["**/test/**", "**/*.spec.ts", "**/*.test.ts", "**/dist/**"],
   "includeVersion": true,
   "readme": "README.md",
   "categorizeByGroup": true,

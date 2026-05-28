@@ -4,7 +4,7 @@
   "description": "Tagged Maybe for expected absence — pure tagged unions, Result interop, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
-  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/maybe#readme",
+  "homepage": "https://alanrsoares.github.io/onrails/modules/_onrails_maybe.html",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alanrsoares/onrails.git",

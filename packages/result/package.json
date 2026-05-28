@@ -4,7 +4,7 @@
   "description": "Tagged Result / ResultAsync for railway-oriented TypeScript — pure tagged unions, neverthrow-shaped compat shim, FL-friendly",
   "license": "MIT",
   "author": "Alan R. Soares",
-  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/result#readme",
+  "homepage": "https://alanrsoares.github.io/onrails/modules/_onrails_result.html",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alanrsoares/onrails.git",

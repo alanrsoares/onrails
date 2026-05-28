@@ -23,6 +23,8 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+      - name: Build TS packages (so cross-package imports resolve)
+        run: bun run --filter '@onrails/result' --filter '@onrails/maybe' --filter '@onrails/pattern' build
       - name: Build docs
         run: bun run docs
       - name: Upload Pages artifact
