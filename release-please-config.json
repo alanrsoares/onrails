@@ -10,38 +10,32 @@
     "packages/result": {
       "package-name": "@onrails/result",
       "component": "result",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "0.1.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/maybe": {
       "package-name": "@onrails/maybe",
       "component": "maybe",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "0.1.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/pattern": {
       "package-name": "@onrails/pattern",
       "component": "pattern",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "0.1.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/codemod": {
       "package-name": "@onrails/codemod",
       "component": "codemod",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "0.1.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/eslint-plugin": {
       "package-name": "@onrails/eslint-plugin",
       "component": "eslint-plugin",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "0.1.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/biome-plugin": {
       "package-name": "@onrails/biome-plugin",
       "component": "biome-plugin",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "0.1.0"
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": ["node-workspace"]

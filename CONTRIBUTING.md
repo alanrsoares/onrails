@@ -34,6 +34,8 @@ Valid scopes: `result`, `codemod`, `eslint-plugin`, `repo`, `deps`, `ci`, `docs`
 
 Releases are automated by [release-please](https://github.com/googleapis/release-please-action). When `main` receives a feat/fix commit for a package, release-please opens a release PR for that package. Merging the PR creates the GitHub release and triggers `bun publish` with npm provenance.
 
+`.release-please-manifest.json` and each `packages/*/package.json` version must stay aligned with what is already on npm — do not use `release-as` after the initial publish. Stale release PRs (duplicate `0.1.0` changelog sections) should be closed; the next push to `main` opens a fresh one.
+
 ## Pull requests
 
 - One package per PR, ideally.
