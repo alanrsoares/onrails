@@ -1,6 +1,6 @@
 {
   "name": "@onrails/codemod",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Codemods for migrating onto @onrails/result (neverthrow → compat shim, and beyond)",
   "license": "MIT",
   "author": "Alan R. Soares",
