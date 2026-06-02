@@ -1,1 +1,8 @@
+#!/usr/bin/env sh
+
+# Strip AI agent Co-authored-by footers before commitlint (IDEs may inject them).
+tmp="$(mktemp)"
+grep -viE '^co-authored-by:.*(cursoragent|cursor\.com|openai|anthropic|copilot|claude|chatgpt|github-copilot)' "$1" >"$tmp"
+mv "$tmp" "$1"
+
 bunx --no -- commitlint --edit "$1"

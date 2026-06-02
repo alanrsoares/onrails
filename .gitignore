@@ -5,3 +5,5 @@ dist/
 *.tgz
 docs/
 .env.local
+.claude/
+.cursor/
