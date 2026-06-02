@@ -6,8 +6,7 @@
  * for TypeScript files; without it the rules never fire.
  */
 
-const isIdentifierNamed = (node, name) =>
-  node && node.type === "Identifier" && node.name === name;
+const isIdentifierNamed = (node, name) => node && node.type === "Identifier" && node.name === name;
 
 const noPromiseResult = {
   meta: {
@@ -29,7 +28,7 @@ const noPromiseResult = {
         if (!isIdentifierNamed(node.typeName, "Promise")) return;
         const args = node.typeArguments?.params;
         const inner = args?.[0];
-        if (!inner || inner.type !== "TSTypeReference") return;
+        if (inner?.type !== "TSTypeReference") return;
         if (!isIdentifierNamed(inner.typeName, "Result")) return;
 
         const innerArgs = inner.typeArguments?.params;

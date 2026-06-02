@@ -11,6 +11,6 @@ language js
   register_diagnostic(
     span = $t,
     message = "Promise<Result<…>> in a type position — use ResultAsync<T, E> at the boundary (fromAsync / tryAsync).",
-    severity = "warn"
+    severity = "error"
   )
 }

@@ -11,18 +11,19 @@ Per-package design notes: [result](packages/result/DESIGN.md) · [maybe](package
 ## Toolchain
 
 - **Bun ≥ 1.0**. Use `bun`, `bun run`, `bun test`, `bunx`. No npm/yarn/pnpm.
-- **Biome** for lint + format ([`biome.json`](biome.json)). Run `bun lint:fix` before pushing.
+- **Biome** for lint + format ([`biome.json`](biome.json)). Root config dogfoods `@onrails/biome-plugin` grit rules (with `result` internals excluded). Run `bun lint:fix` before pushing.
 - **TypeScript strict** — `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax` ([`tsconfig.base.json`](tsconfig.base.json)).
 - **`bun:test`** runtime; **`ts-expect`** (`expectType` / `TypeEqual`) compile-time.
-- **Husky** installs hooks on `bun install`: `pre-commit` runs lint+typecheck, `commit-msg` runs commitlint.
+- **Husky** installs hooks on `bun install`: `pre-commit` runs `bun check`, `commit-msg` runs commitlint.
 
 Root scripts fan out:
 
 ```
 bun typecheck   # bun run --filter '@onrails/*' typecheck
 bun test        # bun run --filter '@onrails/*' test
-bun lint        # biome check .
-bun check       # typecheck + lint + test
+bun lint        # biome check . --error-on-warnings
+bun format      # biome format --write .
+bun check       # lint + typecheck + test
 ```
 
 ## Quality bar
