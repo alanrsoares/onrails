@@ -1,7 +1,7 @@
 {
   "packages/result": "0.1.0",
-  "packages/maybe": "0.1.0",
-  "packages/pattern": "0.1.0",
+  "packages/maybe": "0.1.1",
+  "packages/pattern": "0.1.1",
   "packages/codemod": "0.1.0",
   "packages/eslint-plugin": "0.1.0",
   "packages/biome-plugin": "0.1.0"
