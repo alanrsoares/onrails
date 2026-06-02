@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -8,7 +8,15 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["packages/**/src/**/*.ts", "packages/**/test/**/*.ts"]
+    "includes": [
+      "packages/**/src/**/*.{ts,js}",
+      "packages/**/test/**/*.ts",
+      "packages/**/tsup.config.ts",
+      "tsup.base.ts",
+      "commitlint.config.cjs",
+      "!packages/biome-plugin/test/fixtures",
+      "!**/dist"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -22,7 +30,18 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "suspicious": { "noExplicitAny": "error" }
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noTsIgnore": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useImportType": "error"
+      }
     }
   },
   "javascript": {
@@ -40,6 +59,18 @@
           "suspicious": { "noExplicitAny": "off" }
         }
       }
+    },
+    {
+      "includes": [
+        "packages/**/src/**",
+        "!packages/result/**",
+        "!packages/biome-plugin/**",
+        "!**/*.spec.ts"
+      ],
+      "plugins": [
+        "./packages/biome-plugin/rules/no-promise-result.grit",
+        "./packages/biome-plugin/rules/no-unsafe-unwrap.grit"
+      ]
     }
   ]
 }

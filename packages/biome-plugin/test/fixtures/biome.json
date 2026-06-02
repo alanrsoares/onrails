@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "plugins": [
+    "../../rules/no-promise-result.grit",
+    "../../rules/no-unsafe-unwrap.grit"
+  ],
+  "linter": { "enabled": true, "rules": { "recommended": false } },
+  "formatter": { "enabled": false }
+}

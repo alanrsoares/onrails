@@ -25,9 +25,5 @@ jobs:
         run: |
           bun run --filter '@onrails/result' build
           bun run --filter '@onrails/maybe' --filter '@onrails/pattern' build
-      - name: Typecheck
-        run: bun run typecheck
-      - name: Lint
-        run: bun run lint
-      - name: Test
-        run: bun test
+      - name: Check
+        run: bun run check

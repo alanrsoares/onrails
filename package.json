@@ -21,16 +21,17 @@
   },
   "scripts": {
     "typecheck": "bun run --filter '@onrails/*' typecheck",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
+    "lint": "biome check . --error-on-warnings",
+    "lint:fix": "biome check --write . --error-on-warnings",
+    "format": "biome format --write .",
     "test": "bun run --filter '@onrails/*' test",
-    "check": "bun typecheck && bun lint && bun test",
+    "check": "bun run lint && bun run typecheck && bun run test",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
+    "@biomejs/biome": "^2.4.16",
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
     "@types/bun": "latest",
