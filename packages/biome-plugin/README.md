@@ -25,9 +25,9 @@ Reference the rule files in `biome.json` plugins:
 
 | Rule | What it catches |
 |------|------------------|
-| `no-promise-result` | `Promise<Result<T, E>>` in any type position — return `ResultAsync<T, E>` and use `fromAsync` / `tryAsync` at the boundary |
-| `no-unsafe-unwrap`  | `._unsafeUnwrap()` / `._unsafeUnwrapErr()` calls — use `match` / `resolve` / `yieldResult` instead |
+| `no-promise-result` | `Promise<Result<T, E>>` in any type position — return `ResultAsync<T, E>` and use `fromAsync` / `tryAsync` at the boundary (error) |
+| `no-unsafe-unwrap`  | `._unsafeUnwrap()` / `._unsafeUnwrapErr()` calls — use `match` / `resolve` / `yieldResult` instead (error) |
 
 ## Tests
 
-Fixtures under `fixtures/{valid,invalid}/`. Tests in `src/rules.spec.ts` shell out to `biome lint --reporter=json` and assert message substrings.
+Fixtures under `test/fixtures/{valid,invalid}/` (isolated `biome.json` with `root: true`). Tests in `test/rules.spec.ts` shell out to `biome lint --reporter=json` from that directory and assert message substrings.
