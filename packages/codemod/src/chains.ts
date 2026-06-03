@@ -1,0 +1,157 @@
+import { compactMap, isSome, type Maybe, none, some } from "@onrails/maybe";
+import ts from "typescript";
+import { argsToText, edit, lookupMap, spanEdit, walkSource } from "./ast.js";
+import {
+  ASYNC_ROOT_HINTS,
+  CHAIN_METHODS,
+  PREDICATE_METHODS,
+  RESULT_SPECIFIC_CHAIN_METHODS,
+  SAFE_BASE_PATTERNS,
+  TEE_METHODS,
+  TERMINAL_METHODS,
+  UNSAFE_UNWRAP_METHODS,
+  ZERO_ARG_HELPERS,
+} from "./constants.js";
+import { addNativeValueImports } from "./imports.js";
+import type { ChainStep, Edit, EditAcc, PipelinePart } from "./types.js";
+
+export function isSupportedChainCall(node: ts.Node): node is ts.CallExpression {
+  if (!ts.isCallExpression(node)) return false;
+  if (!ts.isPropertyAccessExpression(node.expression)) return false;
+  const method = node.expression.name.text;
+  return CHAIN_METHODS.has(method) || TERMINAL_METHODS.has(method);
+}
+
+export function helperCallToNative(node: ts.CallExpression): Maybe<Edit> {
+  if (ts.isIdentifier(node.expression) && node.arguments.length === 0) {
+    return lookupMap(ZERO_ARG_HELPERS, node.expression.text, (text) => edit(text));
+  }
+
+  if (!ts.isPropertyAccessExpression(node.expression)) return none();
+  const method = node.expression.name.text;
+  const base = node.expression.expression
+    .getText()
+    .replaceAll(".andTee(", ".tap(")
+    .replaceAll(".orTee(", ".tapErr(");
+  const argsText = argsToText(node.arguments);
+
+  const tee = lookupMap(TEE_METHODS, method, (t) => edit(`${base}.${t}(${argsText})`));
+  if (isSome(tee)) return tee;
+
+  if (PREDICATE_METHODS.has(method)) {
+    return some(edit(`${method}(${base})`, [method]));
+  }
+
+  return lookupMap(UNSAFE_UNWRAP_METHODS, method, (u) => edit(`${u}(${base})`, [u]));
+}
+
+export function isNestedInSupportedChain(node: ts.Node): boolean {
+  const parent = node.parent;
+  if (!parent) return false;
+  if (!ts.isPropertyAccessExpression(parent)) return false;
+  return isSupportedChainCall(parent.parent);
+}
+
+export function collectChain(node: ts.CallExpression): { base: string; steps: ChainStep[] } {
+  const steps: ChainStep[] = [];
+  let current: ts.Expression = node;
+
+  while (ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression)) {
+    const method = current.expression.name.text;
+    if (!CHAIN_METHODS.has(method) && !TERMINAL_METHODS.has(method)) break;
+    steps.push({
+      method,
+      argsText: argsToText(current.arguments),
+      argCount: current.arguments.length,
+    });
+    current = current.expression.expression;
+  }
+
+  return {
+    base: current.getText(),
+    steps: steps.reverse(),
+  };
+}
+
+export const hasAsyncRootHint = (base: string): boolean =>
+  ASYNC_ROOT_HINTS.some((hint) => base.includes(hint));
+
+export const isSafeSyncChainBase = (base: string): boolean =>
+  SAFE_BASE_PATTERNS.some((re) => re.test(base));
+
+const isTerminalStep = (s: ChainStep): boolean => TERMINAL_METHODS.has(s.method);
+const isResultSpecificStep = (s: ChainStep): boolean => RESULT_SPECIFIC_CHAIN_METHODS.has(s.method);
+const isChainStep = (s: ChainStep): boolean => CHAIN_METHODS.has(s.method);
+
+export function chainToNative(base: string, steps: readonly ChainStep[]): Maybe<Edit> {
+  if (steps.length === 0 || hasAsyncRootHint(base)) return none();
+  const terminalStep = steps.find(isTerminalStep);
+  if (!isSafeSyncChainBase(base)) return none();
+  if (!terminalStep && !steps.some(isResultSpecificStep)) return none();
+  if (terminalStep?.method === "match" && terminalStep.argCount !== 2) return none();
+  const pipelineSteps = steps.filter(isChainStep);
+  const pipelineParts = compactMap(pipelineSteps, (step) =>
+    lookupMap(
+      CHAIN_METHODS,
+      step.method,
+      (nativeName): PipelinePart => ({
+        importName: nativeName,
+        text: `${nativeName}(${step.argsText})`,
+      }),
+    ),
+  );
+
+  if (pipelineParts.length !== pipelineSteps.length) return none();
+
+  const parts = pipelineParts.map((part) => part.text);
+  const imports = new Set(pipelineParts.map((part) => part.importName));
+  const pipeline = parts.length > 0 ? `pipe(${[base, ...parts].join(", ")})` : base;
+
+  if (parts.length > 0) imports.add("pipe");
+
+  if (!terminalStep) {
+    return some(edit(pipeline, [...imports]));
+  }
+
+  imports.add(terminalStep.method);
+  return some(edit(`${terminalStep.method}(${pipeline}, ${terminalStep.argsText})`, [...imports]));
+}
+
+export const byStartDesc = (a: Edit, b: Edit): number => b.start - a.start;
+
+export const applyEditStep = (acc: EditAcc, e: Edit): EditAcc => ({
+  src: `${acc.src.slice(0, e.start)}${e.text}${acc.src.slice(e.end)}`,
+  imports: new Set([...acc.imports, ...e.imports]),
+});
+
+export function rewriteCompatMethodChainsToNative(src: string): string {
+  const edits: Edit[] = [];
+
+  walkSource(src, (node, sf) => {
+    if (ts.isCallExpression(node)) {
+      const helper = helperCallToNative(node);
+      if (isSome(helper)) {
+        edits.push(spanEdit(node, sf, helper.value));
+        return true;
+      }
+    }
+
+    if (
+      isSupportedChainCall(node) &&
+      !isNestedInSupportedChain(node) &&
+      !ts.isPropertyAccessExpression(node.parent)
+    ) {
+      const chain = collectChain(node);
+      const chained = chainToNative(chain.base, chain.steps);
+      if (isSome(chained)) edits.push(spanEdit(node, sf, chained.value));
+    }
+  });
+
+  if (edits.length === 0) return src;
+
+  const { src: next, imports } = edits
+    .sort(byStartDesc)
+    .reduce(applyEditStep, { src, imports: new Set<string>() });
+
+  return addNativeValueImports(next, [...imports]);
+}
