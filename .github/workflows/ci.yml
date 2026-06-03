@@ -10,7 +10,9 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # Include event_name so pull_request and pull_request_target don't share a
+  # group — otherwise the (skipped) target run cancels the real pull_request run.
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
