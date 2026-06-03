@@ -10,7 +10,7 @@ type Event =
   | { type: "error"; message: string }
   | { type: "done" };
 
-describe("match", () => {
+describe("match: basic patterns", () => {
   it("matches string literal unions (direct)", () => {
     const out = match("ollama" as Provider)
       .with("ollama", () => "local")
@@ -35,7 +35,9 @@ describe("match", () => {
       .exhaustive();
     expect(out).toBe("x");
   });
+});
 
+describe("match: multi-pattern sugar", () => {
   it("withOneOf shares a handler across patterns", () => {
     type Job =
       | { kind: "queued"; id: string }
@@ -69,15 +71,6 @@ describe("match", () => {
     expect(len({ type: "message", content: "ab" })).toBe(2);
   });
 
-  it("run throws when no case matches", () => {
-    type OneTwo = 1 | 2;
-    expect(() =>
-      match(1 as OneTwo)
-        .with(2, () => "two")
-        .run(),
-    ).toThrow("Non-exhaustive match");
-  });
-
   it("when guard", () => {
     const sign = match<number>()
       .with(
@@ -92,7 +85,49 @@ describe("match", () => {
     expect(sign(-1)).toBe("neg");
     expect(sign(0)).toBe("non-neg");
   });
+});
 
+describe("match: execution", () => {
+  it("run throws when no case matches", () => {
+    type OneTwo = 1 | 2;
+    expect(() =>
+      match(1 as OneTwo)
+        .with(2, () => "two")
+        .run(),
+    ).toThrow("Non-exhaustive match");
+  });
+
+  it("void-returning handlers count as matched (no false non-exhaustive)", () => {
+    type Event = { kind: "a" } | { kind: "b" } | { kind: "c" };
+    const seen: string[] = [];
+    const dispatch = (e: Event) =>
+      match(e)
+        .with({ kind: "a" }, () => {
+          seen.push("a");
+        })
+        .with({ kind: "b" }, () => {
+          seen.push("b");
+        })
+        .with({ kind: "c" }, () => {
+          seen.push("c");
+        })
+        .exhaustive();
+    dispatch({ kind: "a" });
+    dispatch({ kind: "b" });
+    dispatch({ kind: "c" });
+    expect(seen).toEqual(["a", "b", "c"]);
+  });
+
+  it("run matches immediately", () => {
+    expect(
+      match({ type: "error", message: "x" } as Event)
+        .with({ type: "error" }, (e) => e.message)
+        .run({ type: "error", message: "net" }),
+    ).toBe("net");
+  });
+});
+
+describe("match: returnType", () => {
   it("returnType locks accumulator and runs", () => {
     type Part = { type: "text"; text: string } | { type: "image"; src: string };
     const render = (p: Part) =>
@@ -124,35 +159,6 @@ describe("match", () => {
       .exhaustive();
     expect(fn("a")).toBe(1);
     expect(fn("b")).toBe(2);
-  });
-
-  it("void-returning handlers count as matched (no false non-exhaustive)", () => {
-    type Event = { kind: "a" } | { kind: "b" } | { kind: "c" };
-    const seen: string[] = [];
-    const dispatch = (e: Event) =>
-      match(e)
-        .with({ kind: "a" }, () => {
-          seen.push("a");
-        })
-        .with({ kind: "b" }, () => {
-          seen.push("b");
-        })
-        .with({ kind: "c" }, () => {
-          seen.push("c");
-        })
-        .exhaustive();
-    dispatch({ kind: "a" });
-    dispatch({ kind: "b" });
-    dispatch({ kind: "c" });
-    expect(seen).toEqual(["a", "b", "c"]);
-  });
-
-  it("run matches immediately", () => {
-    expect(
-      match({ type: "error", message: "x" } as Event)
-        .with({ type: "error" }, (e) => e.message)
-        .run({ type: "error", message: "net" }),
-    ).toBe("net");
   });
 });
 
