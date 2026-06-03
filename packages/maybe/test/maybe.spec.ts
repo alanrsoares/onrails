@@ -14,6 +14,8 @@ import {
   of,
   optional,
   some,
+  tap,
+  tapNone,
   unwrap,
   unwrapOr,
 } from "../src/maybe.js";
@@ -75,5 +77,43 @@ describe("Maybe", () => {
   it("optional lifts nullable then binds", () => {
     expect(optional("x", (s) => some(s.length))).toEqual(some(1));
     expect(optional(null, (s) => some(s))).toEqual(none());
+  });
+});
+
+describe("Maybe tap", () => {
+  it("tap runs effect on Some and passes the Maybe through", () => {
+    let seen: number | undefined;
+    const out = tap(some(2), (n) => {
+      seen = n;
+    });
+    expect(seen).toBe(2);
+    expect(out).toEqual(some(2));
+  });
+
+  it("tap is a no-op on None", () => {
+    let called = false;
+    const out = tap(none<number>(), () => {
+      called = true;
+    });
+    expect(called).toBe(false);
+    expect(isNone(out)).toBe(true);
+  });
+
+  it("tap is dual-form (curried)", () => {
+    const log: number[] = [];
+    const collect = tap<number>((n) => log.push(n));
+    expect(collect(some(5))).toEqual(some(5));
+    expect(isNone(collect(none<number>()))).toBe(true);
+    expect(log).toEqual([5]);
+  });
+
+  it("tapNone runs effect on None only", () => {
+    let misses = 0;
+    const onMiss = tapNone<number>(() => {
+      misses += 1;
+    });
+    expect(onMiss(none<number>())).toEqual(none());
+    expect(onMiss(some(1))).toEqual(some(1));
+    expect(misses).toBe(1);
   });
 });

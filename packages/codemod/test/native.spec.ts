@@ -91,7 +91,7 @@ describe("collectNativeMigrationWarnings", () => {
   });
 });
 
-describe("rewriteCompatMethodChainsToNative", () => {
+describe("rewriteCompatMethodChainsToNative: sync rewrites", () => {
   it("rewrites supported sync method chains to pipe", () => {
     const src = [
       'import { ok } from "@onrails/result";',
@@ -128,7 +128,9 @@ describe("rewriteCompatMethodChainsToNative", () => {
       ].join("\n"),
     );
   });
+});
 
+describe("rewriteCompatMethodChainsToNative: unchanged chains", () => {
   it("leaves ResultAsync-looking chains unchanged", () => {
     const src = [
       'import { ResultAsync } from "@onrails/result";',
@@ -174,7 +176,9 @@ describe("rewriteCompatMethodChainsToNative", () => {
 
     expect(rewriteCompatMethodChainsToNative(src)).toBe(src);
   });
+});
 
+describe("rewriteCompatMethodChainsToNative: predicate and helper rewrites", () => {
   it("does not rewrite ordinary array transform chains but rewrites result predicates", () => {
     const src = [
       'import { ok } from "@onrails/result";',
@@ -214,7 +218,9 @@ describe("rewriteCompatMethodChainsToNative", () => {
       ].join("\n"),
     );
   });
+});
 
+describe("rewriteCompatMethodChainsToNative: helper renames", () => {
   it("rewrites neverthrow ok helpers with no value to explicit undefined", () => {
     const src = [
       'import { ok, okAsync } from "@onrails/result";',
@@ -253,7 +259,7 @@ describe("rewriteCompatMethodChainsToNative", () => {
   });
 });
 
-describe("CLI", () => {
+describe("CLI: native rewrites", () => {
   it("dry-runs native import rewrites without changing files", async () => {
     const root = await makeFixture();
     const source = [
@@ -302,7 +308,9 @@ describe("CLI", () => {
       ].join("\n"),
     );
   });
+});
 
+describe("CLI: unsupported and stage-1", () => {
   it("reports unsupported native migration imports without changing files", async () => {
     const root = await makeFixture();
     const source = [
@@ -321,7 +329,9 @@ describe("CLI", () => {
     expect(result.stdout.toString()).toContain("TODO line 2: unsupported compat import");
     expect(await readFixtureFile(root, "src/index.ts")).toBe(source);
   });
+});
 
+describe("CLI: stage-1 rewrites", () => {
   it("applies stage-1 neverthrow import and package rewrites", async () => {
     const root = await makeFixture();
     await writeFixtureFile(

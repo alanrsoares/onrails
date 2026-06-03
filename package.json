@@ -25,7 +25,8 @@
     "lint:fix": "biome check --write . --error-on-warnings",
     "format": "biome format --write .",
     "test": "bun run --filter '@onrails/*' test",
-    "check": "bun run lint && bun run typecheck && bun run test",
+    "check:loc": "bun run scripts/check-loc.ts",
+    "check": "bun run check:loc && bun run lint && bun run typecheck && bun run test",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
     "prepare": "husky"

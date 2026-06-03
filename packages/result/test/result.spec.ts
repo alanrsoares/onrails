@@ -19,7 +19,7 @@ import {
   unwrapOr,
 } from "../src/result.js";
 
-describe("sync Result", () => {
+describe("sync Result: constructors & transforms", () => {
   it("ok / err tags", () => {
     expect(ok(1)).toEqual({ _tag: "Ok", value: 1 });
     expect(err("x")).toEqual({ _tag: "Err", error: "x" });
@@ -42,7 +42,9 @@ describe("sync Result", () => {
     expect(flatMap(ok(0), () => err({ kind: "zero" }))).toEqual(err({ kind: "zero" }));
     expect(flatMap(err({ kind: "parse" }), () => ok("never"))).toEqual(err({ kind: "parse" }));
   });
+});
 
+describe("sync Result: match & fold", () => {
   it("match dispatches", () => {
     expect(
       match(
@@ -84,7 +86,9 @@ describe("sync Result", () => {
       })(err("nope")),
     ).toBe("err:nope");
   });
+});
 
+describe("sync Result: unwrap", () => {
   it("unwrapOr supplies default on Err", () => {
     expect(unwrapOr(ok(5), 0)).toBe(5);
     expect(unwrapOr(err("x"), 0)).toBe(0);
@@ -100,7 +104,9 @@ describe("sync Result", () => {
     expect(unwrapErr(err("x"))).toBe("x");
     expect(() => unwrapErr(ok(5))).toThrow(TypeError);
   });
+});
 
+describe("sync Result: trySync & combine", () => {
   it("trySync catches throws", () => {
     const parse = trySync(
       (raw: string) => JSON.parse(raw) as { v: number },
@@ -119,7 +125,9 @@ describe("sync Result", () => {
     const combined = combineTuple([ok(1), ok("a")] as const);
     expect(combined).toEqual(ok([1, "a"]));
   });
+});
 
+describe("sync Result: mapErr & recover", () => {
   it("mapErr maps Err only", () => {
     expect(mapErr((s: string) => s.length)(err("ab"))).toEqual(err(2));
     expect(mapErr((s: string) => s.length)(ok(1))).toEqual(ok(1));

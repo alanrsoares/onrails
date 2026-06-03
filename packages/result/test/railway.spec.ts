@@ -15,7 +15,7 @@ import { err, ok } from "../src/result.js";
 const toError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
 
-describe("Railway", () => {
+describe("Railway: sync workflows", () => {
   it("returns a sync Result for sync-only workflows", () => {
     const result = Railway.fromSync("id", () => "profile-1", toError)
       .derive("slug", ({ id }) => `${id}-slug`)
@@ -43,7 +43,9 @@ describe("Railway", () => {
 
     expect(result).toEqual(err("boom"));
   });
+});
 
+describe("Railway: async upgrade", () => {
   it("upgrades to ResultAsync when a Promise step appears", async () => {
     const result = Railway.fromSync("id", () => "profile-1", toError)
       .fromPromise("row", ({ id }) => Promise.resolve({ id, name: "Ada" }), toError)
@@ -71,7 +73,9 @@ describe("Railway", () => {
 
     expect(await result.resolve()).toEqual(err("not-found"));
   });
+});
 
+describe("Railway: require", () => {
   it("requires nullable values and narrows them under a new key", async () => {
     const result = Railway.fromPromise(
       "row",
@@ -99,7 +103,9 @@ describe("Railway", () => {
       expect(resolved.error.message).toBe("missing");
     }
   });
+});
 
+describe("Railway: parallel", () => {
   it("merges parallel branch outputs", async () => {
     const result = Railway.fromSync("id", () => "profile-1", toError)
       .parallel({

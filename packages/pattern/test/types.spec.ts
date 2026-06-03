@@ -13,7 +13,7 @@ type Event =
   | { type: "error"; message: string }
   | { type: "done" };
 
-describe("pattern types", () => {
+describe("pattern types: narrow", () => {
   it("Narrow extracts discriminated members", () => {
     type Msg = Narrow<Event, { type: "message" }>;
     expectType<TypeEqual<Msg, { type: "message"; content: string }>>(true);
@@ -28,6 +28,19 @@ describe("pattern types", () => {
     >(true);
   });
 
+  it("Narrow falls back to intersection on single-object T", () => {
+    type Job = {
+      id: string;
+      status: "queued" | "running" | "failed" | "canceled" | "succeeded";
+      errorMessage: string | null;
+    };
+    type FailedJob = Job & { status: "failed" };
+    type Narrowed = Narrow<Job, { status: "failed" }>;
+    expectType<TypeEqual<Narrowed, FailedJob>>(true);
+  });
+});
+
+describe("pattern types: match builder", () => {
   it("withOneOf narrows handler input to union of members", () => {
     type Job = { kind: "queued"; id: string } | { kind: "running"; id: string } | { kind: "done" };
     match<Job>()
@@ -84,7 +97,9 @@ describe("pattern types", () => {
       .otherwise(() => -1);
     expectType<TypeEqual<typeof n, number>>(true);
   });
+});
 
+describe("pattern types: returnType", () => {
   it("returnType locks the accumulator to R", () => {
     type Part = { type: "text"; text: string } | { type: "image"; src: string };
     const render = (p: Part) =>
@@ -105,6 +120,22 @@ describe("pattern types", () => {
     expectType<(input: Provider2) => number>(fn);
   });
 
+  it("returnType narrows handler input via object pattern", () => {
+    match<Event>()
+      .returnType<string>()
+      .with({ type: "message" }, (e) => {
+        expectType<TypeEqual<typeof e, { type: "message"; content: string }>>(true);
+        return e.content;
+      })
+      .with({ type: "error" }, (e) => {
+        expectType<TypeEqual<typeof e, { type: "error"; message: string }>>(true);
+        return e.message;
+      })
+      .with({ type: "done" }, () => "");
+  });
+});
+
+describe("pattern types: guards", () => {
   it("when() narrows via type predicate", () => {
     type Msg = { type: "msg"; content: string };
     type ErrEv = { type: "err"; code: number };
@@ -130,31 +161,6 @@ describe("pattern types", () => {
         },
       )
       .otherwise(() => 0);
-  });
-
-  it("Narrow falls back to intersection on single-object T", () => {
-    type Job = {
-      id: string;
-      status: "queued" | "running" | "failed" | "canceled" | "succeeded";
-      errorMessage: string | null;
-    };
-    type FailedJob = Job & { status: "failed" };
-    type Narrowed = Narrow<Job, { status: "failed" }>;
-    expectType<TypeEqual<Narrowed, FailedJob>>(true);
-  });
-
-  it("returnType narrows handler input via object pattern", () => {
-    match<Event>()
-      .returnType<string>()
-      .with({ type: "message" }, (e) => {
-        expectType<TypeEqual<typeof e, { type: "message"; content: string }>>(true);
-        return e.content;
-      })
-      .with({ type: "error" }, (e) => {
-        expectType<TypeEqual<typeof e, { type: "error"; message: string }>>(true);
-        return e.message;
-      })
-      .with({ type: "done" }, () => "");
   });
 
   it("matchTag narrows each _tag branch", () => {
