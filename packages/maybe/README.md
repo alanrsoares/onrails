@@ -22,6 +22,20 @@ const name = match(
 );
 ```
 
+## Side effects
+
+`tap` runs an effect on the `Some` value, `tapNone` on absence — both pass the
+`Maybe` through unchanged. Mirrors `tap`/`tapErr` from `@onrails/result`. Dual-form.
+
+```ts
+import { fromNullable, tap, tapNone } from "@onrails/maybe";
+
+const row = fromNullable(db.get(id));
+
+tap(row, (r) => log.debug("hit", r.id)); // runs on Some, returns row
+tapNone(row, () => metrics.miss());       // runs on None, returns row
+```
+
 ## Result boundary
 
 ```ts
