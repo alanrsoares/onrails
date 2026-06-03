@@ -30,6 +30,8 @@ chore(ci): bump setup-bun to v2
 
 Valid scopes: `result`, `codemod`, `eslint-plugin`, `repo`, `deps`, `ci`, `docs`. See [`commitlint.config.cjs`](./commitlint.config.cjs).
 
+Do not add `Co-authored-by` footers for AI tools (Cursor, Copilot, Claude, etc.). The commit-msg hook strips them if an IDE injects them.
+
 ## Releases
 
 Releases are automated by [release-please](https://github.com/googleapis/release-please-action). When `main` receives a feat/fix commit for a package, release-please opens a release PR for that package. Merging the PR creates the GitHub release and triggers `bun publish` with npm provenance.
