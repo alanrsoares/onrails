@@ -14,6 +14,8 @@ export {
   of,
   optional,
   some,
+  tap,
+  tapNone,
   unwrap,
   unwrapOr,
 } from "./maybe.js";

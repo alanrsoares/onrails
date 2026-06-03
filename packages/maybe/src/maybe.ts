@@ -221,3 +221,51 @@ export const compactMap = <T, U>(items: readonly T[], fn: (item: T) => Maybe<U>)
  */
 export const optional = <T, U>(value: T | null | undefined, fn: (value: T) => Maybe<U>): Maybe<U> =>
   flatMapImpl(fromNullable(value), fn);
+
+const tapImpl = <T>(maybe: Maybe<T>, fn: (value: T) => void): Maybe<T> => {
+  if (isSome(maybe)) fn(maybe.value);
+  return maybe;
+};
+
+/**
+ * Run a side effect on the `Some` value, pass the `Maybe` through unchanged.
+ * `None` is a no-op. Mirrors `tap` from `@onrails/result`. Dual-form.
+ *
+ * @example
+ * ```ts
+ * tap(some(2), (n) => console.log(n));               // logs 2, returns Some 2
+ * pipe(fromNullable(row), tap((r) => sink.push(r))); // curried — collect on Some
+ * ```
+ */
+export function tap<T>(maybe: Maybe<T>, fn: (value: T) => void): Maybe<T>;
+export function tap<T>(fn: (value: T) => void): (maybe: Maybe<T>) => Maybe<T>;
+export function tap(
+  ...args: [Maybe<unknown>, (value: unknown) => void] | [(value: unknown) => void]
+): unknown {
+  if (args.length === 2) return tapImpl(args[0], args[1]);
+  const fn = args[0];
+  return (maybe: Maybe<unknown>) => tapImpl(maybe, fn);
+}
+
+const tapNoneImpl = <T>(maybe: Maybe<T>, fn: () => void): Maybe<T> => {
+  if (isNone(maybe)) fn();
+  return maybe;
+};
+
+/**
+ * Run a side effect when the `Maybe` is `None`, pass it through unchanged.
+ * `Some` is a no-op. The `None`-side mirror of {@link tap}. Dual-form.
+ *
+ * @example
+ * ```ts
+ * tapNone(none(), () => metrics.miss());              // runs effect, returns None
+ * pipe(fromNullable(hit), tapNone(() => metrics.miss())); // curried
+ * ```
+ */
+export function tapNone<T>(maybe: Maybe<T>, fn: () => void): Maybe<T>;
+export function tapNone<T>(fn: () => void): (maybe: Maybe<T>) => Maybe<T>;
+export function tapNone(...args: [Maybe<unknown>, () => void] | [() => void]): unknown {
+  if (args.length === 2) return tapNoneImpl(args[0], args[1]);
+  const fn = args[0];
+  return (maybe: Maybe<unknown>) => tapNoneImpl(maybe, fn);
+}
