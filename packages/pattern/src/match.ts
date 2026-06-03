@@ -176,6 +176,20 @@ export class MatchBuilder<
    * Lock the result type. All subsequent `.with()` handlers must return `R2`.
    * Useful when branch return-type inference widens to a union narrower than
    * the slot the match feeds into (e.g. `ReactNode`).
+   *
+   * Also the fix for literal-widening: when a handler returns an object whose
+   * field is a union literal, inference widens it (e.g. `{ mode: "native" }`
+   * becomes `{ mode: string }`, breaking a `Mode` union). Lock the target type
+   * instead of sprinkling `as const`:
+   *
+   * @example
+   * ```ts
+   * type State = { mode: "compat" | "native" };
+   * const next = match(flag)
+   *   .returnType<State>()                       // handlers now checked against State
+   *   .with("--native", () => ({ mode: "native" })) // no `as const` needed
+   *   .otherwise(() => state);
+   * ```
    */
   returnType<R2>(): MatchBuilder<T, R2, HasInput, Handled, true> {
     return new MatchBuilder<T, R2, HasInput, Handled, true>(this.cases, this.input, this._handled);
