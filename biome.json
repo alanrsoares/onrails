@@ -30,6 +30,12 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "complexity": {
+        "noExcessiveLinesPerFunction": {
+          "level": "warn",
+          "options": { "maxLines": 50 }
+        }
+      },
       "correctness": {
         "noUnusedImports": "error",
         "noUnusedVariables": "error"

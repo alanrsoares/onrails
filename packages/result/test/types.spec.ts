@@ -39,7 +39,7 @@ import { $, tryGen, yieldResult } from "../src/try-gen.js";
 import type { Err, Ok, Result, UnexpectedError } from "../src/types.js";
 import { validateAllArray, validateTupleArray } from "../src/validation.js";
 
-describe("Result sync types", () => {
+describe("Result sync types: core", () => {
   it("ok and err preserve type params", () => {
     const success = ok(1);
     const failure = err("x");
@@ -58,7 +58,9 @@ describe("Result sync types", () => {
       expectType<TypeEqual<typeof r.error, string>>(true);
     }
   });
+});
 
+describe("Result sync types: mapping", () => {
   it("map and curried map change Ok type", () => {
     const r = map(ok(1), (n) => String(n));
     expectType<TypeEqual<typeof r, Result<string, never>>>(true);
@@ -93,7 +95,9 @@ describe("Result sync types", () => {
     );
     expectType<TypeEqual<typeof r, Result<string, "parse" | { kind: "zero" }>>>(true);
   });
+});
 
+describe("Result sync types: match and fold", () => {
   it("match preserves handler return type", () => {
     const out = match(
       ok(1),
@@ -119,7 +123,9 @@ describe("Result sync types", () => {
   it("matchResult is the same type as match", () => {
     expectType<TypeEqual<typeof matchResult, typeof match>>(true);
   });
+});
 
+describe("Result sync types: unwrap and combine", () => {
   it("unwrapOr returns Ok type on success", () => {
     const v = unwrapOr(ok(1), 0);
     expectType<TypeEqual<typeof v, number>>(true);
@@ -147,7 +153,9 @@ describe("Result sync types", () => {
     const r = combineTuple([a, b] as const);
     expectType<TypeEqual<typeof r, Result<readonly [number, string], never>>>(true);
   });
+});
 
+describe("Result sync types: effects", () => {
   it("trySync preserves function arity and return", () => {
     const safe = trySync(
       (a: number, b: string) => a + b.length,
@@ -298,7 +306,7 @@ describe("Result validation types", () => {
   });
 });
 
-describe("Railway types", () => {
+describe("Railway types: fluent", () => {
   it("sync-only workflows return Result", () => {
     const out = Railway.fromResult("id", () => ok("profile-1" as const))
       .derive("slug", ({ id }) => `${id}-slug`)
@@ -344,7 +352,9 @@ describe("Railway types", () => {
 
     expectType<ResultAsync<string, "parse" | "missing" | "write">>(out);
   });
+});
 
+describe("Railway types: functional", () => {
   it("functional railway composes reusable steps", () => {
     const parseProfileId = parseWith(
       (input: string) => input.trim() as "profile-1",

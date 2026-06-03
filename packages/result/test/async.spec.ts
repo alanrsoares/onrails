@@ -11,7 +11,7 @@ import {
 } from "../src/async.js";
 import { err, ok } from "../src/result.js";
 
-describe("ResultAsync", () => {
+describe("ResultAsync: construction", () => {
   it("fromPromise maps rejection", async () => {
     const ra = fromPromise(Promise.reject(new Error("boom")), (e) =>
       e instanceof Error ? e.message : String(e),
@@ -46,7 +46,9 @@ describe("ResultAsync", () => {
     const r2 = await errAsync<number, string>("nope");
     expect(r2).toEqual(err("nope"));
   });
+});
 
+describe("ResultAsync: chaining and combine", () => {
   it("flatMap chains async steps", async () => {
     const ra = okAsync(2).flatMap((n) => okAsync(n + 1));
     expect(await ra.resolve()).toEqual(ok(3));
@@ -80,7 +82,9 @@ describe("ResultAsync", () => {
     ] as const);
     expect(await combined.resolve()).toEqual(err("first"));
   });
+});
 
+describe("ResultAsync: tuple concurrency", () => {
   it("parallelTupleAsync returns first Err in input order", async () => {
     const combined = parallelTupleAsync([
       okAsync(1),
@@ -134,7 +138,9 @@ describe("ResultAsync", () => {
     expect(result).toEqual(ok([1, 2]));
     expect(maxInFlight).toBe(1);
   });
+});
 
+describe("ResultAsync: terminal and recovery", () => {
   it("match returns a plain value", async () => {
     const value = await okAsync("x").match(
       (v) => v.toUpperCase(),
