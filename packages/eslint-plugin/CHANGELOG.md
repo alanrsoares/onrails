@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.0...eslint-plugin-v0.1.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* **repo:** quality review fixes and cleanup ([#14](https://github.com/alanrsoares/onrails/issues/14)) ([29a606a](https://github.com/alanrsoares/onrails/commit/29a606a5ab8eb668b9fbcde282838d4cfd73b33f))
+
 ## 0.1.0 (2026-05-28)
 
 

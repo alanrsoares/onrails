@@ -1,6 +1,6 @@
 {
   "name": "@onrails/pattern",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Lightweight exhaustive matching for owned tagged unions — ts-pattern-shaped DX, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
