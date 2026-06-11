@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.2](https://github.com/alanrsoares/onrails/compare/maybe-v0.1.1...maybe-v0.1.2) (2026-06-11)
+
+
+### Features
+
+* **maybe:** add tap and tapNone ([#10](https://github.com/alanrsoares/onrails/issues/10)) ([b75aeea](https://github.com/alanrsoares/onrails/commit/b75aeead0b879a5424d1d4b9939480ea074852b2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.1.2
+  * peerDependencies
+    * @onrails/result bumped to 0.1.2
+
 ## [0.1.1](https://github.com/alanrsoares/onrails/compare/maybe-v0.1.0...maybe-v0.1.1) (2026-06-02)
 
 
