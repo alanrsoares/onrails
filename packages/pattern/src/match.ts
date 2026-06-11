@@ -121,6 +121,18 @@ export class MatchBuilder<
     readonly _handled: Handled = [] as unknown as Handled,
   ) {}
 
+  /** Appends a runtime case plus a phantom `H` entry on the handled tuple. */
+  private addCase<R2, H>(
+    next: Case<T, unknown>,
+  ): MatchBuilder<T, NextResult<Locked, R, R2>, HasInput, readonly [...Handled, H], Locked> {
+    return new MatchBuilder(
+      [...this.cases, next],
+      this.input,
+      // Safe: _handled is a phantom tuple — only its type-level contents matter.
+      this._handled as unknown as readonly [...Handled, H],
+    );
+  }
+
   with<const P extends Pattern<T>, R2>(
     pattern: P,
     handler: (input: Narrow<T, P>) => HandlerReturn<Locked, R, R2>,
@@ -131,13 +143,10 @@ export class MatchBuilder<
     readonly [...Handled, ExhaustMatched<T, P>],
     Locked
   > {
-    const next: Case<T, unknown> = {
+    return this.addCase<R2, ExhaustMatched<T, P>>({
       test: (input) => matches(input, pattern),
       run: handler as (input: T) => unknown,
-    };
-    return new MatchBuilder([...this.cases, next], this.input, [
-      ...this._handled,
-    ] as unknown as readonly [...Handled, ExhaustMatched<T, P>]);
+    });
   }
 
   /** One handler for several patterns (OR). Handler input is the union of narrowed members. */
@@ -151,10 +160,9 @@ export class MatchBuilder<
     readonly [...Handled, NarrowUnion<T, Ps>],
     Locked
   > {
-    const next = caseForPatterns(patterns, handler as (input: T) => unknown);
-    return new MatchBuilder([...this.cases, next], this.input, [
-      ...this._handled,
-    ] as unknown as readonly [...Handled, NarrowUnion<T, Ps>]);
+    return this.addCase<R2, NarrowUnion<T, Ps>>(
+      caseForPatterns(patterns, handler as (input: T) => unknown),
+    );
   }
 
   /** `withOneOf` for exactly two patterns. */
@@ -209,10 +217,10 @@ export class MatchBuilder<
   }
 
   exhaustive(): ExhaustiveResult<T, Handled, R, HasInput> {
-    if (this.input !== undefined) {
-      return this.run() as ExhaustiveResult<T, Handled, R, HasInput>;
-    }
-    return ((value: T) => this.run(value)) as ExhaustiveResult<T, Handled, R, HasInput>;
+    // Safe: HasInput is true exactly when match(value) captured an input.
+    return (
+      this.input !== undefined ? this.run() : (value: T) => this.run(value)
+    ) as ExhaustiveResult<T, Handled, R, HasInput>;
   }
 
   otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R {
@@ -220,10 +228,10 @@ export class MatchBuilder<
       const out = runCases(value, this.cases);
       return out === NO_MATCH ? handler(value) : (out as R);
     };
-    if (this.input !== undefined) {
-      return runWithFallback(this.input) as HasInput extends true ? R : (input: T) => R;
-    }
-    return runWithFallback as HasInput extends true ? R : (input: T) => R;
+    // Safe: HasInput is true exactly when match(value) captured an input.
+    return (
+      this.input !== undefined ? runWithFallback(this.input) : runWithFallback
+    ) as HasInput extends true ? R : (input: T) => R;
   }
 }
 
