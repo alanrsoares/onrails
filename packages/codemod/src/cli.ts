@@ -83,16 +83,11 @@ const collectInto =
       (e) => console.error(`error processing ${file}:`, e.message),
     );
 
-export async function main() {
-  const { target, dry, onrails, mode } = parseArgs(Bun.argv.slice(2));
-  const codeChanges: FileChange[] = [];
-  const pkgChanges: PkgChange[] = [];
-  for await (const file of walk(target)) {
-    if (mode === "compat" && file.endsWith("/package.json"))
-      await collectInto(pkgChanges, file)(rewritePkg(file, onrails, dry));
-    else if (CODE_EXT.test(file))
-      await collectInto(codeChanges, file)(rewriteCode(file, dry, mode));
-  }
+const printReport = (
+  { target, dry, onrails, mode }: Args,
+  codeChanges: readonly FileChange[],
+  pkgChanges: readonly PkgChange[],
+): void => {
   const label = dry ? "DRY" : "APPLY";
   console.log(`[${label}] target=${target}`);
   console.log(`[${label}] mode=${mode}`);
@@ -115,4 +110,18 @@ export async function main() {
     }
   }
   if (dry) console.log(`[${label}] no files written. re-run without --dry to apply.`);
+};
+
+export async function main() {
+  const args = parseArgs(Bun.argv.slice(2));
+  const { target, dry, onrails, mode } = args;
+  const codeChanges: FileChange[] = [];
+  const pkgChanges: PkgChange[] = [];
+  for await (const file of walk(target)) {
+    if (mode === "compat" && file.endsWith("/package.json"))
+      await collectInto(pkgChanges, file)(rewritePkg(file, onrails, dry));
+    else if (CODE_EXT.test(file))
+      await collectInto(codeChanges, file)(rewriteCode(file, dry, mode));
+  }
+  printReport(args, codeChanges, pkgChanges);
 }
