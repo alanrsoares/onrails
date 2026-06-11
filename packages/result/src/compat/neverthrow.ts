@@ -81,12 +81,12 @@ export class CompatResult<T, E> {
     if (isErr(this.inner)) {
       return CompatResultAsync.err(this.inner.error);
     }
-    return CompatResultAsync.fromInner(coerceToCore(fn(this.inner.value)) as CoreResultAsync<U, F>);
+    return CompatResultAsync.fromInner(coerceToCoreAsync(fn(this.inner.value)));
   }
 
   orElse<F>(fn: (error: E) => CompatResult<T, F>): CompatResult<T, F> {
     if (isOk(this.inner)) {
-      return new CompatResult(this.inner as ResultType<T, F>);
+      return new CompatResult<T, F>(this.inner);
     }
     return fn(this.inner.error);
   }
@@ -177,6 +177,7 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   ): Promise<R1 | R2> {
     return this.inner.resolve().then((r) => {
       const wrapped = new CompatResult(r);
+      // Safe: without onfulfilled, R1 stays at its CompatResult<T, E> default.
       return onfulfilled ? onfulfilled(wrapped) : (wrapped as unknown as R1);
     }, onrejected ?? undefined);
   }
@@ -196,12 +197,7 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   andThen<R extends AnyAsyncOrSyncResult>(
     fn: (value: T) => R,
   ): CompatResultAsync<UnwrapOk<R>, E | UnwrapErr<R>> {
-    return new CompatResultAsync(
-      this.inner.andThen((value) => coerceToCore(fn(value))) as CoreResultAsync<
-        UnwrapOk<R>,
-        E | UnwrapErr<R>
-      >,
-    );
+    return new CompatResultAsync(this.inner.andThen((value) => coerceToCore(fn(value))));
   }
 
   chain<R extends AnyAsyncOrSyncResult>(fn: (value: T) => R) {
@@ -285,14 +281,22 @@ type UnwrapErr<R> =
           ? F
           : never;
 
-function coerceToCore<U, F>(
-  next: CompatResultAsync<U, F> | CoreResultAsync<U, F> | CompatResult<U, F> | ResultType<U, F>,
-): CoreResultAsync<U, F> | ResultType<U, F> {
+function coerceToCore<R extends AnyAsyncOrSyncResult>(
+  next: R,
+): CoreResultAsync<UnwrapOk<R>, UnwrapErr<R>> | ResultType<UnwrapOk<R>, UnwrapErr<R>>;
+function coerceToCore(
+  next: AnyAsyncOrSyncResult,
+): CoreResultAsync<unknown, unknown> | ResultType<unknown, unknown> {
   if (next instanceof CompatResultAsync) return next.toCore();
   if (next instanceof CoreResultAsync) return next;
   if (next instanceof CompatResult) return next.inner;
   return next;
 }
+
+/** Async-only coercion — keeps {@link CompatResult.asyncAndThen} cast-free. */
+const coerceToCoreAsync = <U, F>(
+  next: CompatResultAsync<U, F> | CoreResultAsync<U, F>,
+): CoreResultAsync<U, F> => (next instanceof CompatResultAsync ? next.toCore() : next);
 
 export { CompatResultAsync as ResultAsync };
 
