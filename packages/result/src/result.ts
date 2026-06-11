@@ -379,14 +379,9 @@ export const combine = <T, E>(results: readonly Result<T, E>[]): Result<T[], E> 
 /** Tuple-preserving combine (neverthrow-style) */
 export const combineTuple = <const R extends readonly Result<unknown, unknown>[]>(
   results: R,
-): CombineTuple<R> => {
-  const values: unknown[] = [];
-  for (const result of results) {
-    if (isErr(result)) return err(result.error) as CombineTuple<R>;
-    values.push(result.value);
-  }
-  return ok(values) as CombineTuple<R>;
-};
+): CombineTuple<R> =>
+  // Runtime identical to combine; the cast restores per-index tuple types.
+  combine(results as readonly Result<unknown, unknown>[]) as CombineTuple<R>;
 
 type _OkValue<R> = R extends { _tag: "Ok"; readonly value: infer T } ? T : never;
 type _ErrValue<R> = R extends { _tag: "Err"; readonly error: infer E } ? E : never;
