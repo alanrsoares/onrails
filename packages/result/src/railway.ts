@@ -287,11 +287,7 @@ export class Railway<C extends object, E, M extends RailwayMode> {
    * every named field; prefer {@link select} when you can project to a DTO.
    */
   done(): RailwayOutput<C, E, M> {
-    return (this.state.mode === "sync" ? this.state.result : this.state.result) as RailwayOutput<
-      C,
-      E,
-      M
-    >;
+    return this.state.result as RailwayOutput<C, E, M>;
   }
 }
 
@@ -376,12 +372,10 @@ export function railway<I, A, B, C, D, E, F, G, H>(
   step8: UnaryStep<G, H>,
 ): H;
 export function railway<I>(input: I, ...steps: readonly ((input: never) => unknown)[]): unknown {
-  let current: unknown = Railway.context({ input });
-  for (const step of steps) {
-    const applyStep = step as (input: unknown) => unknown;
-    current = applyStep(current);
-  }
-  return current;
+  return steps.reduce<unknown>(
+    (current, step) => (step as (input: unknown) => unknown)(current),
+    Railway.context({ input }),
+  );
 }
 
 /**
