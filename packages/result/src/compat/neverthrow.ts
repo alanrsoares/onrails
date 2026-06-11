@@ -81,12 +81,12 @@ export class CompatResult<T, E> {
     if (isErr(this.inner)) {
       return CompatResultAsync.err(this.inner.error);
     }
-    return CompatResultAsync.fromInner(coerceToCore(fn(this.inner.value)) as CoreResultAsync<U, F>);
+    return CompatResultAsync.fromInner(coerceToCoreAsync(fn(this.inner.value)));
   }
 
   orElse<F>(fn: (error: E) => CompatResult<T, F>): CompatResult<T, F> {
     if (isOk(this.inner)) {
-      return new CompatResult(this.inner as ResultType<T, F>);
+      return new CompatResult<T, F>(this.inner);
     }
     return fn(this.inner.error);
   }
@@ -177,6 +177,7 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   ): Promise<R1 | R2> {
     return this.inner.resolve().then((r) => {
       const wrapped = new CompatResult(r);
+      // Safe: without onfulfilled, R1 stays at its CompatResult<T, E> default.
       return onfulfilled ? onfulfilled(wrapped) : (wrapped as unknown as R1);
     }, onrejected ?? undefined);
   }
@@ -196,12 +197,7 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   andThen<R extends AnyAsyncOrSyncResult>(
     fn: (value: T) => R,
   ): CompatResultAsync<UnwrapOk<R>, E | UnwrapErr<R>> {
-    return new CompatResultAsync(
-      this.inner.andThen((value) => coerceToCore(fn(value))) as CoreResultAsync<
-        UnwrapOk<R>,
-        E | UnwrapErr<R>
-      >,
-    );
+    return new CompatResultAsync(this.inner.andThen((value) => coerceToCore(fn(value))));
   }
 
   chain<R extends AnyAsyncOrSyncResult>(fn: (value: T) => R) {
@@ -240,19 +236,34 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   }
 
   andTee(fn: (value: T) => void | Promise<void>): CompatResultAsync<T, E> {
-    return this.andThen((value) =>
-      CompatResultAsync.fromSafePromise(Promise.resolve(fn(value)).then(() => value)),
+    return new CompatResultAsync(
+      CoreResultAsync.defer(async () => {
+        const r = await this.inner.resolve();
+        if (!isErr(r)) {
+          try {
+            await fn(r.value);
+          } catch {
+            // andTee ignores tee failures (neverthrow semantics).
+          }
+        }
+        return r;
+      }),
     );
   }
 
   orTee(fn: (error: E) => void | Promise<void>): CompatResultAsync<T, E> {
     return new CompatResultAsync(
-      CoreResultAsync.fromResultPromise(
-        this.inner.resolve().then(async (r) => {
-          if (isErr(r)) await fn(r.error);
-          return r;
-        }),
-      ) as CoreResultAsync<T, E>,
+      CoreResultAsync.defer(async () => {
+        const r = await this.inner.resolve();
+        if (isErr(r)) {
+          try {
+            await fn(r.error);
+          } catch {
+            // orTee ignores tee failures (neverthrow semantics).
+          }
+        }
+        return r;
+      }),
     );
   }
 }
@@ -285,14 +296,22 @@ type UnwrapErr<R> =
           ? F
           : never;
 
-function coerceToCore<U, F>(
-  next: CompatResultAsync<U, F> | CoreResultAsync<U, F> | CompatResult<U, F> | ResultType<U, F>,
-): CoreResultAsync<U, F> | ResultType<U, F> {
+function coerceToCore<R extends AnyAsyncOrSyncResult>(
+  next: R,
+): CoreResultAsync<UnwrapOk<R>, UnwrapErr<R>> | ResultType<UnwrapOk<R>, UnwrapErr<R>>;
+function coerceToCore(
+  next: AnyAsyncOrSyncResult,
+): CoreResultAsync<unknown, unknown> | ResultType<unknown, unknown> {
   if (next instanceof CompatResultAsync) return next.toCore();
   if (next instanceof CoreResultAsync) return next;
   if (next instanceof CompatResult) return next.inner;
   return next;
 }
+
+/** Async-only coercion — keeps {@link CompatResult.asyncAndThen} cast-free. */
+const coerceToCoreAsync = <U, F>(
+  next: CompatResultAsync<U, F> | CoreResultAsync<U, F>,
+): CoreResultAsync<U, F> => (next instanceof CompatResultAsync ? next.toCore() : next);
 
 export { CompatResultAsync as ResultAsync };
 

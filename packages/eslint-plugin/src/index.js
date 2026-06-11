@@ -6,8 +6,48 @@
  * for TypeScript files; without it the rules never fire.
  */
 
-const isIdentifierNamed = (node, name) => node && node.type === "Identifier" && node.name === name;
+/**
+ * Loose AST-node shape — typescript-eslint nodes (TSTypeReference, …) are not
+ * part of ESLint's bundled estree types, so rules narrow on `type` manually.
+ *
+ * @param {{ type: string; name?: string } | null | undefined} node
+ * @param {string} name
+ * @returns {boolean}
+ */
+const isIdentifierNamed = (node, name) =>
+  Boolean(node && node.type === "Identifier" && node.name === name);
 
+/**
+ * Minimal structural view of `@typescript-eslint/parser`'s TSTypeReference —
+ * only the fields these rules read. ESLint's bundled types know estree alone,
+ * so TS-AST visitors type their own slice and bridge at report boundaries.
+ *
+ * @typedef {object} TsTypeReference
+ * @property {string} type
+ * @property {{ type: string; name?: string }} typeName
+ * @property {{ params: TsTypeReference[] } | undefined} [typeArguments]
+ */
+
+/**
+ * Safe: TS-AST nodes carry the same range/loc contract ESLint needs; the
+ * bundled estree types just cannot name them.
+ *
+ * @param {TsTypeReference} node
+ * @returns {import('eslint').Rule.Node}
+ */
+const asReportable = (node) =>
+  /** @type {import('eslint').Rule.Node} */ (/** @type {unknown} */ (node));
+
+/**
+ * Safe: the `TSTypeReference` visitor key guarantees the parser produced a
+ * typescript-eslint TSTypeReference node.
+ *
+ * @param {import('eslint').Rule.Node} node
+ * @returns {TsTypeReference}
+ */
+const asTsTypeReference = (node) => /** @type {TsTypeReference} */ (/** @type {unknown} */ (node));
+
+/** @type {import('eslint').Rule.RuleModule} */
 const noPromiseResult = {
   meta: {
     type: "problem",
@@ -24,9 +64,10 @@ const noPromiseResult = {
   create(context) {
     const sourceCode = context.sourceCode;
     return {
-      TSTypeReference(node) {
-        if (!isIdentifierNamed(node.typeName, "Promise")) return;
-        const args = node.typeArguments?.params;
+      TSTypeReference(/** @type {import('eslint').Rule.Node} */ node) {
+        const typeRef = asTsTypeReference(node);
+        if (!isIdentifierNamed(typeRef.typeName, "Promise")) return;
+        const args = typeRef.typeArguments?.params;
         const inner = args?.[0];
         if (inner?.type !== "TSTypeReference") return;
         if (!isIdentifierNamed(inner.typeName, "Result")) return;
@@ -34,8 +75,8 @@ const noPromiseResult = {
         const innerArgs = inner.typeArguments?.params;
         const okT = innerArgs?.[0];
         const errT = innerArgs?.[1];
-        const okText = okT ? sourceCode.getText(okT) : "T";
-        const errText = errT ? sourceCode.getText(errT) : "E";
+        const okText = okT ? sourceCode.getText(asReportable(okT)) : "T";
+        const errText = errT ? sourceCode.getText(asReportable(errT)) : "E";
 
         context.report({
           node,
@@ -48,6 +89,7 @@ const noPromiseResult = {
   },
 };
 
+/** @type {import('eslint').Rule.RuleModule} */
 const noUnsafeUnwrap = {
   meta: {
     type: "suggestion",

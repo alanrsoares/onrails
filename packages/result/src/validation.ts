@@ -62,21 +62,9 @@ export const validateAll = <T, E>(
 export const validateTuple = <E, const R extends readonly Result<unknown, E>[]>(
   results: R,
   combineErrors: (left: E, right: E) => E,
-): ValidateTuple<R, E> => {
-  const values: unknown[] = [];
-  let accumulated: E | undefined;
-
-  for (const result of results) {
-    if (isErr(result)) {
-      const error = result.error;
-      accumulated = accumulated === undefined ? error : combineErrors(accumulated, error);
-    } else {
-      values.push(result.value);
-    }
-  }
-
-  return (accumulated === undefined ? ok(values) : err(accumulated)) as ValidateTuple<R, E>;
-};
+): ValidateTuple<R, E> =>
+  // Runtime identical to validateAll; the cast restores per-index tuple types.
+  validateAll(results, combineErrors) as ValidateTuple<R, E>;
 
 /**
  * Like {@link validateAll}, but collects every failure into a readonly
@@ -119,20 +107,9 @@ export const validateAllArray = <T, E>(
  */
 export const validateTupleArray = <const R extends readonly Result<unknown, unknown>[]>(
   results: R,
-): ValidateTuple<R, readonly TupleErrors<R>[]> => {
-  const values: unknown[] = [];
-  const errors: TupleErrors<R>[] = [];
-
-  for (const result of results) {
-    if (isErr(result)) {
-      errors.push(result.error as TupleErrors<R>);
-    } else {
-      values.push(result.value);
-    }
-  }
-
-  return (errors.length === 0 ? ok(values) : err(errors)) as ValidateTuple<
+): ValidateTuple<R, readonly TupleErrors<R>[]> =>
+  // Runtime identical to validateAllArray; the cast restores per-index tuple types.
+  validateAllArray(results as readonly Result<unknown, TupleErrors<R>>[]) as ValidateTuple<
     R,
     readonly TupleErrors<R>[]
   >;
-};

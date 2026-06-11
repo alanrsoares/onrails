@@ -1,5 +1,4 @@
-// biome-ignore lint/suspicious/noExplicitAny: type-predicate position in GuardTarget
-type GuardTarget<F> = F extends (input: any) => input is infer U ? U : never;
+import type { GuardTarget } from "./narrow.js";
 
 /**
  * Union members of `T` ruled out by pattern `P`.

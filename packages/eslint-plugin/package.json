@@ -49,9 +49,9 @@
     }
   },
   "scripts": {
-    "typecheck": "echo 'noop (js plugin)'",
+    "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check": "bun test"
+    "check": "bun run typecheck && bun test"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.60.0",

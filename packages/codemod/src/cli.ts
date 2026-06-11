@@ -1,7 +1,7 @@
 import { relative, resolve } from "node:path";
 import { type Maybe, match as matchMaybe, none, some, tap } from "@onrails/maybe";
 import { match } from "@onrails/pattern";
-import { ResultAsync } from "@onrails/result";
+import { err, isErr, ok, type Result, ResultAsync } from "@onrails/result";
 import { Glob } from "bun";
 import { CODE_EXT, SKIP } from "./constants.js";
 import { computeFileChange, toFileChange } from "./file-change.js";
@@ -26,7 +26,10 @@ const applyArg = (s: ArgState, a: string): ArgState =>
     )
     .otherwise(() => s);
 
-export function parseArgs(argv: string[]): Args {
+const USAGE =
+  "usage: onrails-codemod-neverthrow <target-dir> [--dry] [--to-native] [--onrails=<abs-path>]";
+
+export function parseArgs(argv: string[]): Result<Args, string> {
   const initial: ArgState = {
     positional: [],
     dry: false,
@@ -35,17 +38,14 @@ export function parseArgs(argv: string[]): Args {
   };
   const { positional, dry, mode, onrails } = argv.reduce(applyArg, initial);
   if (positional.length !== 1) {
-    console.error(
-      "usage: onrails-codemod-neverthrow <target-dir> [--dry] [--to-native] [--onrails=<abs-path>]",
-    );
-    process.exit(2);
+    return err(USAGE);
   }
-  return {
+  return ok({
     target: resolve(positional[0] ?? "."),
     dry,
     onrails,
     mode,
-  };
+  });
 }
 
 const shouldSkip = (path: string) => path.split("/").some((seg) => SKIP.has(seg));
@@ -83,16 +83,11 @@ const collectInto =
       (e) => console.error(`error processing ${file}:`, e.message),
     );
 
-export async function main() {
-  const { target, dry, onrails, mode } = parseArgs(Bun.argv.slice(2));
-  const codeChanges: FileChange[] = [];
-  const pkgChanges: PkgChange[] = [];
-  for await (const file of walk(target)) {
-    if (mode === "compat" && file.endsWith("/package.json"))
-      await collectInto(pkgChanges, file)(rewritePkg(file, onrails, dry));
-    else if (CODE_EXT.test(file))
-      await collectInto(codeChanges, file)(rewriteCode(file, dry, mode));
-  }
+const printReport = (
+  { target, dry, onrails, mode }: Args,
+  codeChanges: readonly FileChange[],
+  pkgChanges: readonly PkgChange[],
+): void => {
   const label = dry ? "DRY" : "APPLY";
   console.log(`[${label}] target=${target}`);
   console.log(`[${label}] mode=${mode}`);
@@ -115,4 +110,23 @@ export async function main() {
     }
   }
   if (dry) console.log(`[${label}] no files written. re-run without --dry to apply.`);
+};
+
+export async function main() {
+  const parsed = parseArgs(Bun.argv.slice(2));
+  if (isErr(parsed)) {
+    console.error(parsed.error);
+    process.exit(2);
+  }
+  const args = parsed.value;
+  const { target, dry, onrails, mode } = args;
+  const codeChanges: FileChange[] = [];
+  const pkgChanges: PkgChange[] = [];
+  for await (const file of walk(target)) {
+    if (mode === "compat" && file.endsWith("/package.json"))
+      await collectInto(pkgChanges, file)(rewritePkg(file, onrails, dry));
+    else if (CODE_EXT.test(file))
+      await collectInto(codeChanges, file)(rewriteCode(file, dry, mode));
+  }
+  printReport(args, codeChanges, pkgChanges);
 }
