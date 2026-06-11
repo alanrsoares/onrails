@@ -19,16 +19,25 @@ const liftPromiseResult = async <T, E>(
     if (isErr(result)) {
       return result;
     }
-    const inner = result.value;
-    if (inner && typeof inner === "object" && "_tag" in inner) {
-      if (inner._tag === "Ok" || inner._tag === "Err") {
-        return inner as unknown as Result<T, E | UnexpectedError>;
-      }
-    }
-    return result;
+    // Auto-flatten one level: Ok<Result<…>> from double-wrapped interop.
+    return isResultLike<T, E | UnexpectedError>(result.value) ? result.value : result;
   } catch (error) {
     return err(onDefect(error));
   }
+};
+
+/** Collapses settled results left-to-right, short-circuiting on the first `Err`. */
+const sequenceSettled = (
+  settled: readonly Result<unknown, unknown>[],
+): Result<unknown[], unknown> => {
+  const values: unknown[] = [];
+  for (const result of settled) {
+    if (isErr(result)) {
+      return err(result.error);
+    }
+    values.push(result.value);
+  }
+  return ok(values);
 };
 
 /**
@@ -104,23 +113,10 @@ export class ResultAsync<T, E> {
   static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(
     results: R,
   ): CombineTupleAsync<R> {
-    return new ResultAsync(async () => {
-      const values: unknown[] = [];
-      for (const ra of results) {
-        const result = await ra.resolve();
-        if (isErr(result)) {
-          return err(result.error) as Result<
-            { [K in keyof R]: AsyncOk<R[K]> },
-            { [K in keyof R]: AsyncErr<R[K]> }[number]
-          >;
-        }
-        values.push(result.value);
-      }
-      return ok(values) as Result<
-        { [K in keyof R]: AsyncOk<R[K]> },
-        { [K in keyof R]: AsyncErr<R[K]> }[number]
-      >;
-    }) as CombineTupleAsync<R>;
+    // Runtime identical to combine; the cast restores per-index tuple types.
+    return ResultAsync.combine(
+      results as readonly ResultAsync<unknown, unknown>[],
+    ) as CombineTupleAsync<R>;
   }
 
   /**
@@ -130,23 +126,10 @@ export class ResultAsync<T, E> {
   static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknown>[]>(
     results: R,
   ): CombineTupleAsync<R> {
-    return new ResultAsync(async () => {
-      const settled = await Promise.all(results.map((ra) => ra.resolve()));
-      const values: unknown[] = [];
-      for (const result of settled) {
-        if (isErr(result)) {
-          return err(result.error) as Result<
-            { [K in keyof R]: AsyncOk<R[K]> },
-            { [K in keyof R]: AsyncErr<R[K]> }[number]
-          >;
-        }
-        values.push(result.value);
-      }
-      return ok(values) as Result<
-        { [K in keyof R]: AsyncOk<R[K]> },
-        { [K in keyof R]: AsyncErr<R[K]> }[number]
-      >;
-    }) as CombineTupleAsync<R>;
+    // Cast restores per-index tuple types over the untyped sequence core.
+    return new ResultAsync(async () =>
+      sequenceSettled(await Promise.all(results.map((ra) => ra.resolve()))),
+    ) as CombineTupleAsync<R>;
   }
 
   map<U>(fn: (value: T) => U): ResultAsync<U, E> {
@@ -160,22 +143,19 @@ export class ResultAsync<T, E> {
   flatMap<U, F = E>(
     fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
   ): ResultAsync<U, E | F> {
-    return new ResultAsync(async () => {
+    return new ResultAsync<U, E | F>(async () => {
       const first = await this.run();
       if (isErr(first)) {
-        return err(first.error) as Result<U, E | F>;
+        return first;
       }
       const next = fn(first.value);
       if (next instanceof ResultAsync) {
-        return next.resolve() as Promise<Result<U, E | F>>;
+        return next.resolve();
       }
-      if (isResultLike(next)) {
-        return next as Result<U, E | F>;
+      if (isResultLike<U, F>(next)) {
+        return next;
       }
-      if (isCompatLike(next)) {
-        return next.inner as Result<U, E | F>;
-      }
-      return next as Result<U, E | F>;
+      return isCompatLike<U, F>(next) ? next.inner : next;
     });
   }
 
@@ -192,16 +172,13 @@ export class ResultAsync<T, E> {
   }
 
   recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
-    return new ResultAsync(async () => {
+    return new ResultAsync<T, F>(async () => {
       const first = await this.run();
       if (!isErr(first)) {
-        return first as Result<T, F>;
+        return first;
       }
       const next = fn(first.error);
-      if (next instanceof ResultAsync) {
-        return next.resolve();
-      }
-      return next;
+      return next instanceof ResultAsync ? next.resolve() : next;
     });
   }
 
@@ -242,9 +219,7 @@ export class ResultAsync<T, E> {
   }
 
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2> {
-    return this.run().then((result) =>
-      isErr(result) ? onErr(result.error) : onOk(result.value),
-    ) as Promise<U1 | U2>;
+    return this.run().then((result) => (isErr(result) ? onErr(result.error) : onOk(result.value)));
   }
 
   resolve(): Promise<Result<T, E>> {
@@ -261,6 +236,7 @@ export class ResultAsync<T, E> {
     onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | undefined | null,
   ): Promise<R1 | R2> {
     return this.run().then(
+      // Safe: without onfulfilled, R1 stays at its Result<T, E> default.
       (r) => (onfulfilled ? onfulfilled(r) : (r as unknown as R1)),
       onrejected ?? undefined,
     );
