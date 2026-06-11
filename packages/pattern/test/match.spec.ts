@@ -176,3 +176,27 @@ describe("assertNever", () => {
     expect(() => assertNever(x)).toThrow("Unreachable");
   });
 });
+
+describe("data-first match on nullish input", () => {
+  it("regression: match(undefined) runs immediately instead of currying", () => {
+    const out = match(undefined as string | undefined)
+      .with(undefined, () => "none")
+      .otherwise((s) => s ?? "none");
+    expect(out).toBe("none");
+  });
+
+  it("regression: match(null) runs immediately instead of currying", () => {
+    const out = match(null as string | null)
+      .with(null, () => "none")
+      .otherwise(() => "some");
+    expect(out).toBe("none");
+  });
+
+  it("curried matcher still runs on an undefined input value", () => {
+    const fn = match<string | undefined>()
+      .with(undefined, () => "none")
+      .otherwise((s) => s ?? "none");
+    expect(fn(undefined)).toBe("none");
+    expect(fn("x")).toBe("x");
+  });
+});

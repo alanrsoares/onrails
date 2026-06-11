@@ -65,6 +65,12 @@ const matches = <T>(input: T, pattern: Pattern<T>): boolean => {
 const NO_MATCH = Symbol("@onrails/pattern/no-match");
 type NoMatch = typeof NO_MATCH;
 
+// Sentinel for "curried matcher, no captured input". Distinct from a
+// data-first `match(undefined)` / `match(null)`, which must run immediately
+// like any other value instead of silently degrading to curried mode.
+const NO_INPUT = Symbol("@onrails/pattern/no-input");
+type NoInput = typeof NO_INPUT;
+
 const runCases = <T, R>(input: T, cases: readonly Case<T, R>[]): R | NoMatch => {
   for (const c of cases) {
     if (c.test(input)) {
@@ -115,8 +121,10 @@ export class MatchBuilder<
   Locked extends boolean = false,
 > {
   constructor(
-    private readonly cases: readonly Case<T, unknown>[] = [],
-    private readonly input?: T,
+    private readonly cases: readonly Case<T, unknown>[],
+    // No default: `= NO_INPUT` would swallow a data-first `undefined` input,
+    // because JS applies parameter defaults to explicitly-passed undefined.
+    private readonly input: T | NoInput,
     // Safe: phantom tuple — only used for compile-time exhaustiveness tracking.
     readonly _handled: Handled = [] as unknown as Handled,
   ) {}
@@ -204,9 +212,9 @@ export class MatchBuilder<
   }
 
   /** Run on the value passed to {@link match}, or on `input` when curried. */
-  run(input?: T): R {
-    const value = input ?? this.input;
-    if (value === undefined) {
+  run(...input: readonly [input: T] | readonly []): R {
+    const value = input.length === 1 ? input[0] : this.input;
+    if (value === NO_INPUT) {
       throw new Error("match.run: no input value");
     }
     const out = runCases(value, this.cases);
@@ -219,7 +227,7 @@ export class MatchBuilder<
   exhaustive(): ExhaustiveResult<T, Handled, R, HasInput> {
     // Safe: HasInput is true exactly when match(value) captured an input.
     return (
-      this.input !== undefined ? this.run() : (value: T) => this.run(value)
+      this.input === NO_INPUT ? (value: T) => this.run(value) : this.run()
     ) as ExhaustiveResult<T, Handled, R, HasInput>;
   }
 
@@ -230,7 +238,7 @@ export class MatchBuilder<
     };
     // Safe: HasInput is true exactly when match(value) captured an input.
     return (
-      this.input !== undefined ? runWithFallback(this.input) : runWithFallback
+      this.input === NO_INPUT ? runWithFallback : runWithFallback(this.input)
     ) as HasInput extends true ? R : (input: T) => R;
   }
 }
@@ -272,6 +280,10 @@ export type LockedMatchBuilder<
  */
 export function match<T>(input: T): MatchBuilder<T, never, true>;
 export function match<T = never>(): MatchBuilder<T, never, false>;
-export function match<T>(input?: T): MatchBuilder<T, never, boolean> {
-  return new MatchBuilder([], input);
+export function match<T>(
+  ...input: readonly [input: T] | readonly []
+): MatchBuilder<T, never, boolean> {
+  return input.length === 1
+    ? new MatchBuilder<T, never, boolean>([], input[0])
+    : new MatchBuilder<T, never, boolean>([], NO_INPUT);
 }
