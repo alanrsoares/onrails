@@ -236,19 +236,34 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   }
 
   andTee(fn: (value: T) => void | Promise<void>): CompatResultAsync<T, E> {
-    return this.andThen((value) =>
-      CompatResultAsync.fromSafePromise(Promise.resolve(fn(value)).then(() => value)),
+    return new CompatResultAsync(
+      CoreResultAsync.defer(async () => {
+        const r = await this.inner.resolve();
+        if (!isErr(r)) {
+          try {
+            await fn(r.value);
+          } catch {
+            // andTee ignores tee failures (neverthrow semantics).
+          }
+        }
+        return r;
+      }),
     );
   }
 
   orTee(fn: (error: E) => void | Promise<void>): CompatResultAsync<T, E> {
     return new CompatResultAsync(
-      CoreResultAsync.fromResultPromise(
-        this.inner.resolve().then(async (r) => {
-          if (isErr(r)) await fn(r.error);
-          return r;
-        }),
-      ) as CoreResultAsync<T, E>,
+      CoreResultAsync.defer(async () => {
+        const r = await this.inner.resolve();
+        if (isErr(r)) {
+          try {
+            await fn(r.error);
+          } catch {
+            // orTee ignores tee failures (neverthrow semantics).
+          }
+        }
+        return r;
+      }),
     );
   }
 }

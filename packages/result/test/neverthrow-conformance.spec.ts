@@ -79,7 +79,9 @@ describe("neverthrow compat — async", () => {
       ),
     ).toBe("net");
   });
+});
 
+describe("neverthrow compat — tees", () => {
   it("andTee runs side effect without changing value", async () => {
     const seen: number[] = [];
     const ra = ResultAsync.fromSafePromise(Promise.resolve(3)).andTee((n) => {
@@ -89,5 +91,34 @@ describe("neverthrow compat — async", () => {
     expect(r.isOk()).toBe(true);
     expect(r._unsafeUnwrap()).toBe(3);
     expect(seen).toEqual([3]);
+  });
+
+  it("andTee ignores a throwing tee and keeps the Ok", async () => {
+    const ra = ResultAsync.fromSafePromise(Promise.resolve(3)).andTee(() => {
+      throw new Error("tee boom");
+    });
+    const r = await ra;
+    expect(r.isOk()).toBe(true);
+    expect(r._unsafeUnwrap()).toBe(3);
+  });
+
+  it("orTee runs side effect and preserves the original Err", async () => {
+    const seen: string[] = [];
+    const ra = ResultAsync.err<number, string>("boom").orTee((e) => {
+      seen.push(e);
+    });
+    const r = await ra;
+    expect(r.isErr()).toBe(true);
+    expect(r._unsafeUnwrapErr()).toBe("boom");
+    expect(seen).toEqual(["boom"]);
+  });
+
+  it("orTee ignores a rejecting tee and keeps the original Err", async () => {
+    const ra = ResultAsync.err<number, string>("boom").orTee(() =>
+      Promise.reject(new Error("tee boom")),
+    );
+    const r = await ra;
+    expect(r.isErr()).toBe(true);
+    expect(r._unsafeUnwrapErr()).toBe("boom");
   });
 });
