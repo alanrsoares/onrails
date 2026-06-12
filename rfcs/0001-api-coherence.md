@@ -1,6 +1,6 @@
 # RFC 0001 — API coherence across `result` / `maybe` / `pattern`
 
-**Status:** draft
+**Status:** accepted
 **Scope:** naming, aliases, and surface placement. No runtime behavior changes except where flagged.
 
 The core trio is coherent where it counts — one tagged-union data model, uniform
