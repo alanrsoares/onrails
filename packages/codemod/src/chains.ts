@@ -1,4 +1,4 @@
-import { compactMap, isSome, type Maybe, none, some } from "@onrails/maybe";
+import { compactMap, isSome, type Maybe, map, none, some } from "@onrails/maybe";
 import ts from "typescript";
 import { argsToText, edit, lookupMap, spanEdit, walkSource } from "./ast.js";
 import {
@@ -43,61 +43,52 @@ function identifierCallToNative(node: ts.CallExpression): Maybe<Edit> {
     return some(edit(`match(${argsToText(node.arguments)})`, ["match"]));
   }
   if (name === "fold") {
-    const objArg = node.arguments[0];
-    if (objArg && ts.isObjectLiteralExpression(objArg)) {
-      let okText = "onOk";
-      let errText = "onErr";
-      for (const prop of objArg.properties) {
-        if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
-          if (prop.name.text === "ok") {
-            okText = prop.initializer.getText();
-          } else if (prop.name.text === "err") {
-            errText = prop.initializer.getText();
-          }
-        } else if (ts.isShorthandPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
-          if (prop.name.text === "ok") {
-            okText = "ok";
-          } else if (prop.name.text === "err") {
-            errText = "err";
-          }
-        }
-      }
-      return some(edit(`match(${okText}, ${errText})`, ["match"]));
-    }
+    return map(foldHandlerTexts(node.arguments[0]), ({ okText, errText }) =>
+      edit(`match(${okText}, ${errText})`, ["match"]),
+    );
   }
   return none();
 }
 
-function curriedFoldToNative(node: ts.CallExpression): Maybe<Edit> {
-  if (
-    ts.isCallExpression(node.expression) &&
-    ts.isIdentifier(node.expression.expression) &&
-    node.expression.expression.text === "fold"
-  ) {
-    const objArg = node.expression.arguments[0];
-    if (objArg && ts.isObjectLiteralExpression(objArg)) {
-      let okText = "onOk";
-      let errText = "onErr";
-      for (const prop of objArg.properties) {
-        if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
-          if (prop.name.text === "ok") {
-            okText = prop.initializer.getText();
-          } else if (prop.name.text === "err") {
-            errText = prop.initializer.getText();
-          }
-        } else if (ts.isShorthandPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
-          if (prop.name.text === "ok") {
-            okText = "ok";
-          } else if (prop.name.text === "err") {
-            errText = "err";
-          }
-        }
+type FoldHandlerTexts = { okText: string; errText: string };
+
+// Bails (none) unless both `ok` and `err` handlers are plain or shorthand
+// properties — spread/computed handlers can't be rewritten textually.
+function foldHandlerTexts(objArg: ts.Expression | undefined): Maybe<FoldHandlerTexts> {
+  if (!objArg || !ts.isObjectLiteralExpression(objArg)) return none();
+  let okText: string | undefined;
+  let errText: string | undefined;
+  for (const prop of objArg.properties) {
+    if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+      if (prop.name.text === "ok") {
+        okText = prop.initializer.getText();
+      } else if (prop.name.text === "err") {
+        errText = prop.initializer.getText();
       }
-      const receiverText = node.arguments[0]?.getText() ?? "result";
-      return some(edit(`match(${okText}, ${errText})(${receiverText})`, ["match"]));
+    } else if (ts.isShorthandPropertyAssignment(prop)) {
+      if (prop.name.text === "ok") {
+        okText = "ok";
+      } else if (prop.name.text === "err") {
+        errText = "err";
+      }
     }
   }
-  return none();
+  return okText !== undefined && errText !== undefined ? some({ okText, errText }) : none();
+}
+
+function curriedFoldToNative(node: ts.CallExpression): Maybe<Edit> {
+  if (
+    !ts.isCallExpression(node.expression) ||
+    !ts.isIdentifier(node.expression.expression) ||
+    node.expression.expression.text !== "fold"
+  ) {
+    return none();
+  }
+  const receiver = node.arguments[0];
+  if (!receiver) return none();
+  return map(foldHandlerTexts(node.expression.arguments[0]), ({ okText, errText }) =>
+    edit(`match(${okText}, ${errText})(${receiver.getText()})`, ["match"]),
+  );
 }
 
 export function helperCallToNative(node: ts.CallExpression): Maybe<Edit> {

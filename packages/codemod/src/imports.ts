@@ -1,6 +1,12 @@
 import { isTypeOnlyNative, isValueImport, splitImportNames, stripInlineType } from "./ast.js";
 import { COMPAT_SPEC, NATIVE_SPEC } from "./constants.js";
 
+// Every entry must have a matching call-site rewrite in chains.ts, or the
+// renamed import strands the old name at call sites. `of` is intentionally
+// absent: bare `of(...)` calls collide with other libraries (e.g. RxJS) and
+// the canonical target differs per carrier (result `ok` vs maybe `some`) —
+// the native package still exports the deprecated alias, so imports of `of`
+// pass through unchanged and the lint rules flag them for manual migration.
 const IMPORT_RENAMES = new Map([
   ["sequenceTupleAsync", "ResultAsync"],
   ["getOrElse", "unwrapOr"],
@@ -8,7 +14,6 @@ const IMPORT_RENAMES = new Map([
   ["matchResult", "match"],
   ["matchMaybe", "match"],
   ["fold", "match"],
-  ["of", "ok"],
 ]);
 
 export function toNativeImport(full: string, specifiers: string, quote: string): string {
@@ -17,8 +22,8 @@ export function toNativeImport(full: string, specifiers: string, quote: string):
   const rawValueNames = imports.filter(isValueImport);
   const valueNames = rawValueNames.map((name) => IMPORT_RENAMES.get(name) ?? name);
 
-  const uniqueValueNames = valueNames.filter((v, i, self) => self.indexOf(v) === i);
-  const uniqueTypeNames = typeNames.filter((v, i, self) => self.indexOf(v) === i);
+  const uniqueValueNames = [...new Set(valueNames)];
+  const uniqueTypeNames = [...new Set(typeNames)];
   const chunks: string[] = [];
 
   if (uniqueValueNames.length > 0) {
