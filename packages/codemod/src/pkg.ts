@@ -1,5 +1,5 @@
 import { relative } from "node:path";
-import { type Maybe, match as matchMaybe, none, some } from "@onrails/maybe";
+import { type Maybe, match, none, some } from "@onrails/maybe";
 import { type Result, ResultAsync, trySync } from "@onrails/result";
 import { DEP_KEYS } from "./constants.js";
 import { readFileText, toError, writeFileText } from "./io.js";
@@ -49,7 +49,7 @@ export const rewritePkg = (
   readFileText(path)
     .flatMap((raw) => ResultAsync.fromResult(parsePackageJson(raw)))
     .flatMap((json) =>
-      matchMaybe(
+      match(
         computePkgRewrite(json, path, onrailsAbs),
         (c) => {
           const change = toPkgChange(path, c);
