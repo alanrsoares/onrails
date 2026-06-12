@@ -1,10 +1,11 @@
 /**
  * Runtime + type assertions for the point-free recipes in RECIPES.md
- * (sections 1, 6, and 9–11). Each describe block mirrors one recipe; stubs are
+ * (sections 1, 6, 9–13). Each describe block mirrors one recipe; stubs are
  * inlined so the test file is self-contained.
  */
 import { describe, expect, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
+import { ResultAsync } from "../src/async.js";
 import { flow } from "../src/pipe.js";
 import {
   err,
@@ -279,8 +280,9 @@ describe("recipe 1 — reusable parser builder", () => {
 // Recipe 6 — Reusable validator ladder via flow + recover
 // ─────────────────────────────────────────────────────────────────────────────
 
-type LengthError = { kind: "len"; min: number };
 type CharsError = { kind: "chars"; bad: string };
+
+type TooShortError = { kind: "too_short"; min: number };
 
 const requireMin = (min: number) => (s: string) =>
   s.length >= min ? ok(s) : err({ kind: "len" as const, min });
@@ -293,9 +295,7 @@ const validateUsername = flow(
   flatMap(requireMin(3)),
   flatMap(requireAscii),
   recover(
-    (
-      e: LengthError | CharsError,
-    ): Result<string, { kind: "too_short"; min: number } | CharsError> =>
+    (e): Result<string, TooShortError | CharsError> =>
       e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
   ),
 );
@@ -316,5 +316,110 @@ describe("recipe 6 — reusable validator ladder", () => {
   it("preserves validator output and error types", () => {
     type ExpectedType = Result<string, { kind: "too_short"; min: number } | CharsError>;
     expectType<TypeEqual<ReturnType<typeof validateUsername>, ExpectedType>>(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recipe 12 — Async pipelines via ResultAsync composition
+// ─────────────────────────────────────────────────────────────────────────────
+
+type Profile = { id: string; name: string };
+type Metrics = { score: number };
+type Summary = { name: string; score: number };
+
+const fetchProfileStub = (id: string): ResultAsync<Profile, Error> =>
+  ResultAsync.ok({ id, name: "Alice" });
+
+const fetchMetricsStub = (_p: Profile): ResultAsync<Metrics, Error> =>
+  ResultAsync.ok({ score: 99 });
+
+const formatSummary = (p: Profile, m: Metrics): Summary => ({
+  name: p.name,
+  score: m.score,
+});
+
+describe("recipe 12 — async pipelines via ResultAsync composition", () => {
+  it("composes async steps successfully", async () => {
+    const loadSummary = flow(fetchProfileStub, (ra) =>
+      ra.flatMap((profile) =>
+        fetchMetricsStub(profile).map((metrics) => formatSummary(profile, metrics)),
+      ),
+    );
+
+    const result = await loadSummary("123");
+    expect(result).toEqual(ok({ name: "Alice", score: 99 }));
+  });
+
+  it("preserves async pipeline types", () => {
+    const loadSummary = flow(fetchProfileStub, (ra) =>
+      ra.flatMap((profile) =>
+        fetchMetricsStub(profile).map((metrics) => formatSummary(profile, metrics)),
+      ),
+    );
+    type LoadSummaryFn = typeof loadSummary;
+    expectType<TypeEqual<ReturnType<LoadSummaryFn>, ResultAsync<Summary, Error>>>(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recipe 13 — Functional Railway pipelines (railway + named steps)
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { deriveNamed, fromPromiseNamed, parseWith, railway, select } from "../src/railway.js";
+
+type Dashboard = { title: string };
+
+const IdSchema = {
+  parse: (x: unknown): string => {
+    if (typeof x === "string") return x;
+    throw new Error("Invalid ID");
+  },
+};
+
+const fetchProfileMock = async (id: string): Promise<Profile> => ({
+  id,
+  name: "Alice",
+});
+
+const toError = (e: unknown): Error => (e instanceof Error ? e : new Error(String(e)));
+
+describe("recipe 13 — functional railway pipelines", () => {
+  it("builds and executes an async pipeline using railway steps", async () => {
+    const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
+      railway(
+        rawId,
+        parseWith(IdSchema, toError).as("id"),
+        fromPromiseNamed(
+          "profile",
+          ({ id }: { readonly id: string }) => fetchProfileMock(id),
+          toError,
+        ),
+        deriveNamed("title", ({ profile }: { readonly profile: Profile }) =>
+          profile.name.toUpperCase(),
+        ),
+        select(({ title }: { readonly title: string }) => ({ title })),
+      );
+
+    const result = await loadDashboard("123");
+    expect(result).toEqual(ok({ title: "ALICE" }));
+  });
+
+  it("preserves functional railway output and error types", () => {
+    const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
+      railway(
+        rawId,
+        parseWith(IdSchema, toError).as("id"),
+        fromPromiseNamed(
+          "profile",
+          ({ id }: { readonly id: string }) => fetchProfileMock(id),
+          toError,
+        ),
+        deriveNamed("title", ({ profile }: { readonly profile: Profile }) =>
+          profile.name.toUpperCase(),
+        ),
+        select(({ title }: { readonly title: string }) => ({ title })),
+      );
+    type LoadDashboardFn = typeof loadDashboard;
+    expectType<TypeEqual<ReturnType<LoadDashboardFn>, ResultAsync<Dashboard, Error>>>(true);
   });
 });

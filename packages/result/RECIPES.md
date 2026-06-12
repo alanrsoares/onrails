@@ -403,6 +403,65 @@ Each sub-flow has a clear purpose; the top-level `ingest` reads as a sentence. E
 
 ---
 
+## 12. Async pipelines via `ResultAsync` composition
+
+When composing functions that return `ResultAsync` values, `flow` chains them by wrapping the async transforms in arrow functions. The resulting pipeline remains point-free over the input.
+
+```ts
+import { flow } from "@onrails/result/pipe";
+import { type ResultAsync } from "@onrails/result";
+
+type Profile = { id: string; name: string };
+type Metrics = { score: number };
+type Summary = { name: string; score: number };
+
+declare const fetchProfile: (id: string) => ResultAsync<Profile, Error>;
+declare const fetchMetrics: (p: Profile) => ResultAsync<Metrics, Error>;
+declare const formatSummary: (p: Profile, m: Metrics) => Summary;
+
+const loadSummary = flow(
+  fetchProfile,
+  (ra) => ra.flatMap((profile) => 
+    fetchMetrics(profile).map((metrics) => formatSummary(profile, metrics))
+  ),
+);
+// (id: string) => ResultAsync<Summary, Error>
+```
+
+---
+
+## 13. Functional Railway pipelines (`railway` + named steps)
+
+Use `railway(input, ...steps)` from `@onrails/result/railway` to build a multi-step async pipeline using point-free reusable step wrappers. If any step is async, the entire pipeline resolves to a `ResultAsync`.
+
+```ts
+import { railway, parseWith, fromPromiseNamed, deriveNamed, select } from "@onrails/result/railway";
+import { type ResultAsync } from "@onrails/result";
+
+type Dashboard = { title: string };
+
+declare const IdSchema: { parse: (x: unknown) => string };
+declare const fetchProfile: (id: string) => Promise<Profile>;
+declare const toError: (e: unknown) => Error;
+
+const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
+  railway(
+    rawId,
+    parseWith(IdSchema, toError).as("id"),
+    fromPromiseNamed(
+      "profile",
+      ({ id }: { readonly id: string }) => fetchProfile(id),
+      toError,
+    ),
+    deriveNamed("title", ({ profile }: { readonly profile: Profile }) =>
+      profile.name.toUpperCase(),
+    ),
+    select(({ title }: { readonly title: string }) => ({ title })),
+  );
+```
+
+---
+
 ## When NOT to go point-free
 
 Pipelines should read top-to-bottom and each step should do one obvious thing. Reach for `pipe` when:
