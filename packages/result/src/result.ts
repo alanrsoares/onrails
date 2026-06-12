@@ -54,7 +54,10 @@ export const isOk = <T, E>(result: Result<T, E>): result is Ok<T, E> => result._
  */
 export const isErr = <T, E>(result: Result<T, E>): result is Err<T, E> => result._tag === "Err";
 
-/** Fantasy Land `of` — alias of {@link ok}. */
+/**
+ * Fantasy Land `of` — alias of {@link ok}.
+ * @deprecated Use {@link ok} instead.
+ */
 export const of = ok;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -308,13 +311,17 @@ export function match(
   return (result: Result<unknown, unknown>) => matchImpl(result, onOk, onErr);
 }
 
-/** Collision-free alias for files that also import `match` from ts-pattern. */
+/**
+ * Collision-free alias for files that also import `match` from ts-pattern.
+ * @deprecated Namespace import carriers (e.g., `import * as R from "@onrails/result"`) and use canonical {@link match} instead.
+ */
 export const matchResult = match;
 
 /**
  * Curried collapse with named slots — escape valve when positional `match`
  * order is unclear at the call site (e.g. when both handlers return the same
  * type and a transposed `match(r, onErr, onOk)` would silently compile).
+ * @deprecated Use curried {@link match}(onOk, onErr)(result) instead.
  */
 export const fold =
   <T, E, U>(handlers: { readonly ok: (value: T) => U; readonly err: (error: E) => U }) =>
@@ -332,13 +339,22 @@ export const fold =
 export const unwrapOr = <T, E>(result: Result<T, E>, defaultValue: T): T =>
   isOk(result) ? result.value : defaultValue;
 
-/** Test/assert helper — throws the original Err value when called on Err. */
+/**
+ * Test/assert helper — throws the original Err value when called on Err.
+ *
+ * @throws when the result is Err — assertion-tier; use {@link match} / {@link unwrapOr} in business logic.
+ * Allowed in `*.spec.ts` / `*.test.ts`; flagged elsewhere by the plugins.
+ */
 export function unwrapOk<T, E>(result: Result<T, E>): T {
   if (isErr(result)) throw result.error;
   return result.value;
 }
 
-/** Test/assert helper — throws TypeError when called on Ok. */
+/**
+ * Test/assert helper — throws TypeError when called on Ok.
+ *
+ * @throws when the result is Ok — assertion-tier; allowed in `*.spec.ts` / `*.test.ts`; flagged elsewhere by the plugins.
+ */
 export function unwrapErr<T, E>(result: Result<T, E>): E {
   if (isOk(result)) throw new TypeError("unwrapErr called on Ok");
   return result.error;

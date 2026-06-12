@@ -165,6 +165,10 @@ export class ResultAsync<T, E> {
     return this.flatMap(fn);
   }
 
+  /**
+   * Alias for {@link flatMap}.
+   * @deprecated Use {@link flatMap} or keep/use compat {@link andThen} instead.
+   */
   chain<U, F = E>(
     fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
   ): ResultAsync<U, E | F> {
@@ -210,10 +214,18 @@ export class ResultAsync<T, E> {
     return this.run().then((result) => (isErr(result) ? defaultValue : result.value));
   }
 
+  /**
+   * @deprecated Await the ResultAsync and narrow with {@link isOk} — this method
+   * re-executes deferred factories and cannot narrow.
+   */
   isOk(): Promise<boolean> {
     return this.run().then((result) => !isErr(result));
   }
 
+  /**
+   * @deprecated Await the ResultAsync and narrow with {@link isErr} — this method
+   * re-executes deferred factories and cannot narrow.
+   */
   isErr(): Promise<boolean> {
     return this.run().then((result) => isErr(result));
   }
@@ -311,6 +323,7 @@ export const fromSafePromise = ResultAsync.fromSafePromise;
  * const combined = sequenceTupleAsync([loadCfg(), loadCatalog()] as const);
  * // ResultAsync<readonly [Cfg, Catalog], CfgError | CatalogError>
  * ```
+ * @deprecated Use static {@link ResultAsync.combineTuple} instead.
  */
 export const sequenceTupleAsync = ResultAsync.combineTuple;
 
