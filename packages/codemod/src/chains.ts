@@ -22,10 +22,90 @@ export function isSupportedChainCall(node: ts.Node): node is ts.CallExpression {
   return CHAIN_METHODS.has(method) || TERMINAL_METHODS.has(method);
 }
 
-export function helperCallToNative(node: ts.CallExpression): Maybe<Edit> {
-  if (ts.isIdentifier(node.expression) && node.arguments.length === 0) {
-    return lookupMap(ZERO_ARG_HELPERS, node.expression.text, (text) => edit(text));
+function identifierCallToNative(node: ts.CallExpression): Maybe<Edit> {
+  if (!ts.isIdentifier(node.expression)) return none();
+  const name = node.expression.text;
+  if (node.arguments.length === 0) {
+    const zero = lookupMap(ZERO_ARG_HELPERS, name, (text) => edit(text));
+    if (isSome(zero)) return zero;
   }
+
+  if (name === "sequenceTupleAsync") {
+    return some(edit(`ResultAsync.combineTuple(${argsToText(node.arguments)})`, ["ResultAsync"]));
+  }
+  if (name === "getOrElse") {
+    return some(edit(`unwrapOr(${argsToText(node.arguments)})`, ["unwrapOr"]));
+  }
+  if (name === "collect") {
+    return some(edit(`combine(${argsToText(node.arguments)})`, ["combine"]));
+  }
+  if (name === "matchResult" || name === "matchMaybe") {
+    return some(edit(`match(${argsToText(node.arguments)})`, ["match"]));
+  }
+  if (name === "fold") {
+    const objArg = node.arguments[0];
+    if (objArg && ts.isObjectLiteralExpression(objArg)) {
+      let okText = "onOk";
+      let errText = "onErr";
+      for (const prop of objArg.properties) {
+        if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+          if (prop.name.text === "ok") {
+            okText = prop.initializer.getText();
+          } else if (prop.name.text === "err") {
+            errText = prop.initializer.getText();
+          }
+        } else if (ts.isShorthandPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+          if (prop.name.text === "ok") {
+            okText = "ok";
+          } else if (prop.name.text === "err") {
+            errText = "err";
+          }
+        }
+      }
+      return some(edit(`match(${okText}, ${errText})`, ["match"]));
+    }
+  }
+  return none();
+}
+
+function curriedFoldToNative(node: ts.CallExpression): Maybe<Edit> {
+  if (
+    ts.isCallExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === "fold"
+  ) {
+    const objArg = node.expression.arguments[0];
+    if (objArg && ts.isObjectLiteralExpression(objArg)) {
+      let okText = "onOk";
+      let errText = "onErr";
+      for (const prop of objArg.properties) {
+        if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+          if (prop.name.text === "ok") {
+            okText = prop.initializer.getText();
+          } else if (prop.name.text === "err") {
+            errText = prop.initializer.getText();
+          }
+        } else if (ts.isShorthandPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+          if (prop.name.text === "ok") {
+            okText = "ok";
+          } else if (prop.name.text === "err") {
+            errText = "err";
+          }
+        }
+      }
+      const receiverText = node.arguments[0]?.getText() ?? "result";
+      return some(edit(`match(${okText}, ${errText})(${receiverText})`, ["match"]));
+    }
+  }
+  return none();
+}
+
+export function helperCallToNative(node: ts.CallExpression): Maybe<Edit> {
+  const ident = identifierCallToNative(node);
+  if (isSome(ident)) return ident;
+
+  const curried = curriedFoldToNative(node);
+  if (isSome(curried)) return curried;
 
   if (!ts.isPropertyAccessExpression(node.expression)) return none();
   const method = node.expression.name.text;

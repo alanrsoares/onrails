@@ -1,18 +1,34 @@
 import { isTypeOnlyNative, isValueImport, splitImportNames, stripInlineType } from "./ast.js";
 import { COMPAT_SPEC, NATIVE_SPEC } from "./constants.js";
 
+const IMPORT_RENAMES = new Map([
+  ["sequenceTupleAsync", "ResultAsync"],
+  ["getOrElse", "unwrapOr"],
+  ["collect", "combine"],
+  ["matchResult", "match"],
+  ["matchMaybe", "match"],
+  ["fold", "match"],
+  ["of", "ok"],
+]);
+
 export function toNativeImport(full: string, specifiers: string, quote: string): string {
   const imports = splitImportNames(specifiers);
   const typeNames = imports.filter(isTypeOnlyNative).map(stripInlineType);
-  const valueNames = imports.filter(isValueImport);
+  const rawValueNames = imports.filter(isValueImport);
+  const valueNames = rawValueNames.map((name) => IMPORT_RENAMES.get(name) ?? name);
+
+  const uniqueValueNames = valueNames.filter((v, i, self) => self.indexOf(v) === i);
+  const uniqueTypeNames = typeNames.filter((v, i, self) => self.indexOf(v) === i);
   const chunks: string[] = [];
 
-  if (valueNames.length > 0) {
-    chunks.push(`import { ${valueNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`);
+  if (uniqueValueNames.length > 0) {
+    chunks.push(`import { ${uniqueValueNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`);
   }
 
-  if (typeNames.length > 0) {
-    chunks.push(`import type { ${typeNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`);
+  if (uniqueTypeNames.length > 0) {
+    chunks.push(
+      `import type { ${uniqueTypeNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`,
+    );
   }
 
   return chunks.length > 0 ? chunks.join("\n") : full;

@@ -259,6 +259,34 @@ describe("rewriteCompatMethodChainsToNative: helper renames", () => {
   });
 });
 
+describe("rewriteCompatMethodChainsToNative: deprecated synonyms", () => {
+  it("rewrites deprecated synonyms and helper functions to canonical forms", () => {
+    const src = [
+      'import { sequenceTupleAsync, getOrElse, collect, matchResult, matchMaybe, fold } from "@onrails/result/compat/neverthrow";',
+      "",
+      "const t = sequenceTupleAsync([a, b]);",
+      "const g = getOrElse(maybe, 0);",
+      "const c = collect(results);",
+      "const mr = matchResult(r, (x) => x, (e) => 0);",
+      "const mm = matchMaybe(m, (x) => x, () => 0);",
+      "const f = fold({ ok: (x) => x, err: (e) => 0 })(r);",
+    ].join("\n");
+
+    expect(rewriteCompatMethodChainsToNative(rewriteCompatImportsToNative(src))).toBe(
+      [
+        'import { ResultAsync, combine, match, unwrapOr } from "@onrails/result";',
+        "",
+        "const t = ResultAsync.combineTuple([a, b]);",
+        "const g = unwrapOr(maybe, 0);",
+        "const c = combine(results);",
+        "const mr = match(r, (x) => x, (e) => 0);",
+        "const mm = match(m, (x) => x, () => 0);",
+        "const f = match((x) => x, (e) => 0)(r);",
+      ].join("\n"),
+    );
+  });
+});
+
 describe("CLI: native rewrites", () => {
   it("dry-runs native import rewrites without changing files", async () => {
     const root = await makeFixture();
