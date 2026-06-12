@@ -12,7 +12,10 @@ export type { Maybe, None, Some } from "./types.js";
  */
 export const some = <T>(value: T): Maybe<T> => ({ _tag: "Some", value });
 
-/** Fantasy Land `of` — alias of {@link some}. */
+/**
+ * Fantasy Land `of` — alias of {@link some}.
+ * @deprecated Use {@link some} instead.
+ */
 export const of = some;
 
 /**
@@ -143,7 +146,10 @@ export function match(
   return (maybe: Maybe<unknown>) => matchImpl(maybe, onSome, onNone);
 }
 
-/** Collision-free alias — mirrors `matchResult` on `@onrails/result`. */
+/**
+ * Collision-free alias — mirrors `matchResult` on `@onrails/result`.
+ * @deprecated Namespace import carriers (e.g., `import * as Maybe from "@onrails/maybe"`) and use canonical {@link match} instead.
+ */
 export const matchMaybe = match;
 
 /**
@@ -151,19 +157,24 @@ export const matchMaybe = match;
  *
  * @example
  * ```ts
- * getOrElse(fromNullable(user), { name: "guest" });
+ * unwrapOr(fromNullable(user), { name: "guest" });
  * ```
  */
-export const getOrElse = <T>(maybe: Maybe<T>, defaultValue: T): T =>
+export const unwrapOr = <T>(maybe: Maybe<T>, defaultValue: T): T =>
   isSome(maybe) ? maybe.value : defaultValue;
 
-/** Alias — mirrors `@onrails/result` `unwrapOr`. Same as {@link getOrElse}. */
-export const unwrapOr = getOrElse;
+/**
+ * Returns the `Some` value, or `defaultValue` when the value is `None`.
+ *
+ * @deprecated Use canonical {@link unwrapOr} instead.
+ */
+export const getOrElse = unwrapOr;
 
 /**
- * Unwraps the `Some` value or throws if the value is `None`. Use in tests
- * or at the boundary of an assertion; prefer `match` / `getOrElse` in
- * production code paths.
+ * Unwraps the `Some` value or throws if the value is `None`.
+ *
+ * @throws when the value is None — assertion-tier; use {@link match} / {@link unwrapOr} in business logic.
+ * Allowed in `*.spec.ts` / `*.test.ts`; flagged elsewhere by the plugins.
  *
  * @example
  * ```ts
