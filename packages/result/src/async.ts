@@ -45,6 +45,8 @@ const sequenceSettled = (
  * await via `.resolve()` or `.match()`.
  */
 export class ResultAsync<T, E> {
+  private promise: Promise<Result<T, E>> | null = null;
+
   protected constructor(protected readonly run: PromiseFactory<T, E>) {}
 
   static fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E> {
@@ -133,18 +135,18 @@ export class ResultAsync<T, E> {
   }
 
   map<U>(fn: (value: T) => U): ResultAsync<U, E> {
-    return new ResultAsync(async () => map(await this.run(), fn));
+    return new ResultAsync(async () => map(await this.resolve(), fn));
   }
 
   mapErr<F>(fn: (error: E) => F): ResultAsync<T, F> {
-    return new ResultAsync(async () => mapErr(await this.run(), fn));
+    return new ResultAsync(async () => mapErr(await this.resolve(), fn));
   }
 
   flatMap<U, F = E>(
     fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
   ): ResultAsync<U, E | F> {
     return new ResultAsync<U, E | F>(async () => {
-      const first = await this.run();
+      const first = await this.resolve();
       if (isErr(first)) {
         return first;
       }
@@ -177,7 +179,7 @@ export class ResultAsync<T, E> {
 
   recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
     return new ResultAsync<T, F>(async () => {
-      const first = await this.run();
+      const first = await this.resolve();
       if (!isErr(first)) {
         return first;
       }
@@ -192,7 +194,7 @@ export class ResultAsync<T, E> {
 
   tap(fn: (value: T) => void): ResultAsync<T, E> {
     return new ResultAsync(async () => {
-      const result = await this.run();
+      const result = await this.resolve();
       if (!isErr(result)) {
         fn(result.value);
       }
@@ -202,7 +204,7 @@ export class ResultAsync<T, E> {
 
   tapErr(fn: (error: E) => void): ResultAsync<T, E> {
     return new ResultAsync(async () => {
-      const result = await this.run();
+      const result = await this.resolve();
       if (isErr(result)) {
         fn(result.error);
       }
@@ -211,7 +213,7 @@ export class ResultAsync<T, E> {
   }
 
   unwrapOr<U>(defaultValue: U): Promise<T | U> {
-    return this.run().then((result) => (isErr(result) ? defaultValue : result.value));
+    return this.resolve().then((result) => (isErr(result) ? defaultValue : result.value));
   }
 
   /**
@@ -219,7 +221,7 @@ export class ResultAsync<T, E> {
    * re-executes deferred factories and cannot narrow.
    */
   isOk(): Promise<boolean> {
-    return this.run().then((result) => !isErr(result));
+    return this.resolve().then((result) => !isErr(result));
   }
 
   /**
@@ -227,15 +229,20 @@ export class ResultAsync<T, E> {
    * re-executes deferred factories and cannot narrow.
    */
   isErr(): Promise<boolean> {
-    return this.run().then((result) => isErr(result));
+    return this.resolve().then((result) => isErr(result));
   }
 
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2> {
-    return this.run().then((result) => (isErr(result) ? onErr(result.error) : onOk(result.value)));
+    return this.resolve().then((result) =>
+      isErr(result) ? onErr(result.error) : onOk(result.value),
+    );
   }
 
   resolve(): Promise<Result<T, E>> {
-    return this.run();
+    if (!this.promise) {
+      this.promise = this.run();
+    }
+    return this.promise;
   }
 
   /**
@@ -247,7 +254,7 @@ export class ResultAsync<T, E> {
     onfulfilled?: ((value: Result<T, E>) => R1 | PromiseLike<R1>) | undefined | null,
     onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | undefined | null,
   ): Promise<R1 | R2> {
-    return this.run().then(
+    return this.resolve().then(
       // Safe: without onfulfilled, R1 stays at its Result<T, E> default.
       (r) => (onfulfilled ? onfulfilled(r) : (r as unknown as R1)),
       onrejected ?? undefined,
