@@ -94,11 +94,13 @@ const noUnsafeUnwrap = {
   meta: {
     type: "suggestion",
     docs: {
-      description: "Discourage _unsafeUnwrap / _unsafeUnwrapErr outside tests.",
+      description:
+        "Discourage _unsafeUnwrap / _unsafeUnwrapErr and unwrapOk / unwrapErr / unwrap outside tests.",
     },
     schema: [],
     messages: {
-      unsafe: "Avoid _unsafeUnwrap* — use match(), resolve(), or yieldResult() in tryGen.",
+      unsafe:
+        "Avoid _unsafeUnwrap* and unwrap* outside tests — use match(), resolve(), or yieldResult() in tryGen.",
     },
   },
   create(context) {
@@ -111,6 +113,16 @@ const noUnsafeUnwrap = {
         if (
           node.property.type === "Identifier" &&
           (node.property.name === "_unsafeUnwrap" || node.property.name === "_unsafeUnwrapErr")
+        ) {
+          context.report({ node, messageId: "unsafe" });
+        }
+      },
+      CallExpression(node) {
+        if (
+          node.callee.type === "Identifier" &&
+          (node.callee.name === "unwrapOk" ||
+            node.callee.name === "unwrapErr" ||
+            node.callee.name === "unwrap")
         ) {
           context.report({ node, messageId: "unsafe" });
         }
