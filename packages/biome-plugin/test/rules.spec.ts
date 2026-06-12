@@ -46,7 +46,14 @@ describe("no-promise-result", () => {
 describe("no-unsafe-unwrap", () => {
   test("flags _unsafeUnwrap and _unsafeUnwrapErr calls", () => {
     const diags = diagnosticsFor("invalid/unsafe-unwrap.ts");
-    expect(diags.some((d) => messageOf(d).includes("_unsafeUnwrap"))).toBe(true);
+    expect(diags.some((d) => messageOf(d).includes("Avoid _unsafeUnwrap*"))).toBe(true);
+  });
+});
+
+describe("no-deprecated-synonyms", () => {
+  test("flags deprecated synonyms and methods", () => {
+    const diags = diagnosticsFor("invalid/deprecated-synonyms.ts");
+    expect(diags.some((d) => messageOf(d).includes("Avoid deprecated onrails synonyms"))).toBe(true);
   });
 });
 

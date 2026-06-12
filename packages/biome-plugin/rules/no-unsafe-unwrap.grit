@@ -9,11 +9,14 @@ language js
 
 or {
   `$_._unsafeUnwrap()` as $call,
-  `$_._unsafeUnwrapErr()` as $call
+  `$_._unsafeUnwrapErr()` as $call,
+  `unwrapOk($_)` as $call,
+  `unwrapErr($_)` as $call,
+  `unwrap($_)` as $call
 } where {
   register_diagnostic(
     span = $call,
-    message = "Avoid _unsafeUnwrap* — use match(), resolve(), or yieldResult() in tryGen.",
+    message = "Avoid _unsafeUnwrap* and unwrap* outside tests — use match(), resolve(), or yieldResult() in tryGen.",
     severity = "error"
   )
 }
