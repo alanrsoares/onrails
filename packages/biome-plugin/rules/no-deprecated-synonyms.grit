@@ -8,6 +8,11 @@
 // - sequenceTupleAsync() -> ResultAsync.combineTuple()
 // - collect() -> combine()
 // - ResultAsync.isOk() / isErr() -> await and narrow with isOk() / isErr()
+//
+// Limitation: matching is name-based — GritQL cannot scope by import, so
+// same-named calls from other libraries (RxJS `of`, fp-ts `fold`,
+// neverthrow `.isOk()`) are flagged too. Suppress with an inline
+// biome-ignore comment in mixed codebases.
 
 engine biome(1.0)
 language js
