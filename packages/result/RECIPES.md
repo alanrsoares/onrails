@@ -11,6 +11,68 @@ map(fn)(result);   // curried, data-last — feeds `pipe(...)` and `flow(...)`
 
 See [README.md](./README.md) for the API reference and decision tree.
 
+## Composition Guidelines (The Four Tiers)
+
+To keep codebases readable and consistent, follow the four-tier decision guideline when choosing how to compose operations. Use the simplest pattern that fits your workflow:
+
+| Tier | Use Case | Recommended Pattern |
+| ---- | -------- | ------------------- |
+| **1** | 1–2 steps, linear | direct data-first calls or method chains |
+| **2** | 3+ steps, linear | `pipe` or `flow` |
+| **3** | branchy, value reused | `tryGen` escape hatch |
+| **4** | 4+ named steps, mixed IO | `Railway` or `railway()` steps |
+
+`/fluent` is documented as app-edge sugar only — never in library or service internals.
+
+### Tier 1: 1–2 steps, linear (Direct data-first call or method chain)
+
+```ts
+import { map } from "@onrails/result";
+
+const normalized = map(rawResult, normalize);
+```
+
+### Tier 2: 3+ steps, linear (pipe / flow)
+
+```ts
+import { flow, map, flatMap, recover } from "@onrails/result";
+
+const process = flow(
+  map(normalize),
+  flatMap(validate),
+  recover(fallback)
+);
+```
+
+### Tier 3: Branchy, value reused (tryGen)
+
+```ts
+import { tryGen, $ } from "@onrails/result/try-gen";
+import { ok, err } from "@onrails/result";
+
+const stepResult = tryGen(() => {
+  const user = $(authenticate(req));
+  const post = $(fetchPost(postId));
+  if (post.authorId !== user.id && !user.isAdmin) {
+    return err({ kind: "unauthorized" as const });
+  }
+  return ok(post);
+});
+```
+
+### Tier 4: 4+ named steps, mixed IO (Railway context builder)
+
+```ts
+import { Railway } from "@onrails/result/railway";
+
+const workflow = Railway
+  .fromSync("id", () => IdSchema.parse(raw), toError)
+  .fromPromise("row", ({ id }) => db.profiles.find(id), toError)
+  .require("profile", "row", ({ id }) => ({ kind: "not_found" as const, id }))
+  .derive("normalized", ({ profile }) => normalizeProfile(profile))
+  .select(({ normalized }) => normalized);
+```
+
 ---
 
 ## 1. Reusable parser builder via `flow`
