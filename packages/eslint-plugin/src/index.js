@@ -95,7 +95,7 @@ const noUnsafeUnwrap = {
     type: "suggestion",
     docs: {
       description:
-        "Discourage _unsafeUnwrap / _unsafeUnwrapErr and unwrapOk / unwrapErr / unwrap outside tests.",
+        "Discourage _unsafeUnwrap / _unsafeUnwrapErr and unwrapOk / unwrapErr / unwrap outside tests. Matching is name-based; same-named functions from other libraries are flagged too.",
     },
     schema: [],
     messages: {
