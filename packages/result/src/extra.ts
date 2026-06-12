@@ -1,5 +1,9 @@
+/**
+ * @onrails/result/extra — tagged-error helpers.
+ */
+
 import type { ResultAsync } from "./async.js";
-import { isErr, isOk } from "./result.js";
+import { combine, isErr, isOk } from "./result.js";
 import type { Result } from "./types.js";
 
 /** Extract error type from a {@link Result} */
@@ -50,17 +54,12 @@ export const mapErrKind =
     return result;
   };
 
-/** Collect values when all Ok; otherwise first Err encountered */
-export const collect = <T, E>(results: readonly Result<T, E>[]): Result<T[], E> => {
-  const values: T[] = [];
-  for (const result of results) {
-    if (isErr(result)) {
-      return result;
-    }
-    values.push(result.value);
-  }
-  return { _tag: "Ok", value: values };
-};
+/**
+ * Collect values when all Ok; otherwise first Err encountered.
+ *
+ * @deprecated Identical to {@link combine}; removed in the next major.
+ */
+export const collect = combine;
 
 /** True when no result is Err */
 export const allOk = <T, E>(results: readonly Result<T, E>[]): boolean => results.every(isOk);
