@@ -81,15 +81,17 @@ describe("recipe 9 — pure error unification", () => {
 
 type FetchError = { kind: "network" } | { kind: "fatal"; message: string };
 
+type FetchConfig = {
+  readonly fallback?: Body;
+  readonly rethrow: (e: FetchError) => boolean;
+};
+
 const fetchStub =
   (outcome: Result<Body, FetchError>) =>
   (_url: string): Result<Body, FetchError> =>
     outcome;
 
-const fetchWith = (
-  cfg: { fallback?: Body; rethrow: (e: FetchError) => boolean },
-  src: (url: string) => Result<Body, FetchError>,
-) =>
+const fetchWith = (cfg: FetchConfig, src: (url: string) => Result<Body, FetchError>) =>
   flow(
     src,
     recover(
@@ -314,7 +316,7 @@ describe("recipe 6 — reusable validator ladder", () => {
   });
 
   it("preserves validator output and error types", () => {
-    type ExpectedType = Result<string, { kind: "too_short"; min: number } | CharsError>;
+    type ExpectedType = Result<string, TooShortError | CharsError>;
     expectType<TypeEqual<ReturnType<typeof validateUsername>, ExpectedType>>(true);
   });
 });
@@ -369,6 +371,10 @@ import { deriveNamed, fromPromiseNamed, parseWith, railway, select } from "../sr
 
 type Dashboard = { title: string };
 
+type IdContext = { readonly id: string };
+type ProfileContext = { readonly profile: Profile };
+type TitleContext = { readonly title: string };
+
 const IdSchema = {
   parse: (x: unknown): string => {
     if (typeof x === "string") return x;
@@ -389,15 +395,9 @@ describe("recipe 13 — functional railway pipelines", () => {
       railway(
         rawId,
         parseWith(IdSchema, toError).as("id"),
-        fromPromiseNamed(
-          "profile",
-          ({ id }: { readonly id: string }) => fetchProfileMock(id),
-          toError,
-        ),
-        deriveNamed("title", ({ profile }: { readonly profile: Profile }) =>
-          profile.name.toUpperCase(),
-        ),
-        select(({ title }: { readonly title: string }) => ({ title })),
+        fromPromiseNamed("profile", ({ id }: IdContext) => fetchProfileMock(id), toError),
+        deriveNamed("title", ({ profile }: ProfileContext) => profile.name.toUpperCase()),
+        select(({ title }: TitleContext) => ({ title })),
       );
 
     const result = await loadDashboard("123");
@@ -409,15 +409,9 @@ describe("recipe 13 — functional railway pipelines", () => {
       railway(
         rawId,
         parseWith(IdSchema, toError).as("id"),
-        fromPromiseNamed(
-          "profile",
-          ({ id }: { readonly id: string }) => fetchProfileMock(id),
-          toError,
-        ),
-        deriveNamed("title", ({ profile }: { readonly profile: Profile }) =>
-          profile.name.toUpperCase(),
-        ),
-        select(({ title }: { readonly title: string }) => ({ title })),
+        fromPromiseNamed("profile", ({ id }: IdContext) => fetchProfileMock(id), toError),
+        deriveNamed("title", ({ profile }: ProfileContext) => profile.name.toUpperCase()),
+        select(({ title }: TitleContext) => ({ title })),
       );
     type LoadDashboardFn = typeof loadDashboard;
     expectType<TypeEqual<ReturnType<LoadDashboardFn>, ResultAsync<Dashboard, Error>>>(true);

@@ -235,6 +235,7 @@ import { flatMap, recover, ok, err } from "@onrails/result";
 
 type LengthError = { kind: "len"; min: number };
 type CharsError  = { kind: "chars"; bad: string };
+type TooShortError = { kind: "too_short"; min: number };
 
 const requireMin = (min: number) => (s: string) =>
   s.length >= min ? ok(s) : err({ kind: "len" as const, min });
@@ -247,11 +248,11 @@ const validateUsername = flow(
   flatMap(requireMin(3)),
   flatMap(requireAscii),
   recover(
-    (e: LengthError | CharsError): Result<string, { kind: "too_short"; min: number } | CharsError> =>
+    (e: LengthError | CharsError): Result<string, TooShortError | CharsError> =>
       e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
   ),
 );
-// (raw: string) => Result<string, { kind: "too_short"; min: number } | CharsError>
+// (raw: string) => Result<string, TooShortError | CharsError>
 ```
 
 `requireMin(3)` is a curried factory — `flow` strings it into the pipeline alongside `requireAscii`. None of the inner steps mention the value.
@@ -354,7 +355,12 @@ import { map, recover, ok, err, type Result } from "@onrails/result";
 
 type FetchError = { kind: "network" } | { kind: "fatal"; message: string };
 
-const fetchWith = (cfg: { fallback?: Body; rethrow: (e: FetchError) => boolean }) =>
+type FetchConfig = {
+  readonly fallback?: Body;
+  readonly rethrow: (e: FetchError) => boolean;
+};
+
+const fetchWith = (cfg: FetchConfig) =>
   flow(
     fetchSync,
     recover((e: FetchError) =>
@@ -440,6 +446,10 @@ import { type ResultAsync } from "@onrails/result";
 
 type Dashboard = { title: string };
 
+type IdContext = { readonly id: string };
+type ProfileContext = { readonly profile: Profile };
+type TitleContext = { readonly title: string };
+
 declare const IdSchema: { parse: (x: unknown) => string };
 declare const fetchProfile: (id: string) => Promise<Profile>;
 declare const toError: (e: unknown) => Error;
@@ -450,13 +460,13 @@ const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
     parseWith(IdSchema, toError).as("id"),
     fromPromiseNamed(
       "profile",
-      ({ id }: { readonly id: string }) => fetchProfile(id),
+      ({ id }: IdContext) => fetchProfile(id),
       toError,
     ),
-    deriveNamed("title", ({ profile }: { readonly profile: Profile }) =>
+    deriveNamed("title", ({ profile }: ProfileContext) =>
       profile.name.toUpperCase(),
     ),
-    select(({ title }: { readonly title: string }) => ({ title })),
+    select(({ title }: TitleContext) => ({ title })),
   );
 ```
 

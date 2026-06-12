@@ -166,33 +166,39 @@ describe("Railway: parallel", () => {
   });
 });
 
+type ProfileRow = { readonly id: string; readonly name: string };
+type NormalizedProfile = { readonly id: string; readonly label: string };
+
+type ProfileIdContext = { readonly profileId: string };
+type ProfileRowContext = { readonly profile: ProfileRow };
+type NormalizedContext = { readonly normalized: NormalizedProfile };
+
 describe("functional railway", () => {
   const parseProfileId = parseWith((input: string) => input.trim(), toError).as("profileId");
 
   const loadProfileRow = fromPromiseNamed(
     "row",
-    ({ profileId }: { readonly profileId: string }) =>
-      Promise.resolve<{ id: string; name: string } | null>({ id: profileId, name: "Ada" }),
+    ({ profileId }: ProfileIdContext) =>
+      Promise.resolve<ProfileRow | null>({ id: profileId, name: "Ada" }),
     toError,
   );
 
   const requireProfile = requireNamed(
     "profile",
     "row",
-    ({ profileId }: { readonly profileId: string }) => new Error(`missing ${profileId}`),
+    ({ profileId }: ProfileIdContext) => new Error(`missing ${profileId}`),
   );
 
   const normalize = deriveNamed(
     "normalized",
-    ({ profile }: { readonly profile: { readonly id: string; readonly name: string } }) => ({
+    ({ profile }: ProfileRowContext): NormalizedProfile => ({
       id: profile.id,
       label: profile.name.toUpperCase(),
     }),
   );
 
   const loadSummaryInputs = parallelNamed({
-    recent: ({ normalized }: { readonly normalized: { readonly id: string } }) =>
-      okAsync([normalized.id]),
+    recent: ({ normalized }: NormalizedContext) => okAsync([normalized.id]),
     metrics: () => okAsync({ jobs: 2 }),
   });
 
