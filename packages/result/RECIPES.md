@@ -229,7 +229,7 @@ const buildSummary = (userId: string) =>
 // ResultAsync<Summary, ProfileError | MetricsError>
 ```
 
-`parallelTupleAsync` preserves tuple positions, so destructuring stays type-safe. Use `sequenceTupleAsync` if branches must run left-to-right.
+`parallelTupleAsync` preserves tuple positions, so destructuring stays type-safe. Use static `ResultAsync.combineTuple` if branches must run left-to-right.
 
 ---
 
