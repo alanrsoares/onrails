@@ -1,12 +1,22 @@
 /**
  * Runtime + type assertions for the point-free recipes in RECIPES.md
- * (sections 9–11). Each describe block mirrors one recipe; stubs are
+ * (sections 1, 6, and 9–11). Each describe block mirrors one recipe; stubs are
  * inlined so the test file is self-contained.
  */
 import { describe, expect, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
 import { flow } from "../src/pipe.js";
-import { err, flatMap, isErr, isOk, map, ok, type Result, recover } from "../src/result.js";
+import {
+  err,
+  flatMap,
+  isErr,
+  isOk,
+  map,
+  ok,
+  type Result,
+  recover,
+  trySync,
+} from "../src/result.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Recipe 9 — Pure error unification
@@ -216,5 +226,95 @@ describe("recipe 11 — composing flows", () => {
     expectType<
       TypeEqual<Ingest, (raw: string) => Result<Saved, ParseError | SchemaError | DbError>>
     >(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recipe 1 — Reusable parser builder via flow
+// ─────────────────────────────────────────────────────────────────────────────
+
+const parseJsonWith = <T>(schema: { parse: (x: unknown) => T }) =>
+  flow(
+    trySync(JSON.parse, (e): ParseError => ({ kind: "parse", message: String(e) })),
+    flatMap(trySync(schema.parse, (e): SchemaError => ({ kind: "schema", field: String(e) }))),
+  );
+
+type User = { id: string };
+const UserSchema = {
+  parse: (x: unknown): User => {
+    if (typeof x === "object" && x !== null && "id" in x && typeof x.id === "string") {
+      return { id: x.id };
+    }
+    throw new Error("Invalid schema");
+  },
+};
+
+describe("recipe 1 — reusable parser builder", () => {
+  it("successfully parses valid JSON", () => {
+    const parseUser = parseJsonWith(UserSchema);
+    expect(parseUser('{"id":"123"}')).toEqual(ok({ id: "123" }));
+  });
+
+  it("returns ParseError on invalid JSON syntax", () => {
+    const parseUser = parseJsonWith(UserSchema);
+    const result = parseUser("not-json");
+    expect(isErr(result) && result.error.kind).toBe("parse");
+  });
+
+  it("returns SchemaError on schema mismatch", () => {
+    const parseUser = parseJsonWith(UserSchema);
+    const result = parseUser('{"name":"john"}');
+    expect(isErr(result) && result.error.kind).toBe("schema");
+  });
+
+  it("preserves point-free signature and error types", () => {
+    const parseUser = parseJsonWith(UserSchema);
+    type ParseUserFn = typeof parseUser;
+    expectType<TypeEqual<ReturnType<ParseUserFn>, Result<User, ParseError | SchemaError>>>(true);
+    expectType<TypeEqual<Parameters<ParseUserFn>[0], string>>(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recipe 6 — Reusable validator ladder via flow + recover
+// ─────────────────────────────────────────────────────────────────────────────
+
+type LengthError = { kind: "len"; min: number };
+type CharsError = { kind: "chars"; bad: string };
+
+const requireMin = (min: number) => (s: string) =>
+  s.length >= min ? ok(s) : err({ kind: "len" as const, min });
+
+const requireAscii = (s: string) =>
+  /^[\x20-\x7e]*$/.test(s) ? ok(s) : err({ kind: "chars" as const, bad: s });
+
+const validateUsername = flow(
+  (raw: string) => ok(raw.trim()),
+  flatMap(requireMin(3)),
+  flatMap(requireAscii),
+  recover(
+    (
+      e: LengthError | CharsError,
+    ): Result<string, { kind: "too_short"; min: number } | CharsError> =>
+      e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
+  ),
+);
+
+describe("recipe 6 — reusable validator ladder", () => {
+  it("returns Ok on valid username", () => {
+    expect(validateUsername("  john  ")).toEqual(ok("john"));
+  });
+
+  it("returns too_short error on short username", () => {
+    expect(validateUsername("  jo  ")).toEqual(err({ kind: "too_short", min: 3 }));
+  });
+
+  it("returns chars error on non-ascii characters", () => {
+    expect(validateUsername("  jöhn  ")).toEqual(err({ kind: "chars", bad: "jöhn" }));
+  });
+
+  it("preserves validator output and error types", () => {
+    type ExpectedType = Result<string, { kind: "too_short"; min: number } | CharsError>;
+    expectType<TypeEqual<ReturnType<typeof validateUsername>, ExpectedType>>(true);
   });
 });

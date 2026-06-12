@@ -246,8 +246,9 @@ const validateUsername = flow(
   (raw: string) => ok(raw.trim()),
   flatMap(requireMin(3)),
   flatMap(requireAscii),
-  recover((e: LengthError | CharsError) =>
-    e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
+  recover(
+    (e: LengthError | CharsError): Result<string, { kind: "too_short"; min: number } | CharsError> =>
+      e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
   ),
 );
 // (raw: string) => Result<string, { kind: "too_short"; min: number } | CharsError>
