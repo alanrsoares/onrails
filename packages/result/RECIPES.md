@@ -88,16 +88,8 @@ type SchemaError = { kind: "schema"; field: string };
 
 const parseJsonWith = <T>(schema: { parse: (x: unknown) => T }) =>
   flow(
-    trySync(
-      (raw: string) => JSON.parse(raw),
-      (e): ParseError => ({ kind: "parse", message: String(e) }),
-    ),
-    flatMap((data: unknown) =>
-      trySync(
-        () => schema.parse(data),
-        (e): SchemaError => ({ kind: "schema", field: String(e) }),
-      )(),
-    ),
+    trySync(JSON.parse, (e): ParseError => ({ kind: "parse", message: String(e) })),
+    flatMap(trySync(schema.parse, (e): SchemaError => ({ kind: "schema", field: String(e) }))),
   );
 
 const parseUser = parseJsonWith(UserSchema);
@@ -244,13 +236,11 @@ import { flatMap, recover, ok, err } from "@onrails/result";
 type LengthError = { kind: "len"; min: number };
 type CharsError  = { kind: "chars"; bad: string };
 
-const requireMin = (min: number) =>
-  flow((s: string) => (s.length >= min ? ok(s) : err({ kind: "len" as const, min })));
+const requireMin = (min: number) => (s: string) =>
+  s.length >= min ? ok(s) : err({ kind: "len" as const, min });
 
-const requireAscii = flow(
-  (s: string) =>
-    /^[\x20-\x7e]*$/.test(s) ? ok(s) : err({ kind: "chars" as const, bad: s }),
-);
+const requireAscii = (s: string) =>
+  /^[\x20-\x7e]*$/.test(s) ? ok(s) : err({ kind: "chars" as const, bad: s });
 
 const validateUsername = flow(
   (raw: string) => ok(raw.trim()),
