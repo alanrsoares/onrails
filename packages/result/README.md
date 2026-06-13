@@ -152,20 +152,6 @@ import { unwrapOk } from "@onrails/result";
 expect(unwrapOk(parseConfig(raw))).toEqual(expected);
 ```
 
-## MCP / HTTP boundaries
-
-> [!WARNING]
-> This subpath is `@deprecated` and will be removed in the next major version. Format responses at the application boundary instead.
-
-```ts
-import { toToolResponseAsync, unwrapFetchResultAsync } from "@onrails/result/mcp";
-
-const ra = unwrapFetchResultAsync(
-  client.GET("/tokens/{id}"),
-  ({ error, response }) => new PrintrApiError(response.status, detail),
-);
-return toToolResponseAsync(ra);
-```
 
 ## `tryGen` — sync `?`
 
@@ -322,7 +308,6 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result/fluent` | `fluent()`, `fluentAsync()` |
 | `@onrails/result/extra` | Error-type utilities |
 | `@onrails/result/interop` | `fromAsync`, `fromResult`, `asyncAfter` |
-| `@onrails/result/mcp` | MCP / openapi-fetch helpers (deprecated) |
 | `@onrails/result/pipe` | `flow` (variadic point-free composition) |
 | `@onrails/result/railway` | `Railway`, `railway`, named workflow helpers |
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |

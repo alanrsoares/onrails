@@ -96,7 +96,6 @@ Use `flatMap` for dependent checks where later checks need earlier successful va
 | `@onrails/result/fluent` | Dot-style chains |
 | `@onrails/result/extra` | Error-type utilities |
 | `@onrails/result/interop` | Promise/ResultAsync boundary helpers |
-| `@onrails/result/mcp` | MCP / HTTP boundary helpers |
 | `@onrails/result/pipe` | Variadic `flow` for point-free composition |
 | `@onrails/result/railway` | Named workflow builder and reusable step factories |
 | `@onrails/result/try-gen` | Sync generator-style `Result` sugar |
