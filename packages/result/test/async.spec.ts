@@ -183,3 +183,39 @@ describe("ResultAsync: terminal and recovery", () => {
     expect(seen).toEqual(["ok:1", "err:bad"]);
   });
 });
+
+describe("ResultAsync: memoization / single execution", () => {
+  it("memoizes resolution and runs factory at most once", async () => {
+    let callCount = 0;
+    const ra = ResultAsync.defer(async () => {
+      callCount += 1;
+      return ok(callCount);
+    });
+
+    const res1 = await ra.resolve();
+    const res2 = await ra.resolve();
+    const res3 = await ra;
+
+    expect(res1).toEqual(ok(1));
+    expect(res2).toEqual(ok(1));
+    expect(res3).toEqual(ok(1));
+    expect(callCount).toBe(1);
+  });
+
+  it("memoizes mapping operations so mapped results also evaluate parent once", async () => {
+    let callCount = 0;
+    const parent = ResultAsync.defer(async () => {
+      callCount += 1;
+      return ok(callCount);
+    });
+
+    const child = parent.map((n) => n * 2);
+
+    const res1 = await child.resolve();
+    const res2 = await child.resolve();
+
+    expect(res1).toEqual(ok(2));
+    expect(res2).toEqual(ok(2));
+    expect(callCount).toBe(1);
+  });
+});

@@ -11,6 +11,68 @@ map(fn)(result);   // curried, data-last — feeds `pipe(...)` and `flow(...)`
 
 See [README.md](./README.md) for the API reference and decision tree.
 
+## Composition Guidelines (The Four Tiers)
+
+To keep codebases readable and consistent, follow the four-tier decision guideline when choosing how to compose operations. Use the simplest pattern that fits your workflow:
+
+| Tier | Use Case | Recommended Pattern |
+| ---- | -------- | ------------------- |
+| **1** | 1–2 steps, linear | direct data-first calls or method chains |
+| **2** | 3+ steps, linear | `pipe` or `flow` |
+| **3** | branchy, value reused | `tryGen` escape hatch |
+| **4** | 4+ named steps, mixed IO | `Railway` or `railway()` steps |
+
+`/fluent` is documented as app-edge sugar only — never in library or service internals.
+
+### Tier 1: 1–2 steps, linear (Direct data-first call or method chain)
+
+```ts
+import { map } from "@onrails/result";
+
+const normalized = map(rawResult, normalize);
+```
+
+### Tier 2: 3+ steps, linear (pipe / flow)
+
+```ts
+import { flow, map, flatMap, recover } from "@onrails/result";
+
+const process = flow(
+  map(normalize),
+  flatMap(validate),
+  recover(fallback)
+);
+```
+
+### Tier 3: Branchy, value reused (tryGen)
+
+```ts
+import { tryGen, $ } from "@onrails/result/try-gen";
+import { ok, err } from "@onrails/result";
+
+const stepResult = tryGen(() => {
+  const user = $(authenticate(req));
+  const post = $(fetchPost(postId));
+  if (post.authorId !== user.id && !user.isAdmin) {
+    return err({ kind: "unauthorized" as const });
+  }
+  return ok(post);
+});
+```
+
+### Tier 4: 4+ named steps, mixed IO (Railway context builder)
+
+```ts
+import { Railway } from "@onrails/result/railway";
+
+const workflow = Railway
+  .fromSync("id", () => IdSchema.parse(raw), toError)
+  .fromPromise("row", ({ id }) => db.profiles.find(id), toError)
+  .require("profile", "row", ({ id }) => ({ kind: "not_found" as const, id }))
+  .derive("normalized", ({ profile }) => normalizeProfile(profile))
+  .select(({ normalized }) => normalized);
+```
+
 ---
 
 ## 1. Reusable parser builder via `flow`
@@ -26,16 +88,8 @@ type SchemaError = { kind: "schema"; field: string };
 
 const parseJsonWith = <T>(schema: { parse: (x: unknown) => T }) =>
   flow(
-    trySync(
-      (raw: string) => JSON.parse(raw),
-      (e): ParseError => ({ kind: "parse", message: String(e) }),
-    ),
-    flatMap((data: unknown) =>
-      trySync(
-        () => schema.parse(data),
-        (e): SchemaError => ({ kind: "schema", field: String(e) }),
-      )(),
-    ),
+    trySync(JSON.parse, (e): ParseError => ({ kind: "parse", message: String(e) })),
+    flatMap(trySync(schema.parse, (e): SchemaError => ({ kind: "schema", field: String(e) }))),
   );
 
 const parseUser = parseJsonWith(UserSchema);
@@ -167,7 +221,7 @@ const buildSummary = (userId: string) =>
 // ResultAsync<Summary, ProfileError | MetricsError>
 ```
 
-`parallelTupleAsync` preserves tuple positions, so destructuring stays type-safe. Use `sequenceTupleAsync` if branches must run left-to-right.
+`parallelTupleAsync` preserves tuple positions, so destructuring stays type-safe. Use static `ResultAsync.combineTuple` if branches must run left-to-right.
 
 ---
 
@@ -181,24 +235,24 @@ import { flatMap, recover, ok, err } from "@onrails/result";
 
 type LengthError = { kind: "len"; min: number };
 type CharsError  = { kind: "chars"; bad: string };
+type TooShortError = { kind: "too_short"; min: number };
 
-const requireMin = (min: number) =>
-  flow((s: string) => (s.length >= min ? ok(s) : err({ kind: "len" as const, min })));
+const requireMin = (min: number) => (s: string) =>
+  s.length >= min ? ok(s) : err({ kind: "len" as const, min });
 
-const requireAscii = flow(
-  (s: string) =>
-    /^[\x20-\x7e]*$/.test(s) ? ok(s) : err({ kind: "chars" as const, bad: s }),
-);
+const requireAscii = (s: string) =>
+  /^[\x20-\x7e]*$/.test(s) ? ok(s) : err({ kind: "chars" as const, bad: s });
 
 const validateUsername = flow(
   (raw: string) => ok(raw.trim()),
   flatMap(requireMin(3)),
   flatMap(requireAscii),
-  recover((e: LengthError | CharsError) =>
-    e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
+  recover(
+    (e: LengthError | CharsError): Result<string, TooShortError | CharsError> =>
+      e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
   ),
 );
-// (raw: string) => Result<string, { kind: "too_short"; min: number } | CharsError>
+// (raw: string) => Result<string, TooShortError | CharsError>
 ```
 
 `requireMin(3)` is a curried factory — `flow` strings it into the pipeline alongside `requireAscii`. None of the inner steps mention the value.
@@ -301,7 +355,12 @@ import { map, recover, ok, err, type Result } from "@onrails/result";
 
 type FetchError = { kind: "network" } | { kind: "fatal"; message: string };
 
-const fetchWith = (cfg: { fallback?: Body; rethrow: (e: FetchError) => boolean }) =>
+type FetchConfig = {
+  readonly fallback?: Body;
+  readonly rethrow: (e: FetchError) => boolean;
+};
+
+const fetchWith = (cfg: FetchConfig) =>
   flow(
     fetchSync,
     recover((e: FetchError) =>
@@ -347,6 +406,69 @@ const ingest = flow(parseAndValidate, flatMap(enrichAndPersist));
 ```
 
 Each sub-flow has a clear purpose; the top-level `ingest` reads as a sentence. Errors union automatically through `flatMap`'s `E | F` rule.
+
+---
+
+## 12. Async pipelines via `ResultAsync` composition
+
+When composing functions that return `ResultAsync` values, `flow` chains them by wrapping the async transforms in arrow functions. The resulting pipeline remains point-free over the input.
+
+```ts
+import { flow } from "@onrails/result/pipe";
+import { type ResultAsync } from "@onrails/result";
+
+type Profile = { id: string; name: string };
+type Metrics = { score: number };
+type Summary = { name: string; score: number };
+
+declare const fetchProfile: (id: string) => ResultAsync<Profile, Error>;
+declare const fetchMetrics: (p: Profile) => ResultAsync<Metrics, Error>;
+declare const formatSummary: (p: Profile, m: Metrics) => Summary;
+
+const loadSummary = flow(
+  fetchProfile,
+  (ra) => ra.flatMap((profile) => 
+    fetchMetrics(profile).map((metrics) => formatSummary(profile, metrics))
+  ),
+);
+// (id: string) => ResultAsync<Summary, Error>
+```
+
+---
+
+## 13. Functional Railway pipelines (`railway` + named steps)
+
+Use `railway(input, ...steps)` from `@onrails/result/railway` to build a multi-step async pipeline using point-free reusable step wrappers. If any step is async, the entire pipeline resolves to a `ResultAsync`.
+
+```ts
+import { railway, parseWith, fromPromiseNamed, deriveNamed, select } from "@onrails/result/railway";
+import { type ResultAsync } from "@onrails/result";
+
+type Dashboard = { title: string };
+
+type IdContext = { readonly id: string };
+type ProfileContext = { readonly profile: Profile };
+type TitleContext = { readonly title: string };
+
+declare const IdSchema: { parse: (x: unknown) => string };
+declare const fetchProfile: (id: string) => Promise<Profile>;
+declare const toError: (e: unknown) => Error;
+
+const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
+  railway(
+    rawId,
+    parseWith(IdSchema, toError).as("id"),
+    fromPromiseNamed(
+      "profile",
+      ({ id }: IdContext) => fetchProfile(id),
+      toError,
+    ),
+    deriveNamed("title", ({ profile }: ProfileContext) =>
+      profile.name.toUpperCase(),
+    ),
+    select(({ title }: TitleContext) => ({ title })),
+  );
+```
 
 ---
 

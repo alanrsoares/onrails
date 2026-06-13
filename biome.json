@@ -75,7 +75,8 @@
       ],
       "plugins": [
         "./packages/biome-plugin/rules/no-promise-result.grit",
-        "./packages/biome-plugin/rules/no-unsafe-unwrap.grit"
+        "./packages/biome-plugin/rules/no-unsafe-unwrap.grit",
+        "./packages/biome-plugin/rules/no-deprecated-synonyms.grit"
       ]
     }
   ]

@@ -1,0 +1,40 @@
+// @onrails/biome-plugin: no-deprecated-synonyms
+//
+// Flag deprecated railway/maybe synonyms. Use canonical versions instead:
+// - chain() -> flatMap() / andThen()
+// - getOrElse() -> unwrapOr()
+// - of() -> ok() / some()
+// - fold() / matchResult() / matchMaybe() -> match()
+// - sequenceTupleAsync() -> ResultAsync.combineTuple()
+// - collect() -> combine()
+// - ResultAsync.isOk() / isErr() -> await and narrow with isOk() / isErr()
+//
+// Limitation: matching is name-based — GritQL cannot scope by import, so
+// same-named calls from other libraries (RxJS `of`, fp-ts `fold`,
+// neverthrow `.isOk()`) are flagged too. Suppress with an inline
+// biome-ignore comment in mixed codebases.
+
+engine biome(1.0)
+language js
+
+or {
+  `$_.chain($_)` as $call,
+  `$_?.chain($_)` as $call,
+  `$_.isOk()` as $call,
+  `$_?.isOk()` as $call,
+  `$_.isErr()` as $call,
+  `$_?.isErr()` as $call,
+  `fold($_)` as $call,
+  `matchResult($_)` as $call,
+  `matchMaybe($_)` as $call,
+  `getOrElse($_)` as $call,
+  `sequenceTupleAsync($_)` as $call,
+  `collect($_)` as $call,
+  `of($_)` as $call
+} where {
+  register_diagnostic(
+    span = $call,
+    message = "Avoid deprecated onrails synonyms/methods. Use the canonical equivalents instead.",
+    severity = "error"
+  )
+}

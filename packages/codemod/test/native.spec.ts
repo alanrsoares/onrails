@@ -259,6 +259,68 @@ describe("rewriteCompatMethodChainsToNative: helper renames", () => {
   });
 });
 
+describe("rewriteCompatMethodChainsToNative: deprecated synonyms", () => {
+  it("rewrites deprecated synonyms and helper functions to canonical forms", () => {
+    const src = [
+      'import { sequenceTupleAsync, getOrElse, collect, matchResult, matchMaybe, fold } from "@onrails/result/compat/neverthrow";',
+      "",
+      "const t = sequenceTupleAsync([a, b]);",
+      "const g = getOrElse(maybe, 0);",
+      "const c = collect(results);",
+      "const mr = matchResult(r, (x) => x, (e) => 0);",
+      "const mm = matchMaybe(m, (x) => x, () => 0);",
+      "const f = fold({ ok: (x) => x, err: (e) => 0 })(r);",
+    ].join("\n");
+
+    expect(rewriteCompatMethodChainsToNative(rewriteCompatImportsToNative(src))).toBe(
+      [
+        'import { ResultAsync, combine, match, unwrapOr } from "@onrails/result";',
+        "",
+        "const t = ResultAsync.combineTuple([a, b]);",
+        "const g = unwrapOr(maybe, 0);",
+        "const c = combine(results);",
+        "const mr = match(r, (x) => x, (e) => 0);",
+        "const mm = match(m, (x) => x, () => 0);",
+        "const f = match((x) => x, (e) => 0)(r);",
+      ].join("\n"),
+    );
+  });
+});
+
+describe("rewriteCompatMethodChainsToNative: deprecated synonym edge cases", () => {
+  it("passes `of` imports through without renaming — call sites keep working", () => {
+    const src = [
+      'import { of } from "@onrails/result/compat/neverthrow";',
+      "",
+      "const v = of(1);",
+    ].join("\n");
+
+    expect(rewriteCompatMethodChainsToNative(rewriteCompatImportsToNative(src))).toBe(
+      ['import { of } from "@onrails/result";', "", "const v = of(1);"].join("\n"),
+    );
+  });
+
+  it("leaves fold untouched when handlers cannot be extracted", () => {
+    const src = [
+      "const partial = fold({ ok: (x) => x })(r);",
+      "const spread = fold({ ...handlers })(r);",
+    ].join("\n");
+
+    expect(rewriteCompatMethodChainsToNative(src)).toBe(src);
+  });
+
+  it("rewrites only the inner fold when the curried call has no receiver", () => {
+    const src = "const noReceiver = fold({ ok: (x) => x, err: (e) => 0 })();";
+
+    expect(rewriteCompatMethodChainsToNative(src)).toBe(
+      [
+        'import { match } from "@onrails/result";',
+        "const noReceiver = match((x) => x, (e) => 0)();",
+      ].join("\n"),
+    );
+  });
+});
+
 describe("CLI: native rewrites", () => {
   it("dry-runs native import rewrites without changing files", async () => {
     const root = await makeFixture();

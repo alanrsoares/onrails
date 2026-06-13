@@ -1,18 +1,39 @@
 import { isTypeOnlyNative, isValueImport, splitImportNames, stripInlineType } from "./ast.js";
 import { COMPAT_SPEC, NATIVE_SPEC } from "./constants.js";
 
+// Every entry must have a matching call-site rewrite in chains.ts, or the
+// renamed import strands the old name at call sites. `of` is intentionally
+// absent: bare `of(...)` calls collide with other libraries (e.g. RxJS) and
+// the canonical target differs per carrier (result `ok` vs maybe `some`) —
+// the native package still exports the deprecated alias, so imports of `of`
+// pass through unchanged and the lint rules flag them for manual migration.
+const IMPORT_RENAMES = new Map([
+  ["sequenceTupleAsync", "ResultAsync"],
+  ["getOrElse", "unwrapOr"],
+  ["collect", "combine"],
+  ["matchResult", "match"],
+  ["matchMaybe", "match"],
+  ["fold", "match"],
+]);
+
 export function toNativeImport(full: string, specifiers: string, quote: string): string {
   const imports = splitImportNames(specifiers);
   const typeNames = imports.filter(isTypeOnlyNative).map(stripInlineType);
-  const valueNames = imports.filter(isValueImport);
+  const rawValueNames = imports.filter(isValueImport);
+  const valueNames = rawValueNames.map((name) => IMPORT_RENAMES.get(name) ?? name);
+
+  const uniqueValueNames = [...new Set(valueNames)];
+  const uniqueTypeNames = [...new Set(typeNames)];
   const chunks: string[] = [];
 
-  if (valueNames.length > 0) {
-    chunks.push(`import { ${valueNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`);
+  if (uniqueValueNames.length > 0) {
+    chunks.push(`import { ${uniqueValueNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`);
   }
 
-  if (typeNames.length > 0) {
-    chunks.push(`import type { ${typeNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`);
+  if (uniqueTypeNames.length > 0) {
+    chunks.push(
+      `import type { ${uniqueTypeNames.join(", ")} } from ${quote}${NATIVE_SPEC}${quote};`,
+    );
   }
 
   return chunks.length > 0 ? chunks.join("\n") : full;

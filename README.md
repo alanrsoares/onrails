@@ -59,6 +59,19 @@ if (isOk(r)) console.log(r.value);
 
 For composition patterns (`pipe`, `flow`, dual-form transforms, point-free pipelines) see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
 
+## Composition guidelines
+
+To keep codebases readable and consistent, follow the four-tier guideline when choosing how to compose operations:
+
+| Tier | Use Case | Recommended Pattern |
+| ---- | -------- | ------------------- |
+| **1** | 1–2 steps, linear | direct data-first calls or method chains |
+| **2** | 3+ steps, linear | `pipe` or `flow` |
+| **3** | branchy, value reused | `tryGen` escape hatch |
+| **4** | 4+ named steps, mixed IO | `Railway` or `railway()` steps |
+
+`/fluent` is documented as app-edge sugar only — never in library or service internals. For examples illustrating Tier 1-4 usage patterns, see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
+
 ## Migrating from neverthrow
 
 ```bash

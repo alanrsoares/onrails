@@ -1,5 +1,5 @@
 import { relative, resolve } from "node:path";
-import { type Maybe, match as matchMaybe, none, some, tap } from "@onrails/maybe";
+import * as Maybe from "@onrails/maybe";
 import { match } from "@onrails/pattern";
 import { err, isErr, ok, type Result, ResultAsync } from "@onrails/result";
 import { Glob } from "bun";
@@ -61,25 +61,25 @@ const rewriteCode = (
   path: string,
   dry: boolean,
   mode: Mode,
-): ResultAsync<Maybe<FileChange>, Error> =>
+): ResultAsync<Maybe.Maybe<FileChange>, Error> =>
   readFileText(path).flatMap((src) =>
-    matchMaybe(
+    Maybe.match(
       computeFileChange(src, mode),
       (c) => {
         const change = toFileChange(path, c);
         return c.changed && !dry
-          ? writeFileText(path, c.next).map(() => some(change))
-          : ResultAsync.ok<Maybe<FileChange>, Error>(some(change));
+          ? writeFileText(path, c.next).map(() => Maybe.some(change))
+          : ResultAsync.ok<Maybe.Maybe<FileChange>, Error>(Maybe.some(change));
       },
-      () => ResultAsync.ok<Maybe<FileChange>, Error>(none()),
+      () => ResultAsync.ok<Maybe.Maybe<FileChange>, Error>(Maybe.none()),
     ),
   );
 
 const collectInto =
   <T>(into: T[], file: string) =>
-  (r: ResultAsync<Maybe<T>, Error>): Promise<void> =>
+  (r: ResultAsync<Maybe.Maybe<T>, Error>): Promise<void> =>
     r.match(
-      (m) => void tap(m, (c) => into.push(c)),
+      (m) => void Maybe.tap(m, (c) => into.push(c)),
       (e) => console.error(`error processing ${file}:`, e.message),
     );
 

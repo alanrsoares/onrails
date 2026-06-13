@@ -1,14 +1,4 @@
-import {
-  andThen,
-  flatMap,
-  getOrElse,
-  type Maybe,
-  map,
-  match,
-  tap,
-  tapNone,
-  unwrapOr,
-} from "./maybe.js";
+import { andThen, flatMap, type Maybe, map, match, tap, tapNone, unwrapOr } from "./maybe.js";
 
 export type FluentMaybe<T> = Maybe<T> & {
   map<U>(fn: (value: T) => U): FluentMaybe<U>;
@@ -42,7 +32,7 @@ export const fluent = <T>(maybe: Maybe<T>): FluentMaybe<T> =>
       return match(maybe, onSome, onNone);
     },
     getOrElse(defaultValue: T) {
-      return getOrElse(maybe, defaultValue);
+      return unwrapOr(maybe, defaultValue);
     },
     unwrapOr(defaultValue: T) {
       return unwrapOr(maybe, defaultValue);

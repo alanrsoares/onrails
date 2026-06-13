@@ -1,4 +1,4 @@
-import { fromNullable, type Maybe, match as matchMaybe, none, some } from "@onrails/maybe";
+import { fromNullable, type Maybe, match, none, some } from "@onrails/maybe";
 import ts from "typescript";
 import { TYPE_ONLY_NATIVE } from "./constants.js";
 import type { Edit } from "./types.js";
@@ -11,7 +11,7 @@ export const edit = (text: string, imports: readonly string[] = []): Edit => ({
 });
 
 export const lookupMap = <K, V, R>(m: Map<K, V>, k: K, f: (v: V) => R): Maybe<R> =>
-  matchMaybe(fromNullable(m.get(k)), (v) => some(f(v)), none);
+  match(fromNullable(m.get(k)), (v) => some(f(v)), none);
 
 export const concatCollectors =
   <T, R>(...fns: Array<(t: T) => readonly R[]>) =>

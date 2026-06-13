@@ -173,12 +173,12 @@ const out = tryGen(() => {
 });
 ```
 
-Use `sequenceTupleAsync` (or `parallelTupleAsync` when branches should overlap) when combining heterogeneous async results and destructuring the result:
+Use `ResultAsync.combineTuple` (or `parallelTupleAsync` when branches should overlap) when combining heterogeneous async results and destructuring the result:
 
 ```ts
-import { sequenceTupleAsync } from "@onrails/result";
+import { ResultAsync } from "@onrails/result";
 
-const combined = sequenceTupleAsync([
+const combined = ResultAsync.combineTuple([
   loadSettings(),
   loadModelCatalog(),
 ] as const);

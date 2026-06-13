@@ -21,6 +21,9 @@ tester.run("no-unsafe-unwrap", rule, {
     { code: "const x = result.match();", filename: "src/handler.ts" },
     // Test file — rule is a no-op.
     { code: "const v = result._unsafeUnwrap();", filename: "test/foo.spec.ts" },
+    { code: "unwrapOk(result);", filename: "test/foo.spec.ts" },
+    { code: "unwrapErr(result);", filename: "test/foo.spec.ts" },
+    { code: "unwrap(maybe);", filename: "test/foo.spec.ts" },
   ],
   invalid: [
     {
@@ -30,6 +33,21 @@ tester.run("no-unsafe-unwrap", rule, {
     },
     {
       code: "const e = result._unsafeUnwrapErr();",
+      filename: "src/handler.ts",
+      errors: [{ messageId: "unsafe" }],
+    },
+    {
+      code: "unwrapOk(result);",
+      filename: "src/handler.ts",
+      errors: [{ messageId: "unsafe" }],
+    },
+    {
+      code: "unwrapErr(result);",
+      filename: "src/handler.ts",
+      errors: [{ messageId: "unsafe" }],
+    },
+    {
+      code: "unwrap(maybe);",
       filename: "src/handler.ts",
       errors: [{ messageId: "unsafe" }],
     },

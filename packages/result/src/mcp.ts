@@ -3,17 +3,26 @@ import { fromAsync } from "./interop.js";
 import { err, isOk, ok } from "./result.js";
 import type { Result } from "./types.js";
 
-/** openapi-fetch style response before unwrapping */
+/**
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export type FetchResult<T> = {
   data?: T;
   error?: unknown;
   response: Response;
 };
 
-/** Error with a `message` field for MCP tool boundaries */
+/**
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export type ErrorWithMessage = { message: string };
 
-/** MCP tool success / error shape (structured content + text) */
+/**
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export type ToolResponse<T> =
   | { structuredContent: T; content: { type: "text"; text: string }[] }
   | { content: { type: "text"; text: string }[]; isError: true };
@@ -21,6 +30,9 @@ export type ToolResponse<T> =
 /**
  * Map an openapi-fetch (or similar) response to a {@link Result}.
  * Supply `toError` to build your domain error (e.g. `PrintrApiError`).
+ *
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
  */
 export const unwrapFetchResult = <T, E>(
   result: FetchResult<T>,
@@ -32,7 +44,12 @@ export const unwrapFetchResult = <T, E>(
   return ok(result.data);
 };
 
-/** Default detail extractor — sanitises HTML / empty bodies */
+/**
+ * Default detail extractor — sanitises HTML / empty bodies
+ *
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export const extractFetchErrorDetail = (error: unknown, response: Response): string => {
   if (error === undefined || error === null) {
     return response.statusText || "unknown error";
@@ -49,7 +66,12 @@ export const extractFetchErrorDetail = (error: unknown, response: Response): str
   return raw;
 };
 
-/** Lift `client.GET(...)` promise to {@link ResultAsync} */
+/**
+ * Lift `client.GET(...)` promise to {@link ResultAsync}
+ *
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export const unwrapFetchResultAsync = <T, E>(
   promise: Promise<FetchResult<T>>,
   toError: (detail: { error: unknown; response: Response }) => E,
@@ -60,7 +82,12 @@ export const unwrapFetchResultAsync = <T, E>(
     E
   >;
 
-/** Format a sync {@link Result} as an MCP tool response */
+/**
+ * Format a sync {@link Result} as an MCP tool response
+ *
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export const toToolResponse = <T, E extends ErrorWithMessage>(
   result: Result<T, E>,
 ): ToolResponse<T> => {
@@ -76,16 +103,29 @@ export const toToolResponse = <T, E extends ErrorWithMessage>(
   };
 };
 
-/** Terminate a {@link ResultAsync} pipeline at an MCP tool handler */
+/**
+ * Terminate a {@link ResultAsync} pipeline at an MCP tool handler
+ *
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export const toToolResponseAsync = async <T, E extends ErrorWithMessage>(
   resultAsync: ResultAsync<T, E>,
 ): Promise<ToolResponse<T>> => toToolResponse(await resultAsync.resolve());
 
+/**
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export const toolOk = (data: Record<string, unknown>) => ({
   structuredContent: data,
   content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
 });
 
+/**
+ * @deprecated This type of application-specific integration boundary has no place in the primitives library.
+ * This subpath will be removed in the next major. Format responses at the application boundary instead.
+ */
 export const toolError = (text: string) => ({
   content: [{ type: "text" as const, text }],
   isError: true as const,
