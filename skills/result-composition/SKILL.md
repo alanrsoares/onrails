@@ -141,7 +141,12 @@ When a step needs configuration that doesn't change per-call, take it on an oute
 import { flow } from "@onrails/result/pipe";
 import { map, recover, ok, err } from "@onrails/result";
 
-const fetchWith = (cfg: { fallback?: Body; rethrow: (e: FetchError) => boolean }) =>
+type FetchConfig = {
+  readonly fallback?: Body;
+  readonly rethrow: (e: FetchError) => boolean;
+};
+
+const fetchWith = (cfg: FetchConfig) =>
   flow(
     fetchSync,
     recover((e: FetchError) =>
@@ -260,5 +265,5 @@ The dual-form API lets you mix both styles freely: start point-free, drop to a n
 
 ## See also
 
-- [`packages/result/RECIPES.md`](../../packages/result/RECIPES.md) — 11 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches.
+- [`packages/result/RECIPES.md`](../../packages/result/RECIPES.md) — 13 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches, async pipelines, and functional railway pipelines.
 - [`railway-do-notation`](../railway-do-notation/SKILL.md) — workflow-builder layer above this one. Use when named context wins over positional plumbing.

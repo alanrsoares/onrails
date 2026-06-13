@@ -67,11 +67,6 @@
       "import": "./dist/interop.js",
       "require": "./dist/interop.cjs"
     },
-    "./mcp": {
-      "types": "./dist/mcp.d.ts",
-      "import": "./dist/mcp.js",
-      "require": "./dist/mcp.cjs"
-    },
     "./pipe": {
       "types": "./dist/pipe.d.ts",
       "import": "./dist/pipe.js",

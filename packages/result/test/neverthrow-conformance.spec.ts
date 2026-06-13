@@ -9,8 +9,6 @@ import {
   ResultAsync,
 } from "../src/compat/neverthrow.js";
 
-/** Patterns lifted from printr-mcp (state.ts, client.ts, parse flows) */
-
 describe("neverthrow compat — sync", () => {
   const toStateError = (e: unknown): { message: string } => ({
     message: e instanceof Error ? e.message : String(e),
