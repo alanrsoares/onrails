@@ -8,6 +8,20 @@ Operating rules for human + AI contributors. Repo-local; overrides external skil
 
 Per-package design notes: [result](packages/result/DESIGN.md) · [maybe](packages/maybe/DESIGN.md) · [pattern](packages/pattern/DESIGN.md). Worked composition examples: [result/RECIPES.md](packages/result/RECIPES.md).
 
+## Agent skills
+
+This repository defines local agent skills under `skills/` for AI coders to load and use:
+
+- **`result-composition`** — primitive composition, dual-form currying, pipe/flow.
+- **`railway-do-notation`** — named-context workflows, Railway builder, functional railway steps.
+
+To add these skills to your environment:
+
+```bash
+npx skills add alanrsoares/onrails@result-composition
+npx skills add alanrsoares/onrails@railway-do-notation
+```
+
 ## Toolchain
 
 - **Bun ≥ 1.0**. Use `bun`, `bun run`, `bun test`, `bunx`. No npm/yarn/pnpm.
