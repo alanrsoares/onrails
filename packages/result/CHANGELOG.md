@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/alanrsoares/onrails/compare/result-v0.1.3...result-v0.1.4) (2026-06-13)
+
+
+### Features
+
+* **result:** dual-form asyncAfter, parseNamed, $ barrel ([#26](https://github.com/alanrsoares/onrails/issues/26)) ([bbf9fa0](https://github.com/alanrsoares/onrails/commit/bbf9fa00ce86f1b243bde536f565edbc2f0cb312))
+
 ## [0.1.3](https://github.com/alanrsoares/onrails/compare/result-v0.1.2...result-v0.1.3) (2026-06-13)
 
 
