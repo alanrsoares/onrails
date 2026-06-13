@@ -1,6 +1,6 @@
 ---
 name: railway-do-notation
-description: Ergonomic railway composition for `@onrails/result`: when to use low-level Result/ResultAsync helpers, fluent `Railway.*` workflows, functional `railway(...)` reusable steps, or sync `tryGen`. Use when writing or refactoring Result-heavy TypeScript, Drizzle/Zod ETL workflows, nested `flatMapResult` chains, mixed sync/async railway code, or when a user asks about "Railway", "railway", "do-notation", "safe workflow", or "expressive Result code". Do NOT use workflow builders for tiny repository methods where `asyncAfter` or `.flatMap` is clearer.
+description: "Ergonomic railway composition for `@onrails/result`: when to use low-level Result/ResultAsync helpers, fluent `Railway.*` workflows, functional `railway(...)` reusable steps, or sync `tryGen`. Use when writing or refactoring Result-heavy TypeScript, Drizzle/Zod ETL workflows, nested `flatMapResult` chains, mixed sync/async railway code, or when a user asks about 'Railway', 'railway', 'do-notation', 'safe workflow', or 'expressive Result code'. Do NOT use workflow builders for tiny repository methods where `asyncAfter` or `.flatMap` is clearer."
 ---
 
 # Railway ergonomics in `@onrails/result`
