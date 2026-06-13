@@ -141,7 +141,12 @@ When a step needs configuration that doesn't change per-call, take it on an oute
 import { flow } from "@onrails/result/pipe";
 import { map, recover, ok, err } from "@onrails/result";
 
-const fetchWith = (cfg: { fallback?: Body; rethrow: (e: FetchError) => boolean }) =>
+type FetchConfig = {
+  readonly fallback?: Body;
+  readonly rethrow: (e: FetchError) => boolean;
+};
+
+const fetchWith = (cfg: FetchConfig) =>
   flow(
     fetchSync,
     recover((e: FetchError) =>
