@@ -78,4 +78,27 @@ describe("asyncAfter", () => {
     const result = await asyncAfter(ok(1), () => fromResult(err("async"))).resolve();
     expect(result).toEqual(err("async"));
   });
+
+  describe("data-last (curried)", () => {
+    it("runs the async step on Ok", async () => {
+      const bind = asyncAfter((n: number) => fromResult(ok(n + 1)));
+      expect(await bind(ok(1)).resolve()).toEqual(ok(2));
+    });
+
+    it("short-circuits on Err without calling the async step", async () => {
+      let called = false;
+      const bind = asyncAfter((n: number) => {
+        called = true;
+        return fromResult(ok(n));
+      });
+      expect(await bind(err("stop")).resolve()).toEqual(err("stop"));
+      expect(called).toBe(false);
+    });
+
+    it("unions upstream and async-step errors", async () => {
+      const bind = asyncAfter((n: number) => fromResult(n > 0 ? ok(n) : err("neg" as const)));
+      const upstream: Result<number, "bad"> = err("bad");
+      expect(await bind(upstream).resolve()).toEqual(err("bad"));
+    });
+  });
 });

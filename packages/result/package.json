@@ -52,6 +52,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./$": {
+      "types": "./dist/_.d.ts",
+      "import": "./dist/$.js",
+      "require": "./dist/$.cjs"
+    },
     "./fluent": {
       "types": "./dist/fluent.d.ts",
       "import": "./dist/fluent.js",

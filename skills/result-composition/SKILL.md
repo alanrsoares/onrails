@@ -20,7 +20,7 @@ map(result, fn);   // data-first — best inference for one-shot inline calls
 map(fn)(result);   // data-last (curried) — feeds pipe(...) and flow(...)
 ```
 
-Arity at the call site picks the overload. Same applies to `mapErr`, `bimap`, `flatMap`, `recover`, `tap`, `tapErr`, `match`.
+Arity at the call site picks the overload. Same applies to `mapErr`, `bimap`, `flatMap`, `recover`, `tap`, `tapErr`, `match`, and the sync→async bridge `asyncAfter` (`asyncAfter(result, fn)` data-first, `asyncAfter(fn)` data-last).
 
 `match` and `bimap` use 3-args data-first, 2-args curried:
 
@@ -101,16 +101,26 @@ const greeting = pipe(
 // Result<string, ParseError>
 ```
 
-`pipe` slots arbitrary `(prev) => next` functions, so non-curried steps work too:
+`asyncAfter` is dual-form too — its data-last call is the sync→async bridge that drops straight into `pipe`, so the step stays point-free:
 
 ```ts
 pipe(
   validated,
-  (value) => asyncAfter(value, (v) => tryAsync(persist(v))),
+  asyncAfter((v) => tryAsync(persist(v))),   // Result → ResultAsync, point-free
 );
 ```
 
-Don't fight the railway — when a step is naturally value-first (`asyncAfter`, `pipe(value, ...)` inside a step, etc.), embed the call directly.
+And `pipe` still slots arbitrary `(prev) => next` lambdas when a step is genuinely one-off and has no curried form:
+
+```ts
+pipe(
+  parseConfig(raw),
+  map((cfg) => cfg.users),
+  (r) => r.map((users) => users.slice(0, 10)),   // ad-hoc reshape, no point-free gain
+);
+```
+
+Don't fight the railway — reach for the data-last form when it exists; embed a plain lambda only when the step is truly bespoke.
 
 ## Layer 3 — Variadic `flow`
 
@@ -201,19 +211,25 @@ Decide via the closure ladder above: any step that looks back at the original in
 
 ### 3. Point-free where a step needs the same value three times
 
-When one intermediate value is referenced multiple times in branchy logic, `flatMap` chains start carrying ambient state and reading inverted. Drop into `tryGen`:
+When one intermediate value is referenced multiple times in branchy logic, `flatMap` chains start carrying ambient state and reading inverted. Drop into `tryGen` — `$(result)` unwraps the Ok value or short-circuits the whole block with the first Err (Rust's `?` for sync code).
 
 ```ts
 import { tryGen, $ } from "@onrails/result/try-gen";
+// or the namesake subpath — same exports:
+import { tryGen, $ } from "@onrails/result/$";
+```
 
+**a) Linear unwrap — same value reused downstream.** The point-free version would thread `user` through every closure; `$` names it once.
+
+```ts
 const ingest = (raw: string) =>
   pipe(
     raw,
     parseUser,
     (validated) =>
       tryGen(() => {
-        const user = $(validated);
-        const enriched = $(enrichWithAcl(user));
+        const user = $(validated);                 // unwrap or short-circuit
+        const enriched = $(enrichWithAcl(user));    // reads user
         const persisted = $(persistSync(enriched));
         return ok({ user: persisted, at: Date.now() });
       }),
@@ -221,11 +237,51 @@ const ingest = (raw: string) =>
   );
 ```
 
+**b) Branch on an unwrapped value — early `return err(...)`.** This is the case `flatMap` reads worst: a guard between two unwraps.
+
+```ts
+const authorize = (req: Request, postId: string) =>
+  tryGen(() => {
+    const user = $(authenticate(req));
+    const post = $(fetchPost(postId));
+    if (post.authorId !== user.id && !user.isAdmin) {
+      return err({ kind: "forbidden" as const });   // early exit, no nesting
+    }
+    return ok(post);
+  });
+// Result<Post, AuthError | FetchError | { kind: "forbidden" }>
+```
+
+**c) Conditional unwrap — `$` inside a branch.** Only the taken branch unwraps; the error union still accumulates both sides.
+
+```ts
+const resolve = (raw: string, opts: { strict: boolean }) =>
+  tryGen(() => {
+    const cfg = $(parseConfig(raw));
+    const name = cfg.name ?? (opts.strict ? $(err({ kind: "missing" as const })) : "anon");
+    return ok({ ...cfg, name });
+  });
+```
+
+**d) Loop with `$` — accumulate or bail on first failure.** A `for` loop with `$` is far clearer than `combine` + manual reduce when each iteration depends on the last.
+
+```ts
+const applyAll = (state: State, steps: readonly Step[]) =>
+  tryGen(() => {
+    let acc = state;
+    for (const step of steps) {
+      acc = $(applyStep(acc, step));   // first Err aborts the loop + the block
+    }
+    return ok(acc);
+  });
+```
+
 `tryGen` is a sync island. Use it when:
 
 - the same value is referenced 3+ times
 - conditional branching makes the `flatMap` chain feel inverted
 - you want `?`-style early returns without method-chaining
+- a `Result`-returning loop body must bail on first failure
 
 ### 4. Inference noise mid-chain
 

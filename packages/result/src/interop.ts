@@ -21,11 +21,33 @@ type AnyResult = Result<unknown, unknown>;
 export const fromResult = <T, E>(result: Result<T, E>): ResultAsync<T, E> =>
   ResultAsync.fromResult(result);
 
-/** Bind a sync {@link Result} into an async step without widening defects. */
-export const asyncAfter = <T, U, E, F>(
+/**
+ * Bind a sync {@link Result} into an async step without widening defects.
+ * Dual-form: data-first for one-shots, data-last (curried) for `pipe`/`flow`.
+ *
+ * @example
+ * ```ts
+ * asyncAfter(result, (u) => tryAsync(db.insert(u), toErr)); // data-first
+ * asyncAfter((u) => tryAsync(db.insert(u), toErr));         // data-last
+ * ```
+ */
+export function asyncAfter<T, U, E, F>(
   result: Result<T, E>,
   fn: (value: T) => ResultAsync<U, F>,
-): ResultAsync<U, E | F> => fromResult(result).flatMap(fn);
+): ResultAsync<U, E | F>;
+export function asyncAfter<T, U, F>(
+  fn: (value: T) => ResultAsync<U, F>,
+): <E>(result: Result<T, E>) => ResultAsync<U, E | F>;
+export function asyncAfter<T, U, E, F>(
+  resultOrFn: Result<T, E> | ((value: T) => ResultAsync<U, F>),
+  fn?: (value: T) => ResultAsync<U, F>,
+): ResultAsync<U, E | F> | ((result: Result<T, E>) => ResultAsync<U, E | F>) {
+  if (fn === undefined) {
+    const f = resultOrFn as (value: T) => ResultAsync<U, F>;
+    return (result: Result<T, E>): ResultAsync<U, E | F> => fromResult(result).flatMap(f);
+  }
+  return fromResult(resultOrFn as Result<T, E>).flatMap(fn);
+}
 
 /**
  * Lift `(...args) => Promise<Result<T, E>>` to `(...args) => ResultAsync<T, E>`.

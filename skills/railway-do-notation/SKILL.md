@@ -184,8 +184,10 @@ Use lowercase `railway(...)` when the steps themselves should be reusable values
 
 ```ts
 const parseProfileId =
-  // Parse raw input and name the output.
-  parseWith(ProfileIdSchema, toError).as("profileId");
+  // Parse raw input and name the output. Name-first, like every other step
+  // below — `parseWith(ProfileIdSchema, toError).as("profileId")` is the
+  // equivalent fluent trailing-name form if you prefer it.
+  parseNamed("profileId", ProfileIdSchema, toError);
 
 const loadProfileRow = fromPromiseNamed(
   "row",
@@ -263,7 +265,34 @@ const bundleResult = tryGen<{ artifact: Artifact; chunkData: Chunk[] }, Error>((
 });
 ```
 
-Use `yieldResult as $` for do-notation snippets in this repo. The alias is intentionally local to `tryGen` blocks and mirrors Rust's `?` ergonomics without changing the rest of the railway API.
+`$(result)` unwraps the Ok value or short-circuits the whole block with the first Err. Its real edge over a `flatMap` chain is a **guard between two unwraps** — an early `return err(...)`:
+
+```ts
+const authorizeEdit = (req: Request, postId: string) =>
+  tryGen(() => {
+    const user = $(authenticate(req));
+    const post = $(fetchPost(postId));
+    if (post.authorId !== user.id && !user.isAdmin) {
+      return err({ kind: "forbidden" as const });   // early exit, no nesting
+    }
+    return ok(post);
+  });
+```
+
+…and a `Result`-returning loop body that must bail on first failure:
+
+```ts
+const applyMigrations = (db: Db, steps: readonly Migration[]) =>
+  tryGen(() => {
+    let schema = $(currentSchema(db));
+    for (const step of steps) {
+      schema = $(applyMigration(schema, step));   // first Err aborts loop + block
+    }
+    return ok(schema);
+  });
+```
+
+Use `yieldResult as $` for do-notation snippets in this repo. The exports are also re-published from the namesake subpath — `import { tryGen, $ } from "@onrails/result/$"` — when `$` reads better as the module's name. The alias is intentionally local to `tryGen` blocks and mirrors Rust's `?` ergonomics without changing the rest of the railway API.
 
 Never use `tryGen` with `await` or `ResultAsync`.
 

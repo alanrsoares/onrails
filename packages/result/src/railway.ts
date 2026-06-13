@@ -19,6 +19,7 @@ export {
   fromResultNamed,
   fromSyncNamed,
   parallelNamed,
+  parseNamed,
   parseWith,
   railway,
   requireNamed,
