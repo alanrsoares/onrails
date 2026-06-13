@@ -132,12 +132,17 @@ else console.error(r.error);
 
 ## Match and unwrap helpers
 
-`matchResult` is an alias for `match` for files that also import `match` from `ts-pattern`:
+`match` is the canonical positional fold. If a file imports `match` from `@onrails/pattern` or `ts-pattern`, resolve the collision by using namespace imports:
 
 ```ts
-import { matchResult } from "@onrails/result";
+import * as R from "@onrails/result";
 import { match } from "ts-pattern";
+
+R.match(result, onOk, onErr);
 ```
+
+> [!NOTE]
+> `matchResult` is deprecated and will be removed in the next major version.
 
 `unwrapOk` and `unwrapErr` are test/assertion helpers. Prefer `match`, `isOk`, or `isErr` in production control flow.
 
@@ -148,6 +153,9 @@ expect(unwrapOk(parseConfig(raw))).toEqual(expected);
 ```
 
 ## MCP / HTTP boundaries
+
+> [!WARNING]
+> This subpath is `@deprecated` and will be removed in the next major version. Format responses at the application boundary instead.
 
 ```ts
 import { toToolResponseAsync, unwrapFetchResultAsync } from "@onrails/result/mcp";
@@ -314,7 +322,7 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result/fluent` | `fluent()`, `fluentAsync()` |
 | `@onrails/result/extra` | Error-type utilities |
 | `@onrails/result/interop` | `fromAsync`, `fromResult`, `asyncAfter` |
-| `@onrails/result/mcp` | MCP / openapi-fetch helpers |
+| `@onrails/result/mcp` | MCP / openapi-fetch helpers (deprecated) |
 | `@onrails/result/pipe` | `flow` (variadic point-free composition) |
 | `@onrails/result/railway` | `Railway`, `railway`, named workflow helpers |
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |
