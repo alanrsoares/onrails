@@ -125,6 +125,29 @@ export const parseWith = <I, T, E>(parser: ParserLike<I, T>, onThrow: (error: un
 });
 
 /**
+ * Name-first companion to {@link parseWith}: parse the workflow input with a
+ * Zod-like schema (or unary parse fn), naming the output field in the same
+ * `(key, ...)` shape as {@link fromSyncNamed}, {@link deriveNamed}, et al.
+ * Prefer this in `railway(...)` pipelines so every step's name aligns at the
+ * left edge.
+ *
+ * @example
+ * ```ts
+ * railway(
+ *   rawId,
+ *   parseNamed("id", IdSchema, toError),
+ *   fromPromiseNamed("profile", ({ id }) => fetchProfile(id), toError),
+ * );
+ * ```
+ */
+export const parseNamed =
+  <K extends string, I, T, E>(key: K, parser: ParserLike<I, T>, onThrow: (error: unknown) => E) =>
+  <F, M extends RailwayMode>(
+    workflow: Railway<RailwayInput<I>, F, M>,
+  ): Railway<RailwayInput<I> & Record<K, T>, F | E, M> =>
+    workflow.fromSync(key, ({ input }) => parseWithParser(parser, input), onThrow);
+
+/**
  * Reusable wrapper around {@link Railway.fromSync}. Captures key + fn +
  * onThrow once; applies to any compatible workflow.
  */

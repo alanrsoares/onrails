@@ -367,7 +367,7 @@ describe("recipe 12 — async pipelines via ResultAsync composition", () => {
 // Recipe 13 — Functional Railway pipelines (railway + named steps)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { deriveNamed, fromPromiseNamed, parseWith, railway, select } from "../src/railway.js";
+import { deriveNamed, fromPromiseNamed, parseNamed, railway, select } from "../src/railway.js";
 
 type Dashboard = { title: string };
 
@@ -394,7 +394,7 @@ describe("recipe 13 — functional railway pipelines", () => {
     const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
       railway(
         rawId,
-        parseWith(IdSchema, toError).as("id"),
+        parseNamed("id", IdSchema, toError),
         fromPromiseNamed("profile", ({ id }: IdContext) => fetchProfileMock(id), toError),
         deriveNamed("title", ({ profile }: ProfileContext) => profile.name.toUpperCase()),
         select(({ title }: TitleContext) => ({ title })),
@@ -408,7 +408,7 @@ describe("recipe 13 — functional railway pipelines", () => {
     const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
       railway(
         rawId,
-        parseWith(IdSchema, toError).as("id"),
+        parseNamed("id", IdSchema, toError),
         fromPromiseNamed("profile", ({ id }: IdContext) => fetchProfileMock(id), toError),
         deriveNamed("title", ({ profile }: ProfileContext) => profile.name.toUpperCase()),
         select(({ title }: TitleContext) => ({ title })),

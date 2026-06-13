@@ -6,6 +6,7 @@ export default defineConfig({
   ...baseTsupOptions,
   entry: [
     "src/index.ts",
+    "src/$.ts",
     "src/fluent.ts",
     "src/extra.ts",
     "src/interop.ts",
