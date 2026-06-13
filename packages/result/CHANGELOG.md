@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/alanrsoares/onrails/compare/result-v0.1.2...result-v0.1.3) (2026-06-13)
+
+
+### Features
+
+* **api:** api coherence ([#21](https://github.com/alanrsoares/onrails/issues/21)) ([9150057](https://github.com/alanrsoares/onrails/commit/915005747d25e049bc45f3bf6ffc944b274501ac))
+
 ## [0.1.2](https://github.com/alanrsoares/onrails/compare/result-v0.1.1...result-v0.1.2) (2026-06-11)
 
 

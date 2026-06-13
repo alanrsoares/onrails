@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.3](https://github.com/alanrsoares/onrails/compare/codemod-v0.1.2...codemod-v0.1.3) (2026-06-13)
+
+
+### Features
+
+* **api:** api coherence ([#21](https://github.com/alanrsoares/onrails/issues/21)) ([9150057](https://github.com/alanrsoares/onrails/commit/915005747d25e049bc45f3bf6ffc944b274501ac))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/maybe bumped to 0.1.3
+    * @onrails/pattern bumped to 0.1.3
+    * @onrails/result bumped to 0.1.3
+
 ## [0.1.2](https://github.com/alanrsoares/onrails/compare/codemod-v0.1.1...codemod-v0.1.2) (2026-06-11)
 
 

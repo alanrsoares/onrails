@@ -1,6 +1,6 @@
 {
   "name": "@onrails/biome-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Biome GritQL plugin: boundary diagnostics for @onrails/result (Promise<Result<…>>, _unsafeUnwrap*).",
   "license": "MIT",
