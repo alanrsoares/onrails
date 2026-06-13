@@ -9,7 +9,6 @@ export default defineConfig({
     "src/fluent.ts",
     "src/extra.ts",
     "src/interop.ts",
-    "src/mcp.ts",
     "src/pipe.ts",
     "src/railway.ts",
     "src/try-gen.ts",

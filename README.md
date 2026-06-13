@@ -72,6 +72,20 @@ To keep codebases readable and consistent, follow the four-tier guideline when c
 
 `/fluent` is documented as app-edge sugar only — never in library or service internals. For examples illustrating Tier 1-4 usage patterns, see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
 
+## Agent skills
+
+This repository defines local agent skills under `skills/` for AI coding assistants to load and use:
+
+- **`result-composition`** — primitive composition, dual-form currying, pipe/flow.
+- **`railway-do-notation`** — named-context workflows, Railway builder, functional railway steps.
+
+To add these skills to your environment:
+
+```bash
+npx skills add alanrsoares/onrails@result-composition
+npx skills add alanrsoares/onrails@railway-do-notation
+```
+
 ## Migrating from neverthrow
 
 ```bash
