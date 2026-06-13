@@ -118,18 +118,17 @@ const saveOrder = (rawJson: string) =>
     flatMap((u) => (u.active ? ok(u) : err({ kind: "inactive" as const }))),
     mapErr((e) => ({ kind: "input" as const, cause: e })),
     tap((u) => log.info({ msg: "validated", userId: u.id })),
-    (validated) =>
-      asyncAfter(validated, (u) =>
-        tryAsync(
-          db.orders.insert({ userId: u.id, items: u.cart }),
-          (e): DbError => ({ kind: "db", cause: e }),
-        ),
+    asyncAfter((u) =>
+      tryAsync(
+        db.orders.insert({ userId: u.id, items: u.cart }),
+        (e): DbError => ({ kind: "db", cause: e }),
       ),
+    ),
   );
 // ResultAsync<OrderRow, { kind: "input"; cause: ... } | DbError>
 ```
 
-The last step isn't perfectly point-free because `asyncAfter` is value-first by design (it takes the sync Result, then the async bridge). That's fine — `pipe` slots arbitrary `(prev) => next` functions, point-free or not.
+`asyncAfter` is dual-form like the rest of the core API: the data-last call `asyncAfter((u) => ...)` is the sync→async bridge that drops straight into `pipe`. The final step stays point-free — `pipe` feeds the upstream `Result` into the curried bridge automatically.
 
 ---
 
@@ -306,12 +305,10 @@ const fetchWithBackoff = (url: string) =>
   pipe(
     url,
     fetchSync,                                                            // Result<Body, NetworkError | RateLimit | Fatal>
-    recover((e: NetworkError | RateLimit | Fatal) => {
-      if (e.kind === "network" && e.retryable) return fetchSync(url);
-      if (e.kind === "rate_limit") return err(e);   // bubble up — caller schedules retry
-      if (e.kind === "fatal") return err(e);        // unrecoverable
-      return err(e);
-    }),
+    recover((e: NetworkError | RateLimit | Fatal) =>
+      // only retryable network errors do work; everything else bubbles up
+      e.kind === "network" && e.retryable ? fetchSync(url) : err(e),
+    ),
   );
 // Result<Body, NetworkError | RateLimit | Fatal>
 ```
@@ -434,6 +431,8 @@ const loadSummary = flow(
 // (id: string) => ResultAsync<Summary, Error>
 ```
 
+The middle step can't go point-free: `profile` is reused across both the `flatMap` and the inner `map`. When a value is referenced by two or more async steps, this nested-closure shape is the cost of staying in `flow`. If it gets deeper, drop to the [`tryGen` escape hatch](#7-trygen-escape-hatch-for-branchy-logic) (Tier 3) and rejoin the pipe.
+
 ---
 
 ## 13. Functional Railway pipelines (`railway` + named steps)
@@ -441,7 +440,7 @@ const loadSummary = flow(
 Use `railway(input, ...steps)` from `@onrails/result/railway` to build a multi-step async pipeline using point-free reusable step wrappers. If any step is async, the entire pipeline resolves to a `ResultAsync`.
 
 ```ts
-import { railway, parseWith, fromPromiseNamed, deriveNamed, select } from "@onrails/result/railway";
+import { railway, parseNamed, fromPromiseNamed, deriveNamed, select } from "@onrails/result/railway";
 import { type ResultAsync } from "@onrails/result";
 
 type Dashboard = { title: string };
@@ -457,7 +456,7 @@ declare const toError: (e: unknown) => Error;
 const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
   railway(
     rawId,
-    parseWith(IdSchema, toError).as("id"),
+    parseNamed("id", IdSchema, toError),
     fromPromiseNamed(
       "profile",
       ({ id }: IdContext) => fetchProfile(id),
@@ -469,6 +468,8 @@ const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
     select(({ title }: TitleContext) => ({ title })),
   );
 ```
+
+Every step now reads name-first (`parseNamed("id", …)`, `fromPromiseNamed("profile", …)`, `deriveNamed("title", …)`) so the field names line up at the left edge. `parseWith(schema).as("id")` remains for the fluent trailing-name style.
 
 ---
 
