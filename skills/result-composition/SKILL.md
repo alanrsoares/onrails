@@ -265,5 +265,5 @@ The dual-form API lets you mix both styles freely: start point-free, drop to a n
 
 ## See also
 
-- [`packages/result/RECIPES.md`](../../packages/result/RECIPES.md) — 11 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches.
+- [`packages/result/RECIPES.md`](../../packages/result/RECIPES.md) — 13 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches, async pipelines, and functional railway pipelines.
 - [`railway-do-notation`](../railway-do-notation/SKILL.md) — workflow-builder layer above this one. Use when named context wins over positional plumbing.
