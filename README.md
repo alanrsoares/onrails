@@ -74,16 +74,18 @@ To keep codebases readable and consistent, follow the four-tier guideline when c
 
 ## Agent skills
 
-This repository defines local agent skills under `skills/` for AI coding assistants to load and use:
+`@onrails/result` ships [Agent Skills](https://tanstack.com/intent) under `packages/result/skills/`, versioned with the package and auto-discovered via [`@tanstack/intent`](https://github.com/TanStack/intent):
 
 - **`result-composition`** — primitive composition, dual-form currying, pipe/flow.
 - **`railway-do-notation`** — named-context workflows, Railway builder, functional railway steps.
 
-To add these skills to your environment:
+Once `@onrails/result` is a dependency, wire the skills into your agent config (`AGENTS.md` / `CLAUDE.md`) and load them on demand:
 
 ```bash
-npx skills add alanrsoares/onrails@result-composition
-npx skills add alanrsoares/onrails@railway-do-notation
+npx @tanstack/intent@latest install        # add skill-loading guidance to your agent config
+npx @tanstack/intent@latest list           # discover skills across your dependencies
+npx @tanstack/intent@latest load @onrails/result#result-composition
+npx @tanstack/intent@latest load @onrails/result#railway-do-notation
 ```
 
 ## Migrating from neverthrow
