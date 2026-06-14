@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/alanrsoares/onrails/compare/result-v0.1.4...result-v0.1.5) (2026-06-14)
+
+
+### Features
+
+* **repo:** adopt @tanstack/intent for skill distribution ([#29](https://github.com/alanrsoares/onrails/issues/29)) ([b9a7bb4](https://github.com/alanrsoares/onrails/commit/b9a7bb4e7b580c8c52f1536a06607cf3d84355a5))
+
 ## [0.1.4](https://github.com/alanrsoares/onrails/compare/result-v0.1.3...result-v0.1.4) (2026-06-13)
 
 
