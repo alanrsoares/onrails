@@ -24,7 +24,8 @@
     "rop",
     "typescript",
     "bun",
-    "functional"
+    "functional",
+    "tanstack-intent"
   ],
   "engines": {
     "node": ">=18",
@@ -44,7 +45,8 @@
     "DESIGN.md",
     "README.md",
     "RECIPES.md",
-    "LICENSE"
+    "LICENSE",
+    "skills"
   ],
   "exports": {
     ".": {

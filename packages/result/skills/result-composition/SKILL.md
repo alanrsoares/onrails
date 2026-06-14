@@ -9,7 +9,7 @@ This skill covers how to compose `Result` / `Maybe` transforms at the primitive 
 
 For named multi-step service workflows (Drizzle ETL, parallel enrichment, required nullable fields), escalate to the **`railway-do-notation`** skill.
 
-For worked examples of the patterns below, see [`packages/result/RECIPES.md`](../../packages/result/RECIPES.md).
+For worked examples of the patterns below, see [`packages/result/RECIPES.md`](../../RECIPES.md).
 
 ## The dual-form contract
 
@@ -321,5 +321,5 @@ The dual-form API lets you mix both styles freely: start point-free, drop to a n
 
 ## See also
 
-- [`packages/result/RECIPES.md`](../../packages/result/RECIPES.md) — 13 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches, async pipelines, and functional railway pipelines.
+- [`packages/result/RECIPES.md`](../../RECIPES.md) — 13 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches, async pipelines, and functional railway pipelines.
 - [`railway-do-notation`](../railway-do-notation/SKILL.md) — workflow-builder layer above this one. Use when named context wins over positional plumbing.
