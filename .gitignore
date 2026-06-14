@@ -7,3 +7,6 @@ docs/
 .env.local
 .claude/
 .cursor/
+# Local skill install output (generated from tracked skills/; skills-lock has machine-absolute paths)
+.agents/
+skills-lock.json
