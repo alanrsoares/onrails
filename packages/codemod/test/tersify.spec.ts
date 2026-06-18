@@ -264,4 +264,80 @@ function compute(n: number) {
       expect(tersify(src)).toBe(expected);
     });
   });
+
+  describe("object property shorthand", () => {
+    it("converts property assignment to shorthand when name and initializer are identical identifiers", () => {
+      const src = "const obj = { a: a, b: b, c: d };";
+      const expected = "const obj = { a, b, c: d };";
+      expect(tersify(src)).toBe(expected);
+    });
+  });
+
+  describe("no substitution template literals", () => {
+    it("converts static single-line template literals to double-quoted strings", () => {
+      const src = "const url = `https://api.github.com`;";
+      const expected = 'const url = "https://api.github.com";';
+      expect(tersify(src)).toBe(expected);
+    });
+
+    it("does not convert template literals with substitutions", () => {
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: string contains mock code
+      const src = "const url = `https://${host}`;";
+      expect(tersify(src)).toBe(src);
+    });
+
+    it("does not convert multi-line template literals", () => {
+      const src = "const sql = `SELECT * \nFROM users`;";
+      expect(tersify(src)).toBe(src);
+    });
+  });
+
+  describe("boolean return simplifications", () => {
+    it("converts if-else returning booleans to a simple condition return", () => {
+      const src = `
+function isPositive(x: number) {
+  if (x > 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+      `.trim();
+      const expected = "const isPositive = (x: number) => x > 0;";
+      expect(tersify(src)).toBe(expected);
+    });
+
+    it("converts if-else returning inverted booleans to a negated condition return", () => {
+      const src = `
+function isNegative(x: number) {
+  if (x >= 0) {
+    return false;
+  } else {
+    return true;
+  }
+}
+      `.trim();
+      const expected = "const isNegative = (x: number) => !(x >= 0);";
+      expect(tersify(src)).toBe(expected);
+    });
+  });
+
+  describe("identity filter shorthand", () => {
+    it("converts x => x inside filter to Boolean", () => {
+      const src = "const active = users.filter(x => x);";
+      const expected = "const active = users.filter(Boolean);";
+      expect(tersify(src)).toBe(expected);
+    });
+
+    it("converts x => !!x inside filter to Boolean", () => {
+      const src = "const active = users.filter(x => !!x);";
+      const expected = "const active = users.filter(Boolean);";
+      expect(tersify(src)).toBe(expected);
+    });
+
+    it("does not convert identity callback inside map to Boolean", () => {
+      const src = "const active = users.map(x => x);";
+      expect(tersify(src)).toBe(src);
+    });
+  });
 });
