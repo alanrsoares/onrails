@@ -80,6 +80,10 @@
         "@typescript-eslint/parser",
       ],
     },
+    "packages/examples": {
+      "name": "@onrails/examples",
+      "version": "0.0.0",
+    },
     "packages/maybe": {
       "name": "@onrails/maybe",
       "version": "0.1.4",
@@ -351,6 +355,8 @@
     "@onrails/docs": ["@onrails/docs@workspace:apps/docs"],
 
     "@onrails/eslint-plugin": ["@onrails/eslint-plugin@workspace:packages/eslint-plugin"],
+
+    "@onrails/examples": ["@onrails/examples@workspace:packages/examples"],
 
     "@onrails/maybe": ["@onrails/maybe@workspace:packages/maybe"],
 

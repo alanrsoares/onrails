@@ -3,10 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "snippets": "bun scripts/gen-snippets.ts",
+    "predev": "bun scripts/gen-snippets.ts",
     "dev": "next dev",
+    "prebuild": "bun scripts/gen-snippets.ts",
+    "build": "next build",
     "start": "next start",
-    "types:check": "fumadocs-mdx && next typegen && tsc --noEmit"
+    "types:check": "bun scripts/gen-snippets.ts && fumadocs-mdx && next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@onrails/maybe": "workspace:*",

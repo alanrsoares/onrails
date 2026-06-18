@@ -3,6 +3,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
 import { CodeCompare } from "@/components/code-compare";
+import { Snippet } from "@/components/snippet";
 
 export function getMDXComponents(components?: MDXComponents) {
   return {
@@ -12,6 +13,7 @@ export function getMDXComponents(components?: MDXComponents) {
     Step,
     Steps,
     CodeCompare,
+    Snippet,
     ...components,
   } satisfies MDXComponents;
 }
