@@ -3,7 +3,7 @@ import * as Maybe from "@onrails/maybe";
 import { match } from "@onrails/pattern";
 import { err, isErr, ok, type Result, ResultAsync } from "@onrails/result";
 import { Glob } from "bun";
-import { CODE_EXT, SKIP } from "./constants.js";
+import { CODE_EXT, JSX_EXT, SKIP } from "./constants.js";
 import { computeFileChange, toFileChange } from "./file-change.js";
 import { readFileText, writeFileText } from "./io.js";
 import { rewritePkg } from "./pkg.js";
@@ -64,7 +64,7 @@ const rewriteCode = (
 ): ResultAsync<Maybe.Maybe<FileChange>, Error> =>
   readFileText(path).flatMap((src) =>
     Maybe.match(
-      computeFileChange(src, mode),
+      computeFileChange(src, mode, JSX_EXT.test(path)),
       (c) => {
         const change = toFileChange(path, c);
         return c.changed && !dry

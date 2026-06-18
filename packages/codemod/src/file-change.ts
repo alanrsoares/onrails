@@ -1,25 +1,25 @@
 import { type Maybe, none, some } from "@onrails/maybe";
-import { flow } from "@onrails/result";
-import { concatCollectors, countOccurrences } from "./ast.js";
+import { countOccurrences } from "./ast.js";
 import { rewriteCompatMethodChainsToNative } from "./chains.js";
 import { COMPAT_SPEC, IMPORT_RE, NATIVE_SPEC } from "./constants.js";
 import { rewriteCompatImportsToNative } from "./imports.js";
 import { tersify } from "./tersify.js";
-import type { ComputedChange, FileChange, Mode, ModeStrategy } from "./types.js";
+import type { ComputedChange, FileChange, Mode, ModeStrategy, Warning } from "./types.js";
 import {
   collectNativeMigrationWarnings,
   collectUnsupportedCompatImportWarnings,
 } from "./warnings.js";
 
-const rewriteCompatToNative = flow(rewriteCompatImportsToNative, rewriteCompatMethodChainsToNative);
+const rewriteCompatToNative = (src: string, jsx: boolean): string =>
+  rewriteCompatMethodChainsToNative(rewriteCompatImportsToNative(src), jsx);
 
 const rewriteNeverthrowToCompat = (src: string): string =>
   src.replace(IMPORT_RE, (_, lead, quote) => `${lead}${quote}${COMPAT_SPEC}${quote}`);
 
-const collectAllNativeWarnings = concatCollectors(
-  collectUnsupportedCompatImportWarnings,
-  collectNativeMigrationWarnings,
-);
+const collectAllNativeWarnings = (next: string, jsx: boolean): readonly Warning[] => [
+  ...collectUnsupportedCompatImportWarnings(next),
+  ...collectNativeMigrationWarnings(next, jsx),
+];
 
 const MODES: Record<Mode, ModeStrategy> = {
   compat: {
@@ -45,13 +45,13 @@ const MODES: Record<Mode, ModeStrategy> = {
   },
 };
 
-export const computeFileChange = (src: string, mode: Mode): Maybe<ComputedChange> => {
+export const computeFileChange = (src: string, mode: Mode, jsx = false): Maybe<ComputedChange> => {
   const strat = MODES[mode];
   const before = strat.countBefore(src);
   if (strat.earlyExit(src, before)) return none();
-  const next = strat.transform(src);
+  const next = strat.transform(src, jsx);
   const changed = next !== src;
-  const warnings = strat.warnings(next);
+  const warnings = strat.warnings(next, jsx);
   return !changed && warnings.length === 0
     ? none()
     : some({ next, before, after: strat.countAfter(next), changed, warnings });
