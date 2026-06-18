@@ -28,8 +28,9 @@
     "test": "bun run --filter '@onrails/*' test",
     "check:loc": "bun run scripts/check-loc.ts",
     "check": "bun run check:loc && bun run lint && bun run typecheck && bun run test",
-    "docs": "typedoc",
-    "docs:watch": "typedoc --watch",
+    "docs": "bun run --filter '@onrails/docs' dev",
+    "docs:build": "bun run --filter '@onrails/docs' build",
+    "docs:generate": "bun run scripts/generate-api-docs.ts",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -40,7 +41,6 @@
     "@types/bun": "latest",
     "husky": "^9.1.7",
     "tsup": "^8.5.1",
-    "typedoc": "^0.28.19",
     "typescript": "^6.0.3"
   }
 }

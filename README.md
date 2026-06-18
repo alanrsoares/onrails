@@ -11,7 +11,7 @@ Tagged `Result` / `ResultAsync` + railway-oriented utilities for TypeScript. Pur
 | [`@onrails/eslint-plugin`](./packages/eslint-plugin) | [![npm](https://img.shields.io/npm/v/%40onrails%2Feslint-plugin.svg)](https://www.npmjs.com/package/@onrails/eslint-plugin) | ESLint rules for `@onrails/result` boundaries — flags `Promise<Result<…>>` + `_unsafeUnwrap*` |
 | [`@onrails/biome-plugin`](./packages/biome-plugin) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fbiome-plugin.svg)](https://www.npmjs.com/package/@onrails/biome-plugin) | GritQL plugin: same boundary rules for Biome users |
 
-[![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://alanrsoares.github.io/onrails/)
+[![Docs](https://img.shields.io/badge/docs-online-blue)](https://alanrsoares.github.io/onrails/)
 [![CI](https://github.com/alanrsoares/onrails/actions/workflows/ci.yml/badge.svg)](https://github.com/alanrsoares/onrails/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
