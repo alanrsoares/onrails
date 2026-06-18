@@ -422,29 +422,33 @@ const TRANSFORMS: ReadonlyArray<(node: ts.Node, sf: ts.SourceFile) => Maybe<Edit
   tryTersifyIdentityFilter,
 ];
 
-function tersifyOnce(src: string): string {
+function tersifyOnce(src: string, jsx: boolean): string {
   const edits: Edit[] = [];
   const skippedNodes = new Set<ts.Node>();
 
-  walkSource(src, (node, sf) => {
-    if (skippedNodes.has(node)) {
-      return true;
-    }
-
-    scanIfReturnSequences(node, sf, skippedNodes, edits);
-    scanIfToSwitchSequences(node, sf, skippedNodes, edits);
-
-    for (const transform of TRANSFORMS) {
-      const editResult = transform(node, sf);
-      if (editResult._tag === "Some") {
-        edits.push(editResult.value);
-        skippedNodes.add(node);
+  walkSource(
+    src,
+    (node, sf) => {
+      if (skippedNodes.has(node)) {
         return true;
       }
-    }
 
-    return false;
-  });
+      scanIfReturnSequences(node, sf, skippedNodes, edits);
+      scanIfToSwitchSequences(node, sf, skippedNodes, edits);
+
+      for (const transform of TRANSFORMS) {
+        const editResult = transform(node, sf);
+        if (editResult._tag === "Some") {
+          edits.push(editResult.value);
+          skippedNodes.add(node);
+          return true;
+        }
+      }
+
+      return false;
+    },
+    jsx,
+  );
 
   if (edits.length === 0) return src;
 
@@ -455,11 +459,11 @@ function tersifyOnce(src: string): string {
   return next;
 }
 
-export function tersify(src: string): string {
+export function tersify(src: string, jsx = false): string {
   let current = src;
   let iterations = 0;
   while (iterations < 10) {
-    const next = tersifyOnce(current);
+    const next = tersifyOnce(current, jsx);
     if (next === current) {
       break;
     }

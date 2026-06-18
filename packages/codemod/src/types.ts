@@ -24,8 +24,8 @@ export type ComputedChange = {
 export type ModeStrategy = {
   countBefore: (src: string) => number;
   earlyExit: (src: string, before: number) => boolean;
-  transform: (src: string) => string;
-  warnings: (next: string) => readonly Warning[];
+  transform: (src: string, jsx: boolean) => string;
+  warnings: (next: string, jsx: boolean) => readonly Warning[];
   countAfter: (next: string) => number;
 };
 
