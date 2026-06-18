@@ -160,11 +160,11 @@ the steps are worth naming and sharing.
 A Zod schema's `.parse` throws on invalid input, so wrap it once with `trySync`
 to get a `Result`-returning parser — or use `safeParse` if you'd rather not throw:
 
-```ts
+```ts twoslash
 import { err, ok, trySync } from "@onrails/result";
 import { z } from "zod";
 
-const UserInput = z.object({ email: z.string().email(), age: z.number().int() });
+const UserInput = z.object({ email: z.string(), age: z.number().int() });
 type UserInput = z.infer<typeof UserInput>;
 
 type Invalid = { kind: "invalid"; issues: string[] };
@@ -186,9 +186,14 @@ const decodeUser = (raw: unknown) => {
 Because a Zod schema is just `{ parse }`, it drops straight into the Railway
 `parseWith` step factory — no adapter needed:
 
-```ts
+```ts twoslash
 import { parseWith } from "@onrails/result/railway";
 
+// ---cut-start---
+type Invalid = { kind: "invalid"; issues: string[] };
+declare const UserInput: { parse: (raw: unknown) => { email: string; age: number } };
+declare const toInvalid: (e: unknown) => Invalid;
+// ---cut-end---
 parseWith(UserInput, toInvalid).as("input"); // the first step of a railway(...)
 ```
 

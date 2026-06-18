@@ -19,17 +19,26 @@ fallible values and optional values — without the abstraction layer.
 
 ## Same task, both libraries
 
-```ts
+```ts twoslash
 // fp-ts — Either is error-LEFT, value-RIGHT
-import { pipe } from "fp-ts/function";
 import * as E from "fp-ts/Either";
+import { pipe } from "fp-ts/function";
 
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): E.Either<{ message: string }, Input>;
+declare function validate(input: Input): E.Either<AppError, User>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
 const createUser = (raw: string): E.Either<AppError, User> =>
   pipe(
-    parseJson(raw),                                  // Either<ParseError, Input>
+    parseJson(raw), // Either<ParseError, Input>
     E.mapLeft((e): AppError => ({ kind: "parse", detail: e.message })),
     E.chain(validate),
-    E.map((u) => ({ ...u, id: crypto.randomUUID() })),
+    E.map((u) => ({ ...u, id: newId() })),
   );
 
 const status = pipe(

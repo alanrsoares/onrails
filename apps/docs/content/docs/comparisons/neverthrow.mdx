@@ -47,10 +47,19 @@ const status = R.match(
 );
 ```
 
-```ts
+```ts twoslash
 // neverthrow — fluent methods on a Result instance
 import { err, ok, Result } from "neverthrow";
 
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): Result<Input, { message: string }>;
+declare function validate(input: Input): Result<User, AppError>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
 const createUser = (raw: string): Result<User, AppError> =>
   parseJson(raw)
     .mapErr((e): AppError => ({ kind: "parse", detail: e.message }))
