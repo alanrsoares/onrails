@@ -1,0 +1,119 @@
+---
+title: onrails vs neverthrow
+description: The closest neighbour — same railway idea, different data model, plus Maybe and pattern matching.
+---
+
+neverthrow and onrails solve the same core problem — **make expected failure a
+value, not an exception** — and they look similar at the call site. onrails is
+close enough that it ships a **neverthrow-compat tier** and a **codemod** to move
+existing code over. The differences are in the data model and the surrounding
+surface.
+
+## TL;DR
+
+- neverthrow: a `Result` **class** with fluent methods. Minimal and focused —
+  `Result`/`ResultAsync` only.
+- onrails: `Result` as a **plain tagged union** consumed by dual-form functions
+  (or an optional fluent wrapper), **plus** `Maybe`, exhaustive `match`, and a
+  named-step `Railway` builder.
+
+## Same task, both libraries
+
+```ts
+// neverthrow — fluent methods on a Result instance
+import { ok, err, Result } from "neverthrow";
+
+const createUser = (raw: string): Result<User, AppError> =>
+  parseJson(raw)
+    .mapErr((e): AppError => ({ kind: "parse", detail: e.message }))
+    .andThen(validate)
+    .map((u) => ({ ...u, id: crypto.randomUUID() }));
+
+const status = createUser(raw).match(
+  () => 201,
+  (e) => (e.kind === "validation" ? 422 : 400),
+);
+```
+
+```ts
+// onrails — dual-form functions over a tagged union
+import { pipe, flatMap, map, mapErr, match } from "@onrails/result";
+
+const createUser = (raw: string) =>
+  pipe(
+    parseJson(raw),                                           // Result<Input, ParseError>
+    mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
+    flatMap(validate),                                        // Result<User, AppError>
+    map((u) => ({ ...u, id: crypto.randomUUID() })),
+  );
+
+const status = match(createUser(raw), () => 201, (e) => (e.kind === "validation" ? 422 : 400));
+```
+
+Prefer dots? onrails has an opt-in fluent wrapper too:
+
+```ts
+import { fluent } from "@onrails/result/fluent";
+
+fluent(parseJson(raw)).andThen(validate).map(normalize).match(onOk, onErr);
+```
+
+## Key differences
+
+### Data model: tagged union vs class instance
+
+A neverthrow `Result` is an instance of an `Ok`/`Err` class. An onrails `Result`
+is a plain object — `{ _tag: "Ok", value }` / `{ _tag: "Err", error }`. That
+means onrails values are **structurally serializable** (cross `postMessage`, a
+queue, `JSON.stringify`), inspectable, and directly **pattern-matchable**:
+
+```ts
+import { match } from "@onrails/pattern";
+
+match(result)
+  .with({ _tag: "Ok" }, (r) => use(r.value))
+  .with({ _tag: "Err" }, (r) => report(r.error))
+  .exhaustive();
+```
+
+### Beyond Result
+
+neverthrow is `Result`-only. onrails adds:
+
+- **`Maybe`** for expected absence (`Some`/`None`) with the same dual-form API.
+- **`@onrails/pattern`** for exhaustive, type-narrowed matching on any union.
+- **`Railway`** — a named-step builder for 4+ step workflows with mixed sync/async IO.
+
+### The throwing escape hatch
+
+neverthrow's `_unsafeUnwrap()` and onrails' `unwrapOk`/`unwrapErr` both throw on
+the wrong branch. onrails treats these as a **test/assertion tier** and the
+`@onrails/eslint-plugin` / `@onrails/biome-plugin` rules flag them outside
+`*.spec.ts` / `*.test.ts`.
+
+## Migration is mechanical
+
+`@onrails/result/compat/neverthrow` mirrors the neverthrow shape, and the
+codemod rewrites imports and call sites:
+
+```bash
+bunx onrails-codemod-neverthrow ./src            # to the compat shim
+bunx onrails-codemod-neverthrow ./src --to-native # to canonical @onrails/result
+```
+
+The codemod maps neverthrow names to onrails canonical/compat names
+(`chain → flatMap`, `orElse → recover`, keeping `andThen`), so migrated code
+never lands on a deprecated alias.
+
+## Choose neverthrow when
+
+- You only need `Result`, want the smallest possible surface, and prefer pure
+  method chaining.
+- You don't need `Maybe`, pattern matching, or serializable result values.
+
+## Choose onrails when
+
+- You want a **tagged-union** data model you can serialize and pattern-match.
+- You want `Maybe` and exhaustive `match` from the same toolkit.
+- You like having **both** data-first/curried functions and an optional fluent
+  wrapper, rather than one fixed style.
