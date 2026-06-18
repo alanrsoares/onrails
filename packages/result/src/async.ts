@@ -41,18 +41,59 @@ const sequenceSettled = (
 };
 
 /**
- * Async result — public API never exposes `Promise<Result<…>>` directly;
- * await via `.resolve()` or `.match()`.
+ * Async railway carrier. Wraps a deferred `Promise<Result<T, E>>` and exposes
+ * the same dual-track transforms as the sync {@link Result} — `map`, `flatMap`,
+ * `recover`, `tap`, `match`. The public API never surfaces `Promise<Result<…>>`
+ * directly: `await` the instance (it is thenable) or call {@link resolve} /
+ * {@link match} to settle it.
+ *
+ * Construct via the static factories ({@link ok}, {@link err}, {@link fromPromise},
+ * {@link defer}, …) rather than `new` — the constructor is `protected`.
+ *
+ * @typeParam T - the `Ok` value type
+ * @typeParam E - the `Err` error type
+ *
+ * @example
+ * ```ts
+ * const user = ResultAsync.fromPromise(api.getUser(id), toAppError)
+ *   .map((u) => u.profile)
+ *   .recover(() => ResultAsync.ok(guestProfile));
+ *
+ * const r = await user;          // Result<Profile, AppError>
+ * ```
  */
 export class ResultAsync<T, E> {
   private promise: Promise<Result<T, E>> | null = null;
 
   protected constructor(protected readonly run: PromiseFactory<T, E>) {}
 
+  /**
+   * Lifts an already-settled sync {@link Result} into a {@link ResultAsync}.
+   *
+   * @example
+   * ```ts
+   * const ra = ResultAsync.fromResult(ok(42));   // ResultAsync<number, never>
+   * ```
+   */
   static fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E> {
     return new ResultAsync(async () => result);
   }
 
+  /**
+   * Wraps a `PromiseLike<T>` that may reject. Rejections pass through `onReject`
+   * to become a typed `Err`; resolution becomes `Ok<T>`.
+   *
+   * @param promise - the promise to wrap
+   * @param onReject - maps a rejection reason to the `Err` channel
+   *
+   * @example
+   * ```ts
+   * const body = ResultAsync.fromPromise(
+   *   fetch(url).then((r) => r.text()),
+   *   (e): NetError => ({ kind: "net", cause: String(e) }),
+   * );
+   * ```
+   */
   static fromPromise<T, E>(
     promise: PromiseLike<T>,
     onReject: (error: unknown) => E,
@@ -66,29 +107,70 @@ export class ResultAsync<T, E> {
     });
   }
 
+  /**
+   * Wraps a `PromiseLike<T>` that is **guaranteed not to reject**, skipping the
+   * `onReject` mapper. Use only when rejection is provably impossible.
+   *
+   * @example
+   * ```ts
+   * const now = ResultAsync.fromSafePromise(Promise.resolve(Date.now()));
+   * ```
+   */
   static fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, E> {
     return new ResultAsync(async () => ok(await promise));
   }
 
   /**
-   * Defers work until {@link resolve}. Unlike {@link fromPromise}, nothing runs
-   * until the `ResultAsync` is resolved (e.g. by `combineTuple` / `combineTupleParallel`).
+   * Defers work until {@link resolve}. Unlike {@link fromPromise}, the factory
+   * does not run until the `ResultAsync` is resolved (e.g. by `combineTuple` /
+   * `combineTupleParallel`). The factory runs at most once — `resolve` memoizes.
+   *
+   * @example
+   * ```ts
+   * const insert = ResultAsync.defer(() => db.orders.insert(row));
+   * // nothing has run yet
+   * const r = await insert;   // factory runs exactly once here
+   * ```
    */
   static defer<T, E>(fn: () => Promise<Result<T, E>>): ResultAsync<T, E> {
     return new ResultAsync(fn);
   }
 
+  /**
+   * Lifts a value into an `Ok` async result.
+   *
+   * @example
+   * ```ts
+   * const r = ResultAsync.ok(42);   // ResultAsync<number, never>
+   * ```
+   */
   static ok<T>(value: T): ResultAsync<T, never>;
   static ok<T, E>(value: T): ResultAsync<T, E>;
   static ok<T, E = never>(value: T): ResultAsync<T, E> {
     return new ResultAsync(async () => ok(value));
   }
 
+  /**
+   * Lifts an error into an `Err` async result.
+   *
+   * @example
+   * ```ts
+   * const r = ResultAsync.err({ kind: "not_found" as const });
+   * ```
+   */
   static err<T = never, E = unknown>(error: E): ResultAsync<T, E> {
     return new ResultAsync(async () => err(error));
   }
 
-  /** @see {@link fromAsync} from `@onrails/result/interop` */
+  /**
+   * Lifts an existing `Promise<Result<T, E>>` (e.g. from interop code) into a
+   * {@link ResultAsync}, auto-flattening one level of double-wrapping. A thrown
+   * defect is routed through `onDefect`, defaulting to {@link UnexpectedError}.
+   *
+   * @param promise - a promise that already yields a `Result`
+   * @param onDefect - maps an unexpected throw to the `Err` channel
+   * @see {@link fromAsync} from `@onrails/result/interop`
+   */
   static fromResultPromise<T, E>(
     promise: Promise<Result<T, E>>,
     onDefect?: (error: unknown) => E | UnexpectedError,
@@ -98,6 +180,18 @@ export class ResultAsync<T, E> {
     return new ResultAsync(() => liftPromiseResult(promise, mapDefect));
   }
 
+  /**
+   * Combines a homogeneous array of async results into one. Resolves
+   * **sequentially** in input order, short-circuiting on the first `Err`.
+   * For heterogeneous tuples that preserve per-index types, use
+   * {@link combineTuple}; for wall-clock overlap, {@link combineTupleParallel}.
+   *
+   * @example
+   * ```ts
+   * const all = ResultAsync.combine([loadA(), loadB(), loadC()]);
+   * // ResultAsync<Item[], LoadError>
+   * ```
+   */
   static combine<T, E>(results: readonly ResultAsync<T, E>[]): ResultAsync<T[], E> {
     return new ResultAsync(async () => {
       const values: T[] = [];
@@ -112,6 +206,23 @@ export class ResultAsync<T, E> {
     });
   }
 
+  /**
+   * Heterogeneous async tuple combine — resolves branches **sequentially**
+   * (left-to-right), returning the first `Err` in input order. Preserves each
+   * branch's `Ok` type by position, so the result destructures type-safely.
+   * This is the canonical sequential async combine (replaces the former
+   * `sequenceTupleAsync`).
+   *
+   * @example
+   * ```ts
+   * const combined = ResultAsync.combineTuple([loadCfg(), loadCatalog()] as const);
+   * // ResultAsync<readonly [Cfg, Catalog], CfgError | CatalogError>
+   * const r = await combined;
+   * if (isOk(r)) {
+   *   const [cfg, catalog] = r.value;  // typed per position
+   * }
+   * ```
+   */
   static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(
     results: R,
   ): CombineTupleAsync<R> {
@@ -124,6 +235,15 @@ export class ResultAsync<T, E> {
   /**
    * Like {@link combineTuple}, but starts every branch before awaiting (wall-clock
    * parallel for independent IO). On failure, returns the first `Err` in input order.
+   *
+   * @example
+   * ```ts
+   * // independent IO — overlap them
+   * const combined = ResultAsync.combineTupleParallel([
+   *   loadProfile(id),
+   *   loadMetrics(id),
+   * ] as const);
+   * ```
    */
   static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknown>[]>(
     results: R,
@@ -134,14 +254,42 @@ export class ResultAsync<T, E> {
     ) as CombineTupleAsync<R>;
   }
 
+  /**
+   * Transforms the `Ok` value, passing `Err` through unchanged.
+   *
+   * @example
+   * ```ts
+   * ResultAsync.ok(2).map((n) => n * 3);   // ResultAsync<number> → Ok 6
+   * ```
+   */
   map<U>(fn: (value: T) => U): ResultAsync<U, E> {
     return new ResultAsync(async () => map(await this.resolve(), fn));
   }
 
+  /**
+   * Transforms the `Err` value, passing `Ok` through unchanged — useful for
+   * unifying heterogeneous failures into one app-level union.
+   *
+   * @example
+   * ```ts
+   * load(id).mapErr((e): AppError => ({ kind: "load", cause: e }));
+   * ```
+   */
   mapErr<F>(fn: (error: E) => F): ResultAsync<T, F> {
     return new ResultAsync(async () => mapErr(await this.resolve(), fn));
   }
 
+  /**
+   * Canonical bind — chains a step that itself returns a `ResultAsync` or sync
+   * `Result`, short-circuiting on `Err`. Error types accumulate (`E | F`).
+   *
+   * @example
+   * ```ts
+   * authenticate(req)
+   *   .flatMap((user) => loadProfile(user.id))   // ResultAsync
+   *   .flatMap((p) => validate(p));              // sync Result also accepted
+   * ```
+   */
   flatMap<U, F = E>(
     fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
   ): ResultAsync<U, E | F> {
@@ -161,6 +309,15 @@ export class ResultAsync<T, E> {
     });
   }
 
+  /**
+   * neverthrow-compat alias of {@link flatMap}. Kept as the documented compat
+   * tier; prefer `flatMap` in new code.
+   *
+   * @example
+   * ```ts
+   * authenticate(req).andThen((user) => loadProfile(user.id));
+   * ```
+   */
   andThen<U, F = E>(
     fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
   ): ResultAsync<U, E | F> {
@@ -168,15 +325,15 @@ export class ResultAsync<T, E> {
   }
 
   /**
-   * Alias for {@link flatMap}.
-   * @deprecated Use {@link flatMap} or keep/use compat {@link andThen} instead.
+   * Error-channel bind — runs `fn` only on `Err`, swapping in a recovery
+   * `ResultAsync` or sync `Result`. `Ok` passes through. The mirror of
+   * {@link flatMap} on the error track.
+   *
+   * @example
+   * ```ts
+   * loadFromCache(id).recover(() => loadFromOrigin(id));
+   * ```
    */
-  chain<U, F = E>(
-    fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
-  ): ResultAsync<U, E | F> {
-    return this.flatMap(fn);
-  }
-
   recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
     return new ResultAsync<T, F>(async () => {
       const first = await this.resolve();
@@ -188,10 +345,28 @@ export class ResultAsync<T, E> {
     });
   }
 
+  /**
+   * neverthrow-compat alias of {@link recover}. Kept as the documented compat
+   * tier; prefer `recover` in new code.
+   *
+   * @example
+   * ```ts
+   * loadFromCache(id).orElse(() => loadFromOrigin(id));
+   * ```
+   */
   orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
     return this.recover(fn);
   }
 
+  /**
+   * Runs a side effect on the `Ok` value and passes the result through
+   * unchanged; a no-op on `Err`. Mirrors {@link tapErr}.
+   *
+   * @example
+   * ```ts
+   * saveUser(u).tap((saved) => analytics.track("user_saved", saved.id));
+   * ```
+   */
   tap(fn: (value: T) => void): ResultAsync<T, E> {
     return new ResultAsync(async () => {
       const result = await this.resolve();
@@ -202,6 +377,15 @@ export class ResultAsync<T, E> {
     });
   }
 
+  /**
+   * Runs a side effect on the `Err` value and passes the result through
+   * unchanged; a no-op on `Ok`. The error-track mirror of {@link tap}.
+   *
+   * @example
+   * ```ts
+   * saveUser(u).tapErr((e) => logger.warn("save failed", e));
+   * ```
+   */
   tapErr(fn: (error: E) => void): ResultAsync<T, E> {
     return new ResultAsync(async () => {
       const result = await this.resolve();
@@ -212,32 +396,51 @@ export class ResultAsync<T, E> {
     });
   }
 
+  /**
+   * Settles to the `Ok` value, or `defaultValue` if `Err`. Terminal — returns a
+   * plain `Promise`, not a `ResultAsync`.
+   *
+   * @example
+   * ```ts
+   * const profile = await loadProfile(id).unwrapOr(guestProfile);
+   * ```
+   */
   unwrapOr<U>(defaultValue: U): Promise<T | U> {
     return this.resolve().then((result) => (isErr(result) ? defaultValue : result.value));
   }
 
   /**
-   * @deprecated Await the ResultAsync and narrow with {@link isOk} — this method
-   * re-executes deferred factories and cannot narrow.
+   * Terminal collapse — folds both tracks into a single awaited value. Returns
+   * a plain `Promise`, settling the carrier exactly once.
+   *
+   * @param onOk - handles the `Ok` value
+   * @param onErr - handles the `Err` value
+   *
+   * @example
+   * ```ts
+   * const status = await save(row).match(
+   *   () => 200,
+   *   (e) => (e.kind === "conflict" ? 409 : 500),
+   * );
+   * ```
    */
-  isOk(): Promise<boolean> {
-    return this.resolve().then((result) => !isErr(result));
-  }
-
-  /**
-   * @deprecated Await the ResultAsync and narrow with {@link isErr} — this method
-   * re-executes deferred factories and cannot narrow.
-   */
-  isErr(): Promise<boolean> {
-    return this.resolve().then((result) => isErr(result));
-  }
-
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2> {
     return this.resolve().then((result) =>
       isErr(result) ? onErr(result.error) : onOk(result.value),
     );
   }
 
+  /**
+   * Settles the carrier to a bare sync {@link Result}, memoizing so the
+   * underlying factory runs at most once. Prefer `await ra` (the thenable) or
+   * {@link match} in app code; use `resolve` when you need the tagged union back.
+   *
+   * @example
+   * ```ts
+   * const r = await load(id).resolve();   // Result<Data, LoadError>
+   * if (isOk(r)) use(r.value);
+   * ```
+   */
   resolve(): Promise<Result<T, E>> {
     if (!this.promise) {
       this.promise = this.run();
@@ -281,105 +484,7 @@ function isCompatLike<U, F>(v: unknown): v is { inner: Result<U, F> } {
 }
 
 /**
- * Lifts a value into an `Ok` async result.
- *
- * @example
- * ```ts
- * const r = okAsync(42);                  // ResultAsync<number, never>
- * ```
+ * The free-function lift helpers (`okAsync`, `errAsync`, `fromPromise`,
+ * `fromSafePromise`, `parallelTupleAsync`, `tryAsync`) live in `./async-lift.ts`
+ * and are re-exported from the package index.
  */
-export const okAsync = ResultAsync.ok;
-
-/**
- * Lifts a value into an `Err` async result.
- *
- * @example
- * ```ts
- * const r = errAsync({ kind: "not_found" as const });
- * ```
- */
-export const errAsync = ResultAsync.err;
-
-/**
- * Wraps a `PromiseLike<T>` into a {@link ResultAsync}. Reject reasons go
- * through `onReject` to become typed `Err`s; success becomes `Ok<T>`.
- *
- * @example
- * ```ts
- * const body = fromPromise(
- *   fetch(url).then((r) => r.text()),
- *   (e): NetworkError => ({ kind: "network", cause: String(e) }),
- * );
- * ```
- */
-export const fromPromise = ResultAsync.fromPromise;
-
-/**
- * Wraps a `PromiseLike<T>` that **never rejects** into {@link ResultAsync}.
- * Skips the `onReject` mapper. Use only when the promise is provably safe.
- */
-export const fromSafePromise = ResultAsync.fromSafePromise;
-
-/**
- * Heterogeneous async tuple combine — left-to-right, short-circuit on
- * first `Err` in input order. Preserves tuple positions so destructuring
- * stays type-safe.
- *
- * @example
- * ```ts
- * const combined = sequenceTupleAsync([loadCfg(), loadCatalog()] as const);
- * // ResultAsync<readonly [Cfg, Catalog], CfgError | CatalogError>
- * ```
- * @deprecated Use static {@link ResultAsync.combineTuple} instead.
- */
-export const sequenceTupleAsync = ResultAsync.combineTuple;
-
-/**
- * Heterogeneous async tuple combine — branches overlap in wall-clock time.
- * Returns the first `Err` in **input** order (not completion order).
- *
- * @example
- * ```ts
- * const combined = parallelTupleAsync([
- *   loadProfile(id),
- *   loadMetrics(id),
- *   loadFlags(id),
- * ] as const);
- * // ResultAsync<readonly [Profile, Metrics, Flags], …>
- * ```
- */
-export const parallelTupleAsync = ResultAsync.combineTupleParallel;
-
-const toError = (error: unknown): Error =>
-  error instanceof Error ? error : new Error(String(error));
-
-/**
- * Convenience wrapper over {@link fromPromise} with default `Error`
- * normalization. Call without `onReject` to get `ResultAsync<T, Error>`,
- * or pass a custom mapper for a typed error.
- *
- * @example
- * ```ts
- * // Default: rejection → Err(Error)
- * const a = tryAsync(db.users.insert(row));
- *
- * // Custom: typed error
- * const b = tryAsync(db.users.insert(row), (e): DbError => ({
- *   kind: "db",
- *   cause: e,
- * }));
- * ```
- */
-export function tryAsync<T>(promise: PromiseLike<T>): ResultAsync<T, Error>;
-export function tryAsync<T, E>(
-  promise: PromiseLike<T>,
-  onReject: (error: unknown) => E,
-): ResultAsync<T, E>;
-export function tryAsync<T, E>(
-  promise: PromiseLike<T>,
-  onReject?: (error: unknown) => E,
-): ResultAsync<T, E | Error> {
-  return onReject
-    ? ResultAsync.fromPromise(promise, onReject)
-    : ResultAsync.fromPromise(promise, toError);
-}

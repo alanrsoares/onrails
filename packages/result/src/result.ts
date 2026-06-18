@@ -54,12 +54,6 @@ export const isOk = <T, E>(result: Result<T, E>): result is Ok<T, E> => result._
  */
 export const isErr = <T, E>(result: Result<T, E>): result is Err<T, E> => result._tag === "Err";
 
-/**
- * Fantasy Land `of` — alias of {@link ok}.
- * @deprecated Use {@link ok} instead.
- */
-export const of = ok;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Dual-form helpers — each export accepts either shape:
 //   data-first: `map(result, fn)`
@@ -284,8 +278,9 @@ const matchImpl = <T, E, U>(
  * 3-args data-first, 2-args curried for {@link pipe}. Returns whatever
  * the handlers return.
  *
- * For files that also import `match` from `ts-pattern`, the
- * collision-free alias {@link matchResult} is identical.
+ * For files that also import `match` from `ts-pattern`, use a namespace
+ * import (`import * as R from "@onrails/result"` → `R.match`) to dissolve
+ * the collision.
  *
  * @example
  * ```ts
@@ -312,23 +307,6 @@ export function match(
 }
 
 /**
- * Collision-free alias for files that also import `match` from ts-pattern.
- * @deprecated Namespace import carriers (e.g., `import * as R from "@onrails/result"`) and use canonical {@link match} instead.
- */
-export const matchResult = match;
-
-/**
- * Curried collapse with named slots — escape valve when positional `match`
- * order is unclear at the call site (e.g. when both handlers return the same
- * type and a transposed `match(r, onErr, onOk)` would silently compile).
- * @deprecated Use curried {@link match}(onOk, onErr)(result) instead.
- */
-export const fold =
-  <T, E, U>(handlers: { readonly ok: (value: T) => U; readonly err: (error: E) => U }) =>
-  (result: Result<T, E>): U =>
-    matchImpl(result, handlers.ok, handlers.err);
-
-/**
  * Returns the `Ok` value, or `defaultValue` when the result is `Err`.
  *
  * @example
@@ -340,10 +318,21 @@ export const unwrapOr = <T, E>(result: Result<T, E>, defaultValue: T): T =>
   isOk(result) ? result.value : defaultValue;
 
 /**
- * Test/assert helper — throws the original Err value when called on Err.
+ * Test/assert helper — returns the `Ok` value, or **throws the original `Err`
+ * value** when called on an `Err`. This is the assertion tier (RFC 0001 §4):
+ * intended for `*.spec.ts` / `*.test.ts`, where throwing fails the test loudly.
+ * In business logic prefer {@link match} or {@link unwrapOr}; the lint plugins
+ * flag `unwrapOk` outside test files.
  *
- * @throws when the result is Err — assertion-tier; use {@link match} / {@link unwrapOr} in business logic.
- * Allowed in `*.spec.ts` / `*.test.ts`; flagged elsewhere by the plugins.
+ * @returns the unwrapped `Ok` value
+ * @throws the carried `Err` value when the result is `Err`
+ *
+ * @example
+ * ```ts
+ * // in a *.spec.ts
+ * expect(unwrapOk(ok(5))).toBe(5);
+ * expect(() => unwrapOk(err(error))).toThrow(error);
+ * ```
  */
 export function unwrapOk<T, E>(result: Result<T, E>): T {
   if (isErr(result)) throw result.error;
@@ -351,16 +340,48 @@ export function unwrapOk<T, E>(result: Result<T, E>): T {
 }
 
 /**
- * Test/assert helper — throws TypeError when called on Ok.
+ * Test/assert helper — returns the `Err` value, or **throws a `TypeError`**
+ * when called on an `Ok`. Mirror of {@link unwrapOk} on the error track and
+ * part of the same assertion tier (RFC 0001 §4): intended for `*.spec.ts` /
+ * `*.test.ts`. Prefer {@link match} / {@link unwrapOr} in business logic; the
+ * lint plugins flag `unwrapErr` outside test files.
  *
- * @throws when the result is Ok — assertion-tier; allowed in `*.spec.ts` / `*.test.ts`; flagged elsewhere by the plugins.
+ * @returns the unwrapped `Err` value
+ * @throws `TypeError` when the result is `Ok`
+ *
+ * @example
+ * ```ts
+ * // in a *.spec.ts
+ * expect(unwrapErr(err("x"))).toBe("x");
+ * expect(() => unwrapErr(ok(5))).toThrow(TypeError);
+ * ```
  */
 export function unwrapErr<T, E>(result: Result<T, E>): E {
   if (isOk(result)) throw new TypeError("unwrapErr called on Ok");
   return result.error;
 }
 
-/** Wrap a throwing sync function — neverthrow `Result.fromThrowable` */
+/**
+ * Wraps a throwing sync function, returning a function that produces a
+ * {@link Result} instead of throwing. Thrown errors pass through `onThrow` to
+ * become a typed `Err`; a normal return becomes `Ok`. The neverthrow analogue
+ * is `Result.fromThrowable`.
+ *
+ * @param fn - the throwing function to wrap
+ * @param onThrow - maps a thrown value to the `Err` channel
+ * @returns a function with `fn`'s parameters that returns `Result<ReturnType, E>`
+ *
+ * @example
+ * ```ts
+ * type ParseError = { kind: "parse"; message: string };
+ * const parse = trySync(
+ *   JSON.parse,
+ *   (e): ParseError => ({ kind: "parse", message: String(e) }),
+ * );
+ * parse("{}");      // Ok({})
+ * parse("nope");    // Err({ kind: "parse", … })
+ * ```
+ */
 export function trySync<A extends readonly unknown[], T, E>(
   fn: (...args: A) => T,
   onThrow: (error: unknown) => E,
@@ -382,39 +403,17 @@ export function trySync(
   };
 }
 
-/** First failure wins; otherwise collects values in order */
-export const combine = <T, E>(results: readonly Result<T, E>[]): Result<T[], E> => {
-  const values: T[] = [];
-  for (const result of results) {
-    if (isErr(result)) return err(result.error);
-    values.push(result.value);
-  }
-  return ok(values);
-};
-
-/** Tuple-preserving combine (neverthrow-style) */
-export const combineTuple = <const R extends readonly Result<unknown, unknown>[]>(
-  results: R,
-): CombineTuple<R> =>
-  // Runtime identical to combine; the cast restores per-index tuple types.
-  combine(results as readonly Result<unknown, unknown>[]) as CombineTuple<R>;
-
-type _OkValue<R> = R extends { _tag: "Ok"; readonly value: infer T } ? T : never;
-type _ErrValue<R> = R extends { _tag: "Err"; readonly error: infer E } ? E : never;
-
-type CombineTuple<R extends readonly Result<unknown, unknown>[]> = Result<
-  { [K in keyof R]: _OkValue<R[K]> },
-  { [K in keyof R]: _ErrValue<R[K]> }[number]
->;
-
 /**
- * Variadic value-first pipe — threads `value` through up to nine unary fns.
+ * Variadic value-first pipe — threads `value` through up to nine unary fns,
+ * left-to-right. Use {@link pipe} when you already have a starting value;
+ * use {@link flow} to define a reusable composed function with no value yet.
  *
+ * @example
  * ```ts
  * pipe(
  *   parseConfig(raw),
  *   map((cfg) => cfg.name),
- *   flatMap((name) => name ? ok(name) : err({ kind: "empty" })),
+ *   flatMap((name) => (name ? ok(name) : err({ kind: "empty" as const }))),
  *   tap(log),
  * );
  * ```

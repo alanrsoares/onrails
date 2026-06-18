@@ -3,9 +3,12 @@
   "pages": [
     "index",
     "getting-started",
+    "recipes",
     "---api---",
     "api/result",
     "api/maybe",
-    "api/pattern"
+    "api/pattern",
+    "---comparisons---",
+    "comparisons"
   ]
 }

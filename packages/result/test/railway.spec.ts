@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { errAsync, okAsync, ResultAsync } from "../src/async.js";
+import { ResultAsync } from "../src/async.js";
+import { errAsync, okAsync } from "../src/async-lift.js";
 import {
   deriveNamed,
   fromPromiseNamed,

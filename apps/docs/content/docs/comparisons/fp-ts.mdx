@@ -1,0 +1,145 @@
+---
+title: onrails vs fp-ts
+description: Concrete tagged unions vs typeclass-driven, HKT-encoded functional programming.
+---
+
+fp-ts brings the full vocabulary of typed functional programming to TypeScript —
+`Either`, `Option`, `Task`, `TaskEither`, `IO`, `Reader`, and the typeclass
+hierarchy (`Functor`, `Monad`, `Applicative`, `Traversable`) over a
+higher-kinded-type encoding. onrails covers the **same everyday cases** —
+fallible values and optional values — without the abstraction layer.
+
+## TL;DR
+
+- fp-ts: maximally general. One set of combinators (`map`, `chain`, `sequence`,
+  `traverse`) that work across *every* type constructor via typeclasses + HKTs.
+  Powerful, point-free, and a real learning curve.
+- onrails: concrete, monomorphic functions on two data types. No typeclasses, no
+  HKT encoding, no category-theory vocabulary — just `Result` and `Maybe`.
+
+## Same task, both libraries
+
+```ts twoslash
+// fp-ts — Either is error-LEFT, value-RIGHT
+import * as E from "fp-ts/Either";
+import { pipe } from "fp-ts/function";
+
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): E.Either<{ message: string }, Input>;
+declare function validate(input: Input): E.Either<AppError, User>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
+const createUser = (raw: string): E.Either<AppError, User> =>
+  pipe(
+    parseJson(raw), // Either<ParseError, Input>
+    E.mapLeft((e): AppError => ({ kind: "parse", detail: e.message })),
+    E.chain(validate),
+    E.map((u) => ({ ...u, id: newId() })),
+  );
+
+const status = pipe(
+  createUser(raw),
+  E.match(
+    (e) => (e.kind === "validation" ? 422 : 400), // onLeft first
+    () => 201,
+  ),
+);
+```
+
+```ts twoslash
+// onrails — Result is value-FIRST: Result<T, E>
+import * as R from "@onrails/result";
+
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): R.Result<Input, { message: string }>;
+declare function validate(input: Input): R.Result<User, AppError>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
+const createUser = (raw: string) =>
+  R.pipe(
+    parseJson(raw), // Result<Input, ParseError>
+    R.mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
+    R.flatMap(validate), // Result<User, AppError>
+    R.map((u) => ({ ...u, id: newId() })),
+  );
+
+const status = R.match(createUser(raw), () => 201, (e) => (e.kind === "validation" ? 422 : 400));
+```
+
+The shapes rhyme, but note two ergonomic differences:
+
+- **Type-parameter order.** fp-ts `Either<E, A>` puts the error first;
+  onrails `Result<T, E>` puts the value first (reads as "a number, or a
+  string-error").
+- **Handler order.** fp-ts `match(onLeft, onRight)` takes the error handler
+  first; onrails `match(value, onOk, onErr)` takes the success handler first.
+
+## Key differences
+
+### No typeclasses, no HKTs
+
+fp-ts's power comes from abstracting over the *container*: `sequence`,
+`traverse`, and the `Functor`/`Monad`/`Applicative` instances are written once
+and reused across `Either`, `Option`, `Task`, and your own types. The cost is
+the HKT encoding (`URI`, `Kind`, module augmentation) and a vocabulary you have
+to learn.
+
+onrails declines that generality. There is no `Functor<F>` — there is `map` for
+`Result` and `map` for `Maybe`, each a plain overloaded function. You lose
+generic `traverse`; you gain a surface a TypeScript developer can read on day
+one. For the common "collect a list of results" case, onrails gives you concrete
+helpers instead:
+
+```ts
+import { combine, combineTuple } from "@onrails/result";
+
+combine([ok(1), ok(2), ok(3)]);                 // Result<number[], E>
+combineTuple([ok(1), ok("x")] as const);        // Result<readonly [number, string], E>
+```
+
+### Built-in pattern matching
+
+fp-ts collapses a sum type with the per-type `fold`/`match` for that type.
+onrails ships a general matcher that narrows any discriminated union:
+
+```ts
+import { match } from "@onrails/pattern";
+
+match(state)
+  .with({ status: "loading" }, (s) => `…${s.progress}%`)
+  .with({ status: "ready" }, (s) => s.data)
+  .exhaustive();
+```
+
+### Async
+
+fp-ts models async as `TaskEither<E, A>` (a `() => Promise<Either<E, A>>`) with
+its own combinator set. onrails uses `ResultAsync<T, E>`, a thenable carrier with
+the same method names as the sync side (`map`, `flatMap`, `recover`, `match`) —
+and it interops with native promises through `tryAsync` / `fromPromise`.
+
+## Choose fp-ts when
+
+- You want generic, reusable combinators across many type constructors
+  (`traverse`, `sequence`, `Applicative` validation, custom monads).
+- Your team already speaks the typeclass/category-theory vocabulary and wants
+  maximal point-free composition.
+
+## Choose onrails when
+
+- You want the everyday 90% — fallible and optional values — with a concrete,
+  approachable API and no HKT machinery.
+- You prefer value-first `Result<T, E>` and success-first handlers.
+- You want pattern matching and `Maybe` in the same lightweight, tree-shakeable
+  package.
+
+> fp-ts is now in maintenance; its ideas have largely moved into Effect. If you
+> want the full functional platform, see [onrails vs Effect](/docs/comparisons/effect).

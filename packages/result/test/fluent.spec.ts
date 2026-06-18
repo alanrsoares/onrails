@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { okAsync } from "../src/async.js";
+import { okAsync } from "../src/async-lift.js";
 import { fluent, fluentAsync } from "../src/fluent.js";
 import { err, ok } from "../src/result.js";
 

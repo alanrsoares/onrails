@@ -1,18 +1,20 @@
 /**
- * Variadic point-free composition — left-to-right.
+ * Variadic point-free composition — chains up to nine unary fns left-to-right
+ * into one reusable function. The first fn may take multiple arguments; the
+ * rest are unary. Use {@link pipe} from `@onrails/result` when you already
+ * have a starting value; use {@link flow} to define a reusable composed
+ * function with no value yet.
  *
+ * @example
  * ```ts
  * const parseUserName = flow(
  *   (raw: string) => parseConfig(raw),
  *   map((cfg) => cfg.user),
- *   flatMap((u) => u.name ? ok(u.name) : err({ kind: "missing" })),
+ *   flatMap((u) => (u.name ? ok(u.name) : err({ kind: "missing" as const }))),
  * );
  *
  * parseUserName(raw); // Result<string, ParseError | { kind: "missing" }>
  * ```
- *
- * Use {@link pipe} from `@onrails/result` when you have a starting value;
- * use {@link flow} when you want to define a reusable composed function.
  */
 export function flow<A extends readonly unknown[], B>(ab: (...a: A) => B): (...a: A) => B;
 export function flow<A extends readonly unknown[], B, C>(

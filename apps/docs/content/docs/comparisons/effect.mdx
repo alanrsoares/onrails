@@ -1,0 +1,130 @@
+---
+title: onrails vs Effect
+description: A data layer next to your stack vs a full effect-system framework that owns the runtime.
+---
+
+Effect is a complete platform for TypeScript: a typed effect system
+(`Effect<A, E, R>`) with dependency injection (`Context` / `Layer`), structured
+concurrency and fibers, resource safety (`Scope`), scheduling and retries,
+streaming, schema, and observability — on its own runtime.
+
+onrails is **not** trying to be that. It is the `Result` / `Maybe` slice of that
+world, as plain values, with **no runtime to adopt**. The honest comparison is
+about scope, not features.
+
+## TL;DR
+
+- Effect: a framework that wants to own your runtime and give you everything
+  (errors, DI, concurrency, resources, retries, streams).
+- onrails: a tiny, zero-dependency data layer that owns only your return type and
+  composes with whatever stack you already run.
+
+## The defining difference: the third type parameter
+
+Effect values carry **three** type parameters:
+
+```ts
+Effect<A, E, R>
+//     │  │  └─ R: requirements (services this effect needs from the environment)
+//     │  └──── E: the typed error channel
+//     └─────── A: the success value
+```
+
+onrails has the first two and deliberately **omits the third**:
+
+```ts
+Result<T, E>        // success + typed error. No requirements channel.
+ResultAsync<T, E>   // same, async.
+```
+
+That `R` channel is Effect's dependency-injection system. onrails doesn't model
+dependencies — you inject them the ordinary TypeScript way (function arguments,
+closures, your DI container of choice). If you want `Layer`-based DI, that is a
+reason to choose Effect.
+
+## Same task, both libraries
+
+```ts
+// Effect — Effect.gen, tagged errors, and a Layer-provided service (the R channel)
+import { Effect, Schema } from "effect";
+
+class ValidationError extends Schema.TaggedError<ValidationError>()("ValidationError", {
+  field: Schema.String,
+}) {}
+
+const createUser = (raw: string) =>
+  Effect.gen(function* () {
+    const input = yield* parseJson(raw); // Effect<Input, ParseError>
+    const user = yield* validate(input); // Effect<User, ValidationError>
+    const id = yield* Uuid.next; // Uuid is a *service* — supplied through R
+    return { ...user, id };
+  });
+
+const program = createUser(raw).pipe(
+  Effect.map((user) => ({ status: 201, user })),
+  Effect.catchTag("ValidationError", (e) => Effect.succeed({ status: 422, field: e.field })),
+);
+
+// Run on the Effect runtime, providing the service the program requires.
+const result = await Effect.runPromise(Effect.provide(program, Uuid.Default));
+```
+
+```ts
+// onrails — plain values, no runtime, no requirements channel
+import { ResultAsync } from "@onrails/result";
+
+const createUser = (raw: string): ResultAsync<User, ParseError | ValidationError> =>
+  parseJson(raw) // ResultAsync<Input, ParseError>
+    .flatMap(validate) // ResultAsync<User, ValidationError>
+    .map((user) => ({ ...user, id: newId() })); // newId is just a function — no DI
+
+const result = await createUser(raw).match(
+  (user) => ({ status: 201, user }),
+  (e) => (e.kind === "validation" ? { status: 422, field: e.field } : { status: 400 }),
+);
+```
+
+The Effect version threads `Uuid` through the `R` channel and supplies it with
+`Effect.provide(Uuid.Default)` — the same `Layer`/`Effect.Service` machinery the
+[official examples](https://github.com/Effect-TS/examples) use for every
+dependency. onrails has no `R` channel: `newId` is an ordinary function call.
+
+Both give you a fully typed error union and exhaustive handling. The difference
+is everything *around* it: Effect runs on `Effect.runPromise` and can thread
+requirements, retries, interruption, and tracing through that same value;
+onrails is just a promise you `await`.
+
+## Scope comparison
+
+| Capability | onrails | Effect |
+| --- | --- | --- |
+| Typed success + error | ✅ | ✅ |
+| Tagged errors / matching | ✅ (`@onrails/pattern`) | ✅ (`catchTag`, `Match`) |
+| Optional values | ✅ (`Maybe`) | ✅ (`Option`) |
+| Dependency injection | ❌ (use plain TS) | ✅ (`Context` / `Layer`) |
+| Structured concurrency / fibers | ❌ | ✅ |
+| Resource safety (acquire/release) | ❌ | ✅ (`Scope`) |
+| Retries / scheduling | ❌ | ✅ (`Schedule`) |
+| Streaming | ❌ | ✅ (`Stream`) |
+| Runtime dependency | none | the `effect` runtime |
+| Adopt incrementally at one boundary | ✅ trivially | ⚠️ runtime is somewhat all-in |
+
+## Choose Effect when
+
+- You want a single framework to own runtime concerns: DI, concurrency, resource
+  management, retry policies, tracing, streaming.
+- You're building a large system and want those guarantees uniformly, and the
+  team will invest in the model.
+
+## Choose onrails when
+
+- You want typed railway errors and `Maybe` **without** adopting a runtime or
+  rewriting how your app is wired.
+- You want to drop it into one fallible boundary (a parser, an API client, a
+  service method) and leave the rest of your stack — TanStack Query, Prisma,
+  Express — exactly as it is.
+- Bundle size and a shallow learning curve matter.
+
+> Rule of thumb: if you find yourself wanting `Layer`, fibers, or `Schedule`,
+> you want Effect. If you just want `fetch` to stop throwing and your errors to
+> be typed, you want onrails.

@@ -1,0 +1,12 @@
+{
+  "name": "@onrails/examples",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable, type-checked source for the documentation snippets. Not published.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "check": "bun typecheck && bun test"
+  }
+}

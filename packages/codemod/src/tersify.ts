@@ -146,12 +146,22 @@ function tryTersifyIfElse(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
   return none();
 }
 
+// A concise arrow body that is — or unwraps through `as` / `satisfies` to — an
+// object literal must be parenthesized, else `{ … }` parses as a block body.
+function startsWithObjectLiteral(expr: ts.Expression): boolean {
+  let e: ts.Expression = expr;
+  while (ts.isAsExpression(e) || ts.isSatisfiesExpression(e)) {
+    e = e.expression;
+  }
+  return ts.isObjectLiteralExpression(e);
+}
+
 function tryTersifyArrowBlock(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
   if (ts.isArrowFunction(node) && ts.isBlock(node.body)) {
     const expr = getSingleReturnExpression(node.body);
     if (expr) {
       const exprText = expr.getText(sf);
-      const text = ts.isObjectLiteralExpression(expr) ? `(${exprText})` : exprText;
+      const text = startsWithObjectLiteral(expr) ? `(${exprText})` : exprText;
       return some(spanEdit(node.body, sf, edit(text)));
     }
   }
@@ -169,7 +179,7 @@ function tryTersifyFunctionExpression(node: ts.Node, sf: ts.SourceFile): Maybe<E
       const paramsText = node.parameters.map((p) => p.getText(sf)).join(", ");
       const returnType = node.type ? `: ${node.type.getText(sf)}` : "";
       const exprText = expr.getText(sf);
-      const bodyText = ts.isObjectLiteralExpression(expr) ? `(${exprText})` : exprText;
+      const bodyText = startsWithObjectLiteral(expr) ? `(${exprText})` : exprText;
       const text = `${asyncKeyword}${typeParamsText}(${paramsText})${returnType} => ${bodyText}`;
       return some(spanEdit(node, sf, edit(text)));
     }
@@ -193,7 +203,7 @@ function tryTersifyFunctionDeclaration(node: ts.Node, sf: ts.SourceFile): Maybe<
           const paramsText = node.parameters.map((p) => p.getText(sf)).join(", ");
           const returnType = node.type ? `: ${node.type.getText(sf)}` : "";
           const exprText = expr.getText(sf);
-          const bodyText = ts.isObjectLiteralExpression(expr) ? `(${exprText})` : exprText;
+          const bodyText = startsWithObjectLiteral(expr) ? `(${exprText})` : exprText;
           const exportPrefix = isExported ? "export " : "";
           const text = `${exportPrefix}const ${nameText} = ${asyncKeyword}${typeParamsText}(${paramsText})${returnType} => ${bodyText};`;
           return some(spanEdit(node, sf, edit(text)));

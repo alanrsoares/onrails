@@ -1,0 +1,51 @@
+---
+title: Overview
+description: How onrails relates to neverthrow, fp-ts, and Effect — and when to reach for each.
+---
+
+onrails is the **typed railway data layer**: `Result` / `ResultAsync` / `Maybe`
+as plain tagged unions, exhaustive [pattern matching](/docs/api/pattern), a
+named-step `Railway` builder, and a neverthrow-compat tier — with **zero runtime
+dependencies**. It deliberately stops at the data model: no effect system, no
+dependency injection, no scheduler, no fibers.
+
+That positioning is the whole comparison. onrails is **broader than neverthrow**
+(adds `Maybe` + pattern matching + the railway builder), **lighter than fp-ts**
+(no typeclasses, no HKT encoding, concrete monomorphic functions), and
+**a fraction of Effect** (no `R` requirements channel, no runtime, no `Layer`).
+
+## At a glance
+
+| | **onrails** | **neverthrow** | **fp-ts** | **Effect** |
+| --- | --- | --- | --- | --- |
+| Scope | Result + Maybe + match | Result only | Either/Option/Task + typeclasses | Full effect system |
+| Runtime dependency | none | none | none | `effect` runtime |
+| Value model | plain tagged unions | class instances | tagged unions | `Effect<A, E, R>` |
+| Error channel | typed `E` | typed `E` | `Either<E, A>` (error-left) | typed `E` + tagged errors |
+| Dependency injection | — | — | `Reader*` | `Context` / `Layer` |
+| Concurrency / fibers | — | — | — | structured concurrency |
+| Pattern matching | built-in | — | per-type `fold`/`match` | `Match` module |
+| API style | data-first **and** curried; optional fluent | fluent / OO | point-free, curried | pipe + generators |
+| Bundle footprint | tiny, tree-shakeable | tiny | medium | large |
+| Learning curve | low | low | high | high |
+
+## How to choose
+
+- **Want railway-typed errors without adopting a framework?** onrails. It slots
+  next to your existing stack (TanStack Query, Prisma, Zod, plain `fetch`) and
+  owns nothing but the return type.
+- **Already on neverthrow and happy?** You barely need to move — onrails ships a
+  [drop-in compat tier and a codemod](/docs/comparisons/neverthrow). Migrate for
+  the tagged-union data model, `Maybe`, and pattern matching.
+- **Want category-theory abstractions** (Traversable, generic `sequence`,
+  point-free everything)? [fp-ts](/docs/comparisons/fp-ts) is more general — at a
+  steeper cost.
+- **Want one framework to own your runtime** — DI, concurrency, resource safety,
+  retries, observability? [Effect](/docs/comparisons/effect) is the platform.
+  onrails is intentionally not that.
+
+The three pages below put the same task side by side in each library.
+
+- [onrails vs neverthrow](/docs/comparisons/neverthrow)
+- [onrails vs fp-ts](/docs/comparisons/fp-ts)
+- [onrails vs Effect](/docs/comparisons/effect)

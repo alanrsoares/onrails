@@ -9,8 +9,7 @@ export type FluentResult<T, E> = {
   mapErr: <F>(fn: (error: E) => F) => FluentResult<T, F>;
   flatMap: <U>(fn: (value: T) => Result<U, E>) => FluentResult<U, E>;
   andThen: <U>(fn: (value: T) => Result<U, E>) => FluentResult<U, E>;
-  /** @deprecated Use {@link flatMap} or compat {@link andThen} instead. */
-  chain: <U>(fn: (value: T) => Result<U, E>) => FluentResult<U, E>;
+
   match: <U>(onOk: (value: T) => U, onErr: (error: E) => U) => U;
   unwrapOr: (defaultValue: T) => T;
 };
@@ -21,7 +20,7 @@ export const fluent = <T, E>(result: Result<T, E>): FluentResult<T, E> => ({
   mapErr: (fn) => fluent(mapErr(result, fn)),
   flatMap: (fn) => fluent(flatMap(result, fn)),
   andThen: (fn) => fluent(flatMap(result, fn)),
-  chain: (fn) => fluent(flatMap(result, fn)),
+
   match: (onOk, onErr) => match(onOk, onErr)(result),
   unwrapOr: (defaultValue) => unwrapOr(result, defaultValue),
 });
@@ -33,8 +32,7 @@ export type FluentResultAsync<T, E> = {
   mapErr: <F>(fn: (error: E) => F) => FluentResultAsync<T, F>;
   flatMap: <U>(fn: (value: T) => ResultAsync<U, E>) => FluentResultAsync<U, E>;
   andThen: <U>(fn: (value: T) => ResultAsync<U, E>) => FluentResultAsync<U, E>;
-  /** @deprecated Use {@link flatMap} or compat {@link andThen} instead. */
-  chain: <U>(fn: (value: T) => ResultAsync<U, E>) => FluentResultAsync<U, E>;
+
   match: <U>(onOk: (value: T) => U, onErr: (error: E) => U) => Promise<U>;
 };
 
@@ -44,6 +42,6 @@ export const fluentAsync = <T, E>(resultAsync: ResultAsync<T, E>): FluentResultA
   mapErr: (fn) => fluentAsync(resultAsync.mapErr(fn)),
   flatMap: (fn) => fluentAsync(resultAsync.flatMap(fn)),
   andThen: (fn) => fluentAsync(resultAsync.andThen(fn)),
-  chain: (fn) => fluentAsync(resultAsync.chain(fn)),
+
   match: (onOk, onErr) => resultAsync.match(onOk, onErr),
 });

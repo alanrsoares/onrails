@@ -30,7 +30,7 @@ function resolveSymbolLink(symbolName: string, currentPackage: string): string {
     "Result", "Ok", "Err", "ResultAsync", "ok", "err", "map", "flatMap", "match", "bimap", "mapErr", "trySync", "tryAsync"
   ]);
   const maybeSymbols = new Set([
-    "Maybe", "Some", "None", "some", "none", "isSome", "isNone", "fromNullable", "getOrElse"
+    "Maybe", "Some", "None", "some", "none", "isSome", "isNone", "fromNullable", "unwrapOr"
   ]);
   const patternSymbols = new Set([
     "match", "MatchBuilder", "assertNever", "matchTag", "when"
@@ -114,7 +114,7 @@ function getDefaultCategory(name: string, packageName: string, tags: readonly ts
   }
 
   if (packageName === "@onrails/result") {
-    const isAsync = ["ResultAsync", "fromPromise", "fromSafePromise", "parallelTupleAsync", "sequenceTupleAsync", "tryAsync", "okAsync", "errAsync"].includes(name) || name.startsWith("ResultAsync.");
+    const isAsync = ["ResultAsync", "fromPromise", "fromSafePromise", "parallelTupleAsync", "tryAsync", "okAsync", "errAsync"].includes(name) || name.startsWith("ResultAsync.");
     if (isAsync) return "Async";
     
     if (["combine", "combineTuple"].includes(name)) {
@@ -133,7 +133,7 @@ function getDefaultCategory(name: string, packageName: string, tags: readonly ts
   }
 
   if (packageName === "@onrails/maybe") {
-    if (["some", "none", "of"].includes(name)) {
+    if (["some", "none"].includes(name)) {
       return "Constructors";
     }
     if (["Maybe", "Some", "None"].includes(name)) {

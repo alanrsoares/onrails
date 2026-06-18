@@ -1,14 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { combine, combineTuple } from "../src/collections.js";
 import {
-  combine,
-  combineTuple,
   err,
   flatMap,
-  fold,
   map,
   mapErr,
   match,
-  matchResult,
   ok,
   recover,
   tap,
@@ -44,7 +41,7 @@ describe("sync Result: constructors & transforms", () => {
   });
 });
 
-describe("sync Result: match & fold", () => {
+describe("sync Result: match", () => {
   it("match dispatches", () => {
     expect(
       match(
@@ -60,31 +57,6 @@ describe("sync Result: match & fold", () => {
         (e) => `err:${e}`,
       ),
     ).toBe("err:0");
-  });
-
-  it("matchResult is an alias for match", () => {
-    expect(
-      matchResult(
-        ok(1),
-        (n) => `ok:${n}`,
-        (e) => `err:${e}`,
-      ),
-    ).toBe("ok:1");
-  });
-
-  it("fold collapses with named-slot handlers", () => {
-    expect(
-      fold({
-        ok: (value: number) => `ok:${value}`,
-        err: (error: string) => `err:${error}`,
-      })(ok(1)),
-    ).toBe("ok:1");
-    expect(
-      fold({
-        ok: (value: number) => `ok:${value}`,
-        err: (error: string) => `err:${error}`,
-      })(err("nope")),
-    ).toBe("err:nope");
   });
 });
 

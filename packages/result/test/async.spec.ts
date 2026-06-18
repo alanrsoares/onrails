@@ -1,14 +1,13 @@
 import { describe, expect, it } from "bun:test";
+import { ResultAsync } from "../src/async.js";
 import {
   errAsync,
   fromPromise,
   fromSafePromise,
   okAsync,
   parallelTupleAsync,
-  ResultAsync,
-  sequenceTupleAsync,
   tryAsync,
-} from "../src/async.js";
+} from "../src/async-lift.js";
 import { err, ok } from "../src/result.js";
 
 describe("ResultAsync: construction", () => {
@@ -64,18 +63,13 @@ describe("ResultAsync: chaining and combine", () => {
     expect(await combined.resolve()).toEqual(ok([1, 2]));
   });
 
-  it("sequenceTupleAsync preserves value order at runtime", async () => {
-    const combined = sequenceTupleAsync([okAsync(1), okAsync("a")] as const);
+  it("combineTuple preserves value order at runtime", async () => {
+    const combined = ResultAsync.combineTuple([okAsync(1), okAsync("a")] as const);
     expect(await combined.resolve()).toEqual(ok([1, "a"]));
   });
 
-  it("sequenceTupleAsync aliases sequential tuple combine", async () => {
-    const combined = sequenceTupleAsync([okAsync(1), okAsync("a")] as const);
-    expect(await combined.resolve()).toEqual(ok([1, "a"]));
-  });
-
-  it("sequenceTupleAsync returns first Err in input order", async () => {
-    const combined = sequenceTupleAsync([
+  it("combineTuple returns first Err in input order", async () => {
+    const combined = ResultAsync.combineTuple([
       okAsync(1),
       errAsync("first"),
       errAsync("second"),
@@ -121,7 +115,7 @@ describe("ResultAsync: tuple concurrency", () => {
     expect(maxInFlight).toBe(2);
   });
 
-  it("sequenceTupleAsync runs lazy branches one at a time", async () => {
+  it("combineTuple runs lazy branches one at a time", async () => {
     let inFlight = 0;
     let maxInFlight = 0;
 
@@ -134,7 +128,7 @@ describe("ResultAsync: tuple concurrency", () => {
         return ok(value);
       });
 
-    const result = await sequenceTupleAsync([lazy(1), lazy(2)] as const).resolve();
+    const result = await ResultAsync.combineTuple([lazy(1), lazy(2)] as const).resolve();
     expect(result).toEqual(ok([1, 2]));
     expect(maxInFlight).toBe(1);
   });

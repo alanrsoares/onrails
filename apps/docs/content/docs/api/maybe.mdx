@@ -23,25 +23,6 @@ const cached: Maybe<User> = cache.has(id) ? some(cache.get(id)) : none();
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span> <span className="inline-flex items-center rounded-full border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">deprecated</span>
-
-> [!WARNING]
-> **Deprecated:** Use [some](#some) instead.
-
-Fantasy Land `of` — alias of [some](#some).
-
-```typescript
-function of<T>(value: T): Maybe<T>
-```
-
-#### Parameters
-
-| Parameter | Type | Description |
-|---|---|---|
-| `value` | `T` |  |
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
 ### some <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts a value into the `Some` branch.
@@ -67,7 +48,9 @@ const m = some(1);   // Maybe<number>
 
 ### andThen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Alias for [flatMap](./result#flatmap) — same dual-form shape.
+Neverthrow-compat alias of [flatMap](./result#flatmap) — same dual-form shape. Prefer
+[flatMap](./result#flatmap) as the canonical name; reach for `andThen` only when porting
+neverthrow code or matching its vocabulary.
 
 ```typescript
 function andThen<T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U>
@@ -80,6 +63,14 @@ function andThen<T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U
 |---|---|---|
 | `maybe` | `Maybe<T>` |  |
 | `fn` | `(value: T) => Maybe<U>` |  |
+
+#### Example
+
+```ts
+andThen(fromNullable(user), (u) =>
+  u.active ? some(u) : none(),
+);
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -110,26 +101,6 @@ flatMap(fromNullable(user), (u) =>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### getOrElse <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span> <span className="inline-flex items-center rounded-full border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">deprecated</span>
-
-> [!WARNING]
-> **Deprecated:** Use canonical [unwrapOr](#unwrapor) instead.
-
-Returns the `Some` value, or `defaultValue` when the value is `None`.
-
-```typescript
-function getOrElse<T>(maybe: Maybe<T>, defaultValue: T): T
-```
-
-#### Parameters
-
-| Parameter | Type | Description |
-|---|---|---|
-| `maybe` | `Maybe<T>` |  |
-| `defaultValue` | `T` |  |
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
 ### isNone <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Type-narrowing predicate: returns `true` when the value is `None`.
@@ -143,6 +114,14 @@ function isNone<T>(maybe: Maybe<T>): maybe is { readonly _tag: "None"; }
 | Parameter | Type | Description |
 |---|---|---|
 | `maybe` | `Maybe<T>` |  |
+
+#### Example
+
+```ts
+if (isNone(fromNullable(user))) {
+  return redirect("/login");   // narrowed to None branch
+}
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -200,8 +179,9 @@ pipe(fromNullable(input), map((s) => s.trim())); // curried
 Terminal collapse — fold both branches into a single value. Positional,
 dual-form. Same shape as `Result.match` for sibling consistency.
 
-For files that also import `match` from `ts-pattern`, the alias
-[matchMaybe](#matchmaybe) is identical.
+For files that also import `match` from `ts-pattern`, use a namespace
+import (`import * as Maybe from "@onrails/maybe"` → `Maybe.match`) to
+dissolve the collision.
 
 ```typescript
 function match<T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U
@@ -225,28 +205,6 @@ const greeting = match(
   () => "hello guest",
 );
 ```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
-### matchMaybe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span> <span className="inline-flex items-center rounded-full border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">deprecated</span>
-
-> [!WARNING]
-> **Deprecated:** Namespace import carriers (e.g., `import * as Maybe from "@onrails/maybe"`) and use canonical [match](./result#match) instead.
-
-Collision-free alias — mirrors `matchResult` on `@onrails/result`.
-
-```typescript
-function matchMaybe<T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U
-function matchMaybe<T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U
-```
-
-#### Parameters
-
-| Parameter | Type | Description |
-|---|---|---|
-| `maybe` | `Maybe<T>` |  |
-| `onSome` | `(value: T) => U` |  |
-| `onNone` | `() => U` |  |
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -449,15 +407,28 @@ optional(rawId, (id) => fromNullable(cache.get(id)));
 
 ### Maybe <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-Tagged optional value — absence is not failure.
+Tagged optional value — a discriminated union over `_tag` where absence
+(`None`) is an expected outcome, not a failure. Construct with [some](#some) /
+[none](#none), narrow with [isSome](#issome) / [isNone](#isnone), and collapse with
+[match](./result#match).
 
 ```typescript
 export type Maybe<T> = { readonly _tag: "Some"; readonly value: T } | { readonly _tag: "None" };
 ```
 
+#### Example
+
+```ts
+function findUser(id: string): Maybe<User> {
+  return fromNullable(db.users.get(id));
+}
+```
+
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### None <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+The `None` branch of a [Maybe](#maybe) — expected absence, tagged `"None"`.
 
 ```typescript
 export type None = Extract<Maybe<never>, { _tag: "None" }>;
@@ -466,6 +437,8 @@ export type None = Extract<Maybe<never>, { _tag: "None" }>;
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### Some <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+The `Some` branch of a [Maybe](#maybe) — a present value tagged `"Some"`.
 
 ```typescript
 export type Some<T> = Extract<Maybe<T>, { _tag: "Some" }>;

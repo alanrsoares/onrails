@@ -3,10 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "snippets": "bun scripts/gen-snippets.ts",
+    "predev": "bun scripts/gen-snippets.ts",
     "dev": "next dev",
+    "prebuild": "bun scripts/gen-snippets.ts",
+    "build": "next build",
     "start": "next start",
-    "types:check": "fumadocs-mdx && next typegen && tsc --noEmit"
+    "types:check": "bun scripts/gen-snippets.ts && fumadocs-mdx && next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@onrails/maybe": "workspace:*",
@@ -27,8 +30,14 @@
     "@types/node": "^25.9.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "drizzle-orm": "^0.45.2",
+    "fp-ts": "^2.16.11",
+    "fumadocs-twoslash": "^3.2.0",
+    "neverthrow": "^8.2.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.1",
-    "typescript": "^6.0.3"
+    "twoslash": "^0.3.8",
+    "typescript": "^6.0.3",
+    "zod": "^4.4.3"
   }
 }

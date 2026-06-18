@@ -1,0 +1,165 @@
+---
+title: onrails vs neverthrow
+description: The closest neighbour — same railway idea, different data model, plus Maybe and pattern matching.
+---
+
+neverthrow and onrails solve the same core problem — **make expected failure a
+value, not an exception** — and they look similar at the call site. onrails is
+close enough that it ships a **neverthrow-compat tier** and a **codemod** to move
+existing code over. The differences are in the data model and the surrounding
+surface.
+
+## TL;DR
+
+- neverthrow: a `Result` **class** with fluent methods. Minimal and focused —
+  `Result`/`ResultAsync` only.
+- onrails: `Result` as a **plain tagged union** consumed by dual-form functions
+  (or an optional fluent wrapper), **plus** `Maybe`, exhaustive `match`, and a
+  named-step `Railway` builder.
+
+## Same task, both libraries
+
+```ts twoslash
+// onrails — dual-form functions over a tagged union
+import * as R from "@onrails/result";
+
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): R.Result<Input, { message: string }>;
+declare function validate(input: Input): R.Result<User, AppError>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
+const createUser = (raw: string) =>
+  R.pipe(
+    parseJson(raw), // Result<Input, ParseError>
+    R.mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
+    R.flatMap(validate), // Result<User, AppError>
+    R.map((u) => ({ ...u, id: newId() })),
+  );
+
+const status = R.match(
+  createUser(raw),
+  () => 201,
+  (e) => (e.kind === "validation" ? 422 : 400),
+);
+```
+
+```ts twoslash
+// neverthrow — fluent methods on a Result instance
+import { err, ok, Result } from "neverthrow";
+
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): Result<Input, { message: string }>;
+declare function validate(input: Input): Result<User, AppError>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
+const createUser = (raw: string): Result<User, AppError> =>
+  parseJson(raw)
+    .mapErr((e): AppError => ({ kind: "parse", detail: e.message }))
+    .andThen(validate)
+    .map((u) => ({ ...u, id: newId() }));
+
+const status = createUser(raw).match(
+  () => 201,
+  (e) => (e.kind === "validation" ? 422 : 400),
+);
+```
+
+Prefer dots? onrails has an opt-in fluent wrapper too:
+
+```ts
+import { fluent } from "@onrails/result/fluent";
+
+fluent(parseJson(raw)).andThen(validate).map(normalize).match(onOk, onErr);
+```
+
+## Key differences
+
+### Data model: tagged union vs class instance
+
+A neverthrow `Result` is an instance of an `Ok`/`Err` class. An onrails `Result`
+is a plain object — `{ _tag: "Ok", value }` / `{ _tag: "Err", error }`. That
+means onrails values are **structurally serializable** (cross `postMessage`, a
+queue, `JSON.stringify`), inspectable, and directly **pattern-matchable**:
+
+```ts
+import { match } from "@onrails/pattern";
+
+match(result)
+  .with({ _tag: "Ok" }, (r) => use(r.value))
+  .with({ _tag: "Err" }, (r) => report(r.error))
+  .exhaustive();
+```
+
+For the everyday Ok/Err fork you'd still reach for `match(result, onOk, onErr)`
+from `@onrails/result` — the snippet above just shows the value is an ordinary
+union your tools can see into, not a class you have to call methods on.
+
+### Beyond Result
+
+neverthrow is `Result`-only. onrails adds:
+
+- **`Maybe`** for expected absence (`Some`/`None`) with the same dual-form API.
+- **`@onrails/pattern`** for exhaustive, type-narrowed matching on any union.
+- **`Railway`** — a named-step builder for 4+ step workflows with mixed sync/async IO.
+
+### The throwing escape hatch
+
+neverthrow's `_unsafeUnwrap()` and onrails' `unwrapOk`/`unwrapErr` both throw on
+the wrong branch. onrails treats these as a **test/assertion tier** and the
+`@onrails/eslint-plugin` / `@onrails/biome-plugin` rules flag them outside
+`*.spec.ts` / `*.test.ts`.
+
+## Migration is mechanical
+
+`@onrails/result/compat/neverthrow` mirrors the neverthrow shape, so migration
+is two mechanical stages — preview either with `--dry` first:
+
+```bash
+# stage 1 — rewrite neverthrow imports + package.json deps to the compat shim
+bunx @onrails/codemod ./path/to/repo --dry
+bunx @onrails/codemod ./path/to/repo
+
+# stage 2 — rewrite compat-shim imports to canonical @onrails/result
+bunx @onrails/codemod ./path/to/repo --to-native --dry
+bunx @onrails/codemod ./path/to/repo --to-native
+```
+
+Stage 2 is intentionally conservative: it only rewrites imports that have a
+native equivalent, leaving compat-only shapes flagged for manual review.
+
+Stage 1 only touches the import — your call sites are untouched. Drag the handle
+to see exactly what changes:
+
+<CodeCompare
+  leftLabel="before"
+  rightLabel="after stage 1"
+  left={`import { ok, err, Result } from "neverthrow";
+
+const parseConfig = (raw: string): Result<Config, ConfigError> =>
+  ok(raw).andThen(decode).map(normalize);`}
+  right={`import { ok, err, Result } from "@onrails/result/compat/neverthrow";
+
+const parseConfig = (raw: string): Result<Config, ConfigError> =>
+  ok(raw).andThen(decode).map(normalize);`}
+/>
+
+## Choose neverthrow when
+
+- You only need `Result`, want the smallest possible surface, and prefer pure
+  method chaining.
+- You don't need `Maybe`, pattern matching, or serializable result values.
+
+## Choose onrails when
+
+- You want a **tagged-union** data model you can serialize and pattern-match.
+- You want `Maybe` and exhaustive `match` from the same toolkit.
+- You like having **both** data-first/curried functions and an optional fluent
+  wrapper, rather than one fixed style.

@@ -21,12 +21,10 @@ type Maybe<T> =
 | Result | Maybe |
 |--------|-------|
 | `ok` / `err` | `some` / `none` |
-| `of` | `of` (= `some`) |
 | `map` (dual) | `map` (dual) |
 | `flatMap` (dual) | `flatMap` (dual) |
 | `match` (positional, dual) | `match` (positional, dual) |
-| `matchResult` | `matchMaybe` (collision-free alias) |
-| `unwrapOr` | `unwrapOr` (= `getOrElse`) |
+| `unwrapOr` | `unwrapOr` |
 | — | `compactMap` (`compact` ∘ `map`) |
 | — | `optional` (`flatMap` ∘ `fromNullable`) |
 

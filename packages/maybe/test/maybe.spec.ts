@@ -5,13 +5,11 @@ import {
   compactMap,
   flatMap,
   fromNullable,
-  getOrElse,
   isNone,
   isSome,
   map,
   match,
   none,
-  of,
   optional,
   some,
   tap,
@@ -21,10 +19,9 @@ import {
 } from "../src/maybe.js";
 
 describe("Maybe", () => {
-  it("some / none / of tags", () => {
+  it("some / none tags", () => {
     expect(some(1)._tag).toBe("Some");
     expect(none()._tag).toBe("None");
-    expect(of(2)._tag).toBe("Some");
   });
 
   it("fromNullable", () => {
@@ -59,8 +56,7 @@ describe("Maybe", () => {
     ).toBe(0);
   });
 
-  it("getOrElse / unwrapOr / unwrap", () => {
-    expect(getOrElse(some(1), 0)).toBe(1);
+  it("unwrapOr / unwrap", () => {
     expect(unwrapOr(none<number>(), 0)).toBe(0);
     expect(unwrap(some("ok"))).toBe("ok");
     expect(() => unwrap(none())).toThrow("Called unwrap on None");
