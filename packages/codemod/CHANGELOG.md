@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.0](https://github.com/alanrsoares/onrails/compare/codemod-v0.1.4...codemod-v0.2.0) (2026-06-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* removed deprecated aliases and the @onrails/result/mcp subpath. Migrate to canonical names with onrails-codemod-neverthrow.
+
+### Features
+
+* **codemod:** add tersify AST refactoring mode ([#31](https://github.com/alanrsoares/onrails/issues/31)) ([fa37f14](https://github.com/alanrsoares/onrails/commit/fa37f1410dd63f958a650630acdf4b707d88393b))
+* **codemod:** expand tersify refactoring rules ([#32](https://github.com/alanrsoares/onrails/issues/32)) ([1cb7656](https://github.com/alanrsoares/onrails/commit/1cb765644f56cccfcd31b367cc48456bb8a6a4c9))
+
+
+### Code Refactoring
+
+* API coherence — remove deprecated alias tier (RFC 0001) ([#36](https://github.com/alanrsoares/onrails/issues/36)) ([7b9f157](https://github.com/alanrsoares/onrails/commit/7b9f157cedebf1a1904a46005cee96bb98bfe296))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/maybe bumped to 0.2.0
+    * @onrails/pattern bumped to 0.2.0
+    * @onrails/result bumped to 0.2.0
+
 ## [0.1.4](https://github.com/alanrsoares/onrails/compare/codemod-v0.1.3...codemod-v0.1.4) (2026-06-13)
 
 
