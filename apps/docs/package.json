@@ -25,6 +25,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@onrails/docgen": "workspace:*",
     "@tailwindcss/postcss": "^4.3.1",
     "@types/mdx": "^2.0.14",
     "@types/node": "^25.9.3",

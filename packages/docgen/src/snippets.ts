@@ -118,7 +118,9 @@ interface TransformDeps {
 
 // Plain display form: region without fixture imports / exports.
 const toDisplay = (region: string[], { isFixtureImport, rewriteImport }: TransformDeps): string =>
-  trim(region.filter((l) => !isFixtureImport(l)).map((l) => stripExport(rewriteImport(l)))).join("\n");
+  trim(region.filter((l) => !isFixtureImport(l)).map((l) => stripExport(rewriteImport(l)))).join(
+    "\n",
+  );
 
 // Twoslash form: shown imports, hidden fixtures, shown body.
 const toTwoslash = (region: string[], fixtures: string, deps: TransformDeps): string => {
@@ -126,7 +128,10 @@ const toTwoslash = (region: string[], fixtures: string, deps: TransformDeps): st
   const fx = fixtures.split("\n");
   const regionImports = region.filter((l) => isImport(l) && !isFixtureImport(l)).map(rewriteImport);
   const regionBody = trim(region.filter((l) => !isImport(l)).map(stripExport));
-  const fixtureImports = dedupeFixtureImports(fx.filter(isImport).map(rewriteImport), regionImports);
+  const fixtureImports = dedupeFixtureImports(
+    fx.filter(isImport).map(rewriteImport),
+    regionImports,
+  );
   const fixtureBody = trim(fx.filter((l) => !isImport(l)));
   return [
     ...regionImports,
@@ -154,7 +159,10 @@ export interface BuildResult {
 export function buildSnippetsModule(
   modules: { name: string; source: string }[],
   fixturesSource: string,
-  opts: Pick<ExtractSnippetsOptions, "fixtureName" | "rewriteImport" | "sourceLabel" | "generatedBy"> = {},
+  opts: Pick<
+    ExtractSnippetsOptions,
+    "fixtureName" | "rewriteImport" | "sourceLabel" | "generatedBy"
+  > = {},
 ): BuildResult {
   const fixtureName = opts.fixtureName ?? "fixtures";
   const deps: TransformDeps = {
@@ -214,9 +222,9 @@ export async function extractSnippets(opts: ExtractSnippetsOptions): Promise<Ext
 
   const { module, ids, skipped } = buildSnippetsModule(modules, fixturesSource, {
     fixtureName,
-    rewriteImport: opts.rewriteImport,
     sourceLabel: opts.sourceLabel ?? opts.srcDir,
-    generatedBy: opts.generatedBy,
+    ...(opts.rewriteImport ? { rewriteImport: opts.rewriteImport } : {}),
+    ...(opts.generatedBy !== undefined ? { generatedBy: opts.generatedBy } : {}),
   });
 
   await Bun.write(opts.outFile, module);

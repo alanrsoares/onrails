@@ -1,14 +1,13 @@
 #!/usr/bin/env bun
 /**
- * onrails config for the generic snippet extractor.
+ * onrails config for the `@onrails/docgen` snippet extractor.
  *
- * Engine lives in `./lib/extract-snippets.ts` (zero project coupling — extracts
- * verbatim into a future `packages/docgen`). This file holds only the onrails
- * specifics: where the example modules live, where the generated module goes,
- * and how relative source imports map to `@onrails/*` package specifiers.
+ * The engine is project-agnostic; this file holds only the onrails specifics:
+ * where the example modules live, where the generated module goes, and how
+ * relative source imports map to `@onrails/*` package specifiers.
  */
 import { resolve } from "node:path";
-import { extractSnippets } from "./lib/extract-snippets";
+import { extractSnippets } from "@onrails/docgen/snippets";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 
