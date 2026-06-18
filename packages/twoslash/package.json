@@ -1,0 +1,63 @@
+{
+  "name": "@onrails/twoslash",
+  "version": "0.1.0",
+  "description": "Extract #region snippet blocks from real, tested source modules into display + twoslash forms for type-checked documentation.",
+  "license": "MIT",
+  "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/twoslash#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git",
+    "directory": "packages/twoslash"
+  },
+  "bugs": {
+    "url": "https://github.com/alanrsoares/onrails/issues"
+  },
+  "keywords": [
+    "twoslash",
+    "snippets",
+    "mdx",
+    "documentation",
+    "docs",
+    "codeblocks",
+    "typescript",
+    "fumadocs",
+    "shiki"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "check": "bun typecheck && bun test",
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "bun run build"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.5.1"
+  }
+}
