@@ -1,6 +1,9 @@
 import { resolve } from "node:path";
+import { err, flatMap, ok, type Result, trySync } from "@onrails/result";
 import ts from "typescript";
 import type { DocParam, DocSymbol } from "./types.js";
+
+const toError = (e: unknown): Error => (e instanceof Error ? e : new Error(String(e)));
 
 /** Resolves a symbol's category from JSDoc tags + package context. */
 export type Categorize = (
@@ -193,26 +196,12 @@ const extractDocSymbol = (
 };
 
 /** Parse a package entrypoint and return its exported symbols as DocSymbols. */
-export const extractExports = (
-  entry: string,
+const moduleSymbols = (
+  checker: ts.TypeChecker,
+  moduleSymbol: ts.Symbol,
   packageName: string,
   categorize: Categorize,
 ): DocSymbol[] => {
-  const absoluteEntry = resolve(entry);
-  const program = ts.createProgram([absoluteEntry], {
-    target: ts.ScriptTarget.ESNext,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    strict: true,
-    skipLibCheck: true,
-  });
-  const checker = program.getTypeChecker();
-  const sourceFile = program.getSourceFile(absoluteEntry);
-  if (!sourceFile) throw new Error(`Could not find source file for ${entry}`);
-
-  const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
-  if (!moduleSymbol) return [];
-
   const symbols: DocSymbol[] = [];
   for (const exp of checker.getExportsOfModule(moduleSymbol)) {
     const sym = exp.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exp) : exp;
@@ -221,4 +210,33 @@ export const extractExports = (
     symbols.push(extractDocSymbol(checker, sym, decl, exp.getName(), packageName, categorize));
   }
   return symbols;
+};
+
+const COMPILER_OPTIONS: ts.CompilerOptions = {
+  target: ts.ScriptTarget.ESNext,
+  module: ts.ModuleKind.ESNext,
+  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  strict: true,
+  skipLibCheck: true,
+};
+
+// ts.createProgram is a third-party boundary — a safe, Result-returning form.
+const createProgram = trySync(
+  (entryPath: string) => ts.createProgram([entryPath], COMPILER_OPTIONS),
+  toError,
+);
+
+export const extractExports = (
+  entry: string,
+  packageName: string,
+  categorize: Categorize,
+): Result<DocSymbol[], Error> => {
+  const absoluteEntry = resolve(entry);
+  return flatMap(createProgram(absoluteEntry), (prog) => {
+    const checker = prog.getTypeChecker();
+    const sourceFile = prog.getSourceFile(absoluteEntry);
+    if (!sourceFile) return err(new Error(`Could not find source file for ${entry}`));
+    const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
+    return ok(moduleSymbol ? moduleSymbols(checker, moduleSymbol, packageName, categorize) : []);
+  });
 };

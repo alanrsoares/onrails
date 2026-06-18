@@ -16,6 +16,10 @@
     "test": "bun test",
     "check": "bun typecheck && bun test"
   },
+  "dependencies": {
+    "@onrails/pattern": "workspace:*",
+    "@onrails/result": "workspace:*"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^6.0.3"
