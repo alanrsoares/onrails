@@ -10,6 +10,7 @@ Tagged `Result` / `ResultAsync` + railway-oriented utilities for TypeScript. Pur
 | [`@onrails/codemod`](./packages/codemod) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fcodemod.svg)](https://www.npmjs.com/package/@onrails/codemod) | Bun script: migrate `neverthrow` imports + `package.json` deps to `@onrails/result/compat/neverthrow` |
 | [`@onrails/eslint-plugin`](./packages/eslint-plugin) | [![npm](https://img.shields.io/npm/v/%40onrails%2Feslint-plugin.svg)](https://www.npmjs.com/package/@onrails/eslint-plugin) | ESLint rules for `@onrails/result` boundaries — flags `Promise<Result<…>>` + `_unsafeUnwrap*` |
 | [`@onrails/biome-plugin`](./packages/biome-plugin) | [![npm](https://img.shields.io/npm/v/%40onrails%2Fbiome-plugin.svg)](https://www.npmjs.com/package/@onrails/biome-plugin) | GritQL plugin: same boundary rules for Biome users |
+| [`@onrails/twoslash`](./packages/twoslash) | [![npm](https://img.shields.io/npm/v/%40onrails%2Ftwoslash.svg)](https://www.npmjs.com/package/@onrails/twoslash) | Extract `#region` snippets from tested source into display + twoslash forms for docs |
 
 [![Docs](https://img.shields.io/badge/docs-online-blue)](https://alanrsoares.github.io/onrails/)
 [![CI](https://github.com/alanrsoares/onrails/actions/workflows/ci.yml/badge.svg)](https://github.com/alanrsoares/onrails/actions/workflows/ci.yml)
