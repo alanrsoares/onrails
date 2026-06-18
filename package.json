@@ -37,6 +37,7 @@
     "@biomejs/biome": "^2.4.16",
     "@commitlint/cli": "^19.6.0",
     "@onrails/docgen": "workspace:*",
+    "@onrails/result": "workspace:*",
     "@commitlint/config-conventional": "^19.6.0",
     "@tanstack/intent": "^0.0.44",
     "@types/bun": "latest",

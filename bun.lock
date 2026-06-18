@@ -9,6 +9,7 @@
         "@commitlint/cli": "^19.6.0",
         "@commitlint/config-conventional": "^19.6.0",
         "@onrails/docgen": "workspace:*",
+        "@onrails/result": "workspace:*",
         "@tanstack/intent": "^0.0.44",
         "@types/bun": "latest",
         "husky": "^9.1.7",
@@ -76,6 +77,10 @@
     "packages/docgen": {
       "name": "@onrails/docgen",
       "version": "0.0.0",
+      "dependencies": {
+        "@onrails/pattern": "workspace:*",
+        "@onrails/result": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "^6.0.3",

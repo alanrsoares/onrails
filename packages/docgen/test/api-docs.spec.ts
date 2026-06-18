@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { resolve } from "node:path";
+import { isOk, unwrapOr } from "@onrails/result";
 import { defaultCategorize, extractExports } from "../src/api/extract.js";
 import { defaultResolveLink, renderPackageMdx, slugify } from "../src/api/render.js";
 import type { DocSymbol, ExportsByPackage } from "../src/api/types.js";
@@ -33,8 +34,12 @@ describe("defaultResolveLink", () => {
 });
 
 describe("extractExports", () => {
-  const symbols = extractExports(FIXTURE, "@test/sample", defaultCategorize);
-  const byName = new Map(symbols.map((s) => [s.name, s]));
+  const extracted = extractExports(FIXTURE, "@test/sample", defaultCategorize);
+  const byName = new Map(unwrapOr(extracted, [] as DocSymbol[]).map((s) => [s.name, s]));
+
+  it("returns ok for a valid entrypoint", () => {
+    expect(isOk(extracted)).toBe(true);
+  });
 
   it("extracts exported symbols with kinds", () => {
     expect(byName.get("add")?.kind).toBe("function");
