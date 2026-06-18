@@ -80,6 +80,10 @@ match(result)
   .exhaustive();
 ```
 
+For the everyday Ok/Err fork you'd still reach for `match(result, onOk, onErr)`
+from `@onrails/result` — the snippet above just shows the value is an ordinary
+union your tools can see into, not a class you have to call methods on.
+
 ### Beyond Result
 
 neverthrow is `Result`-only. onrails adds:

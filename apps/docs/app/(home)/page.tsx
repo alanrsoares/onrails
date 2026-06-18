@@ -85,7 +85,7 @@ const label = unwrapOr(
 const COMBINED_SNIPPET = `import { fromNullable } from "@onrails/maybe";
 import { toResult } from "@onrails/maybe/interop";
 import { match } from "@onrails/pattern";
-import { $, err, ok, tryGen } from "@onrails/result";
+import * as R from "@onrails/result";
 
 type OrderError =
   | { kind: "no_user"; id: string }
@@ -94,29 +94,26 @@ type OrderError =
 
 // do-notation: $ unwraps an Ok or short-circuits. Maybe crosses into Result via toResult.
 const checkout = (userId: string) =>
-  tryGen(() => {
-    const user = $(
-      toResult(
-        fromNullable(users.get(userId)),
-        (): OrderError => ({ kind: "no_user", id: userId }),
-      ),
+  R.tryGen(() => {
+    const user = R.$(
+      toResult(fromNullable(users.get(userId)), (): OrderError => ({ kind: "no_user", id: userId })),
     );
-    const cart = $(loadCart(user.id));
-    if (cart.items.length === 0) return err({ kind: "empty_cart" as const });
-    return ok(placeOrder(user, cart));
+    const cart = R.$(loadCart(user.id));
+    if (cart.items.length === 0) return R.err({ kind: "empty_cart" as const });
+    return R.ok(placeOrder(user, cart));
   });
 
-// Pattern-match the tagged-union outcome — every success and failure, exhaustively.
-const message = match(checkout("u_42"))
-  .with({ _tag: "Ok" }, (r) => \`Order \${r.value.id} confirmed\`)
-  .with({ _tag: "Err" }, (r) =>
-    match(r.error)
+// Result's own match forks Ok/Err; @onrails/pattern handles the error variants.
+const message = R.match(
+  checkout("u_42"),
+  (order) => \`Order \${order.id} confirmed\`,
+  (e) =>
+    match(e)
       .with({ kind: "no_user" }, () => "Please sign in")
       .with({ kind: "empty_cart" }, () => "Your cart is empty")
-      .with({ kind: "declined" }, (e) => \`Payment declined: \${e.reason}\`)
+      .with({ kind: "declined" }, (x) => \`Payment declined: \${x.reason}\`)
       .exhaustive(),
-  )
-  .exhaustive();`;
+);`;
 
 const examples = [
   { label: "Result", code: RESULT_SNIPPET },
