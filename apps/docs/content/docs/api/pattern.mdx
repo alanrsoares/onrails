@@ -1,0 +1,281 @@
+---
+title: "@onrails/pattern API"
+description: "Complete API reference for @onrails/pattern"
+---
+
+# @onrails/pattern API Reference
+
+## Classes
+
+### MatchBuilder
+
+Fluent builder for `match`. Tracks the handled cases at the type
+level so `.exhaustive()` only compiles when every union member is covered.
+
+The `Locked` phantom flag (set via `.returnType<R>()`) constrains every
+subsequent handler to return `R`, useful when branch return-type
+inference would widen to a union narrower than the target slot
+(e.g. `ReactNode`, an API DTO).
+
+#### Constructor
+
+```typescript
+constructor<T, R = never, HasInput extends boolean = false, Handled extends readonly unknown[] = [], Locked extends boolean = false>(cases: readonly Case<T, unknown>[], input: T | typeof NO_INPUT, _handled?: Handled): MatchBuilder<T, R, HasInput, Handled, Locked>
+```
+
+#### Instance Methods
+
+##### MatchBuilder.prototype._handled
+
+```typescript
+_handled: Handled
+```
+
+##### MatchBuilder.prototype.with
+
+```typescript
+with<const P extends Pattern<T>, R2>(pattern: P, handler: (input: Narrow<T, P>) => HandlerReturn<Locked, R, R2>): MatchBuilder<T, NextResult<Locked, R, R2>, HasInput, readonly [......], Locked>
+```
+
+##### MatchBuilder.prototype.withOneOf
+
+One handler for several patterns (OR). Handler input is the union of narrowed members.
+
+```typescript
+withOneOf<const Ps extends readonly Pattern<T>[], R2>(patterns: Ps, handler: (input: NarrowUnion<T, Ps>) => HandlerReturn<Locked, R, R2>): MatchBuilder<T, NextResult<...>, HasInput, readonly [......], Locked>
+```
+
+##### MatchBuilder.prototype.withEither
+
+`withOneOf` for exactly two patterns.
+
+```typescript
+withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>, R2>(pattern1: P1, pattern2: P2, handler: (input: NarrowUnion<T, readonly [P1, P2]>) => HandlerReturn<Locked, R, R2>): MatchBuilder<...>
+```
+
+##### MatchBuilder.prototype.returnType
+
+Lock the result type. All subsequent `.with()` handlers must return `R2`.
+Useful when branch return-type inference widens to a union narrower than
+the slot the match feeds into (e.g. `ReactNode`).
+
+Also the fix for literal-widening: when a handler returns an object whose
+field is a union literal, inference widens it (e.g. `{ mode: "native" }`
+becomes `{ mode: string }`, breaking a `Mode` union). Lock the target type
+instead of sprinkling `as const`:
+
+```typescript
+returnType<R2>(): MatchBuilder<T, R2, HasInput, Handled, true>
+```
+
+**Example:**
+
+```ts
+type State = { mode: "compat" | "native" };
+const next = match(flag)
+  .returnType<State>()                       // handlers now checked against State
+  .with("--native", () => ({ mode: "native" })) // no `as const` needed
+  .otherwise(() => state);
+```
+
+##### MatchBuilder.prototype.run
+
+Run on the value passed to `match`, or on `input` when curried.
+
+```typescript
+run(...input: readonly [input: T] | readonly []): R
+```
+
+##### MatchBuilder.prototype.exhaustive
+
+```typescript
+exhaustive(): ExhaustiveResult<T, Handled, R, HasInput>
+```
+
+##### MatchBuilder.prototype.otherwise
+
+```typescript
+otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R
+```
+
+## Functions
+
+### assertNever
+
+Use in `default` branches after manual narrowing — compile-time exhaustiveness check.
+
+```typescript
+function assertNever(value: never, message?: string): never
+```
+
+### match
+
+Start a pattern-matching expression. Two call shapes:
+
+- `match(value)` — data-first; subsequent `.exhaustive()` or
+  `.otherwise(fn)` runs immediately against `value`.
+- `match<T>()` — curried; subsequent `.exhaustive()` returns a function
+  `(value: T) => R` for use in `pipe(...)` or as a reusable matcher.
+
+```typescript
+function match<T>(input: T): MatchBuilder<T, never, true, [], false>
+function match<T = never>(): MatchBuilder<T, never, false, [], false>
+```
+
+#### Example
+
+```ts
+// Data-first
+const out = match({ kind: "click", x: 1, y: 2 } as Event)
+  .with({ kind: "click" }, (e) => e.x + e.y)
+  .with({ kind: "key" },   () => -1)
+  .exhaustive();
+
+// Curried — build a reusable matcher
+const describe = match<Event>()
+  .with({ kind: "click" }, (e) => `click @ ${e.x},${e.y}`)
+  .with({ kind: "key" },   (e) => `key ${e.code}`)
+  .exhaustive();
+```
+
+### matchTag
+
+Exhaustive match on `_tag` — for `@onrails/result` / `@onrails/maybe` style unions.
+
+```typescript
+function matchTag<T extends Tagged, R>(value: T, handlers: TagHandlers<T, R>): R
+```
+
+### when
+
+Guard pattern for `match `.with.
+
+Accepts plain boolean guards (`(x) => x.length > 0`) or TS type-predicate
+guards (`(x): x is Foo => ...`). For type predicates, the matched handler's
+input is narrowed to the predicate's target type via `Narrow `.
+
+```typescript
+function when<T, U extends T>(guard: (input: T) => input is U): (input: T) => input is U
+function when<T>(guard: (input: T) => boolean): Pattern<T>
+```
+
+## Types
+
+### ExhaustiveResult
+
+`.exhaustive()` return type — `NonExhaustiveError` when cases are missing.
+
+```typescript
+export type ExhaustiveResult<T, Handled extends readonly unknown[], R, HasInput extends boolean> =
+  IsExhaustive<T, Handled> extends true
+    ? ExhaustiveOutput<R, HasInput, T>
+    : NonExhaustiveError<RemainingCases<T, Handled>>;
+```
+
+### ExhaustMatched
+
+Union members of `T` ruled out by pattern `P`.
+Boolean guards (non-predicates) do not advance exhaustiveness — use `when(isX)` or `.otherwise()`.
+
+```typescript
+export type ExhaustMatched<T, P> = P extends (input: T) => boolean
+  ? [GuardTarget<P>] extends [never]
+    ? never
+    : Extract<T, GuardTarget<P>>
+  : Extract<T, P>;
+```
+
+### HandledUnion
+
+Union of cases already handled by prior branches.
+
+```typescript
+export type HandledUnion<Handled extends readonly unknown[]> = Handled[number];
+```
+
+### IsExhaustive
+
+```typescript
+export type IsExhaustive<T, Handled extends readonly unknown[]> = [
+  RemainingCases<T, Handled>,
+] extends [never]
+  ? true
+  : false;
+```
+
+### NonExhaustiveError
+
+Returned by `.exhaustive()` when union cases are still missing (compile-time error).
+
+```typescript
+export type NonExhaustiveError<Remaining> = {
+  readonly __nonExhaustive: "Add .with() branches for remaining cases";
+  readonly remaining: Remaining;
+};
+```
+
+### RemainingCases
+
+Input cases not yet covered by `.with` / `.withOneOf` / `.withEither`.
+
+```typescript
+export type RemainingCases<T, Handled extends readonly unknown[]> = Exclude<
+  T,
+  HandledUnion<Handled>
+>;
+```
+
+### LockedMatchBuilder
+
+Result-locked variant of `MatchBuilder`. Constructed via
+`match(...).returnType<R>()`. Now a thin type alias over `MatchBuilder`
+with the `Locked` phantom flag set — kept for backwards compatibility.
+
+```typescript
+export type LockedMatchBuilder<
+  T,
+  R,
+  HasInput extends boolean = false,
+  Handled extends readonly unknown[] = [],
+> = MatchBuilder<T, R, HasInput, Handled, true>;
+```
+
+### Pattern
+
+A pattern that matches a value of type `T`. One of:
+
+- **Literal** — a primitive (`"a"`, `42`, `true`) matched by `===`.
+- **Object pattern** — a `Partial<T>` of shallow key/value pairs that
+  must all match by strict equality. Only available when `T` is an
+  object type.
+- **Guard** — a function `(input: T) => boolean`. Type predicates
+  (`(x): x is U`) narrow the handler input via `Narrow`.
+
+```typescript
+export type Pattern<T> = T | ObjectPattern<T> | PatternGuard<T>;
+```
+
+### Narrow
+
+Narrows `input` when `pattern` is a shallow object, literal discriminant, or type predicate.
+
+```typescript
+export type Narrow<T, P> = P extends (input: T) => boolean
+  ? [GuardTarget<P>] extends [never]
+    ? T
+    : NarrowObject<T, GuardTarget<P>>
+  : P extends Record<string, unknown>
+    ? NarrowObject<T, P>
+    : T extends P
+      ? Extract<T, P>
+      : T;
+```
+
+### NarrowUnion
+
+Union of members narrowed by each pattern in `Ps` (multi-branch handlers).
+
+```typescript
+export type NarrowUnion<T, Ps extends readonly unknown[]> = Narrow<T, Ps[number]>;
+```
+

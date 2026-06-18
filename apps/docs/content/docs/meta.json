@@ -1,0 +1,11 @@
+{
+  "title": "Docs",
+  "pages": [
+    "index",
+    "getting-started",
+    "---api---",
+    "api/result",
+    "api/maybe",
+    "api/pattern"
+  ]
+}

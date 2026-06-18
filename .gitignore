@@ -3,7 +3,7 @@ node_modules/
 dist/
 .bun/
 *.tgz
-docs/
+/docs/
 .env.local
 .claude/
 .cursor/

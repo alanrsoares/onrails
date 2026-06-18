@@ -1,0 +1,813 @@
+---
+title: "@onrails/result API"
+description: "Complete API reference for @onrails/result"
+---
+
+# @onrails/result API Reference
+
+## Classes
+
+### ResultAsync
+
+Async result — public API never exposes `Promise<Result<…>>` directly;
+await via `.resolve()` or `.match()`.
+
+#### Constructor
+
+```typescript
+constructor<T, E>(run: PromiseFactory<T, E>): ResultAsync<T, E>
+```
+
+#### Static Methods
+
+##### ResultAsync.fromResult
+
+```typescript
+static fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E>
+```
+
+##### ResultAsync.fromPromise
+
+```typescript
+static fromPromise<T, E>(promise: PromiseLike<T>, onReject: (error: unknown) => E): ResultAsync<T, E>
+```
+
+##### ResultAsync.fromSafePromise
+
+```typescript
+static fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, E>
+```
+
+##### ResultAsync.defer
+
+Defers work until `resolve`. Unlike `fromPromise`, nothing runs
+until the `ResultAsync` is resolved (e.g. by `combineTuple` / `combineTupleParallel`).
+
+```typescript
+static defer<T, E>(fn: () => Promise<Result<T, E>>): ResultAsync<T, E>
+```
+
+##### ResultAsync.ok
+
+```typescript
+static ok<T>(value: T): ResultAsync<T, never>
+static ok<T, E>(value: T): ResultAsync<T, E>
+```
+
+##### ResultAsync.err
+
+```typescript
+static err<T = never, E = unknown>(error: E): ResultAsync<T, E>
+```
+
+##### ResultAsync.fromResultPromise
+
+```typescript
+static fromResultPromise<T, E>(promise: Promise<Result<T, E>>, onDefect?: ((error: unknown) => E | UnexpectedError) | undefined): ResultAsync<T, E | UnexpectedError>
+```
+
+##### ResultAsync.combine
+
+```typescript
+static combine<T, E>(results: readonly ResultAsync<T, E>[]): ResultAsync<T[], E>
+```
+
+##### ResultAsync.combineTuple
+
+```typescript
+static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
+```
+
+##### ResultAsync.combineTupleParallel
+
+Like `combineTuple`, but starts every branch before awaiting (wall-clock
+parallel for independent IO). On failure, returns the first `Err` in input order.
+
+```typescript
+static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
+```
+
+#### Instance Methods
+
+##### ResultAsync.prototype.map
+
+```typescript
+map<U>(fn: (value: T) => U): ResultAsync<U, E>
+```
+
+##### ResultAsync.prototype.mapErr
+
+```typescript
+mapErr<F>(fn: (error: E) => F): ResultAsync<T, F>
+```
+
+##### ResultAsync.prototype.flatMap
+
+```typescript
+flatMap<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
+```
+
+##### ResultAsync.prototype.andThen
+
+```typescript
+andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
+```
+
+##### ResultAsync.prototype.chain
+
+Alias for `flatMap`.
+
+```typescript
+chain<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
+```
+
+##### ResultAsync.prototype.recover
+
+```typescript
+recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
+```
+
+##### ResultAsync.prototype.orElse
+
+```typescript
+orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
+```
+
+##### ResultAsync.prototype.tap
+
+```typescript
+tap(fn: (value: T) => void): ResultAsync<T, E>
+```
+
+##### ResultAsync.prototype.tapErr
+
+```typescript
+tapErr(fn: (error: E) => void): ResultAsync<T, E>
+```
+
+##### ResultAsync.prototype.unwrapOr
+
+```typescript
+unwrapOr<U>(defaultValue: U): Promise<T | U>
+```
+
+##### ResultAsync.prototype.isOk
+
+```typescript
+isOk(): Promise<boolean>
+```
+
+##### ResultAsync.prototype.isErr
+
+```typescript
+isErr(): Promise<boolean>
+```
+
+##### ResultAsync.prototype.match
+
+```typescript
+match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2>
+```
+
+##### ResultAsync.prototype.resolve
+
+```typescript
+resolve(): Promise<Result<T, E>>
+```
+
+##### ResultAsync.prototype.then
+
+Thenable shim — `await ra` resolves to a bare tagged-union `Result<T, E>`.
+Narrow with `isOk(r)` / `isErr(r)` to read `.value` / `.error`.
+
+```typescript
+then<R1 = Result<T, E>, R2 = never>(onfulfilled?: ((value: Result<T, E>) => R1 | PromiseLike<R1>) | null | undefined, onrejected?: ((reason: unknown) => R2 | PromiseLike<...>) | null | undefined): Promise<...>
+```
+
+### UnexpectedError
+
+Thrown defect mapped when `fromAsync ` has no `onDefect`
+
+#### Constructor
+
+```typescript
+constructor(message: string, cause?: unknown): UnexpectedError
+```
+
+#### Static Methods
+
+##### UnexpectedError.isError
+
+Indicates whether the argument provided is a built-in Error instance or not.
+
+```typescript
+static isError(error: unknown): error is Error
+```
+
+#### Instance Methods
+
+##### UnexpectedError.prototype.cause
+
+```typescript
+cause: unknown
+```
+
+##### UnexpectedError.prototype.name
+
+```typescript
+name: string
+```
+
+##### UnexpectedError.prototype.message
+
+```typescript
+message: string
+```
+
+##### UnexpectedError.prototype.stack
+
+```typescript
+stack: string | undefined
+```
+
+## Functions
+
+### errAsync
+
+Lifts a value into an `Err` async result.
+
+```typescript
+function errAsync<T = never, E = unknown>(error: E): ResultAsync<T, E>
+```
+
+#### Example
+
+```ts
+const r = errAsync({ kind: "not_found" as const });
+```
+
+### fromPromise
+
+Wraps a `PromiseLike<T>` into a `ResultAsync`. Reject reasons go
+through `onReject` to become typed `Err`s; success becomes `Ok<T>`.
+
+```typescript
+function fromPromise<T, E>(promise: PromiseLike<T>, onReject: (error: unknown) => E): ResultAsync<T, E>
+```
+
+#### Example
+
+```ts
+const body = fromPromise(
+  fetch(url).then((r) => r.text()),
+  (e): NetworkError => ({ kind: "network", cause: String(e) }),
+);
+```
+
+### fromSafePromise
+
+Wraps a `PromiseLike<T>` that **never rejects** into `ResultAsync`.
+Skips the `onReject` mapper. Use only when the promise is provably safe.
+
+```typescript
+function fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, E>
+```
+
+### okAsync
+
+Lifts a value into an `Ok` async result.
+
+```typescript
+function okAsync<T>(value: T): ResultAsync<T, never>
+function okAsync<T, E>(value: T): ResultAsync<T, E>
+```
+
+#### Example
+
+```ts
+const r = okAsync(42);                  // ResultAsync<number, never>
+```
+
+### parallelTupleAsync
+
+Heterogeneous async tuple combine — branches overlap in wall-clock time.
+Returns the first `Err` in **input** order (not completion order).
+
+```typescript
+function parallelTupleAsync<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
+```
+
+#### Example
+
+```ts
+const combined = parallelTupleAsync([
+  loadProfile(id),
+  loadMetrics(id),
+  loadFlags(id),
+] as const);
+// ResultAsync<readonly [Profile, Metrics, Flags], …>
+```
+
+### sequenceTupleAsync
+
+Heterogeneous async tuple combine — left-to-right, short-circuit on
+first `Err` in input order. Preserves tuple positions so destructuring
+stays type-safe.
+
+```typescript
+function sequenceTupleAsync<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
+```
+
+#### Example
+
+```ts
+const combined = sequenceTupleAsync([loadCfg(), loadCatalog()] as const);
+// ResultAsync<readonly [Cfg, Catalog], CfgError | CatalogError>
+```
+
+### tryAsync
+
+Convenience wrapper over `fromPromise` with default `Error`
+normalization. Call without `onReject` to get `ResultAsync<T, Error>`,
+or pass a custom mapper for a typed error.
+
+```typescript
+function tryAsync<T>(promise: PromiseLike<T>): ResultAsync<T, Error>
+function tryAsync<T, E>(promise: PromiseLike<T>, onReject: (error: unknown) => E): ResultAsync<T, E>
+```
+
+#### Example
+
+```ts
+// Default: rejection → Err(Error)
+const a = tryAsync(db.users.insert(row));
+
+// Custom: typed error
+const b = tryAsync(db.users.insert(row), (e): DbError => ({
+  kind: "db",
+  cause: e,
+}));
+```
+
+### asyncAfter
+
+Bind a sync `Result` into an async step without widening defects.
+Dual-form: data-first for one-shots, data-last (curried) for `pipe`/`flow`.
+
+```typescript
+function asyncAfter<T, U, E, F>(result: Result<T, E>, fn: (value: T) => ResultAsync<U, F>): ResultAsync<U, E | F>
+function asyncAfter<T, U, F>(fn: (value: T) => ResultAsync<U, F>): <E>(result: Result<T, E>) => ResultAsync<U, F | E>
+```
+
+#### Example
+
+```ts
+asyncAfter(result, (u) => tryAsync(db.insert(u), toErr)); // data-first
+asyncAfter((u) => tryAsync(db.insert(u), toErr));         // data-last
+```
+
+### fromAsync
+
+Lift `(...args) => Promise<Result<T, E>>` to `(...args) => ResultAsync<T, E>`.
+Catches unexpected promise rejections (defects) via `onDefect` or `UnexpectedError`.
+
+```typescript
+function fromAsync<A extends readonly unknown[], R extends AnyResult>(fn: (...args: A) => Promise<R>, onDefect?: ((error: unknown) => UnexpectedError | InferErr<R>) | undefined): (...args: A) => ResultAsync<...>
+```
+
+### fromResult
+
+Lift an already-known sync `Result` into `ResultAsync`.
+
+```typescript
+function fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E>
+```
+
+### flow
+
+Variadic point-free composition — left-to-right.
+
+```ts
+const parseUserName = flow(
+  (raw: string) => parseConfig(raw),
+  map((cfg) => cfg.user),
+  flatMap((u) => u.name ? ok(u.name) : err({ kind: "missing" })),
+);
+
+parseUserName(raw); // Result<string, ParseError | { kind: "missing" }>
+```
+
+Use `pipe ` from `@onrails/result` when you have a starting value;
+use `flow` when you want to define a reusable composed function.
+
+```typescript
+function flow<A extends readonly unknown[], B>(ab: (...a: A) => B): (...a: A) => B
+function flow<A extends readonly unknown[], B, C>(ab: (...a: A) => B, bc: (b: B) => C): (...a: A) => C
+function flow<A extends readonly unknown[], B, C, D>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D): (...a: A) => D
+function flow<A extends readonly unknown[], B, C, D, E>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E): (...a: A) => E
+function flow<A extends readonly unknown[], B, C, D, E, F>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F): (...a: A) => F
+function flow<A extends readonly unknown[], B, C, D, E, F, G>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G): (...a: A) => G
+function flow<A extends readonly unknown[], B, C, D, E, F, G, H>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H): (...a: A) => H
+function flow<A extends readonly unknown[], B, C, D, E, F, G, H, I>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I): (...a: A) => I
+```
+
+### bimap
+
+Transform both tracks at once — `Ok` via `onOk`, `Err` via `onErr`.
+Equivalent to `mapErr(onErr)(map(onOk)(result))` but in one pass.
+
+```typescript
+function bimap<T, U, E, F>(result: Result<T, E>, onOk: (value: T) => U, onErr: (error: E) => F): Result<U, F>
+function bimap<T, U, E, F>(onOk: (value: T) => U, onErr: (error: E) => F): (result: Result<T, E>) => Result<U, F>
+```
+
+#### Example
+
+```ts
+bimap(parsed, (cfg) => cfg.name, (e) => ({ kind: "input", cause: e }));
+```
+
+### combine
+
+First failure wins; otherwise collects values in order
+
+```typescript
+function combine<T, E>(results: readonly Result<T, E>[]): Result<T[], E>
+```
+
+### combineTuple
+
+Tuple-preserving combine (neverthrow-style)
+
+```typescript
+function combineTuple<const R extends readonly Result<unknown, unknown>[]>(results: R): CombineTuple<R>
+```
+
+### err
+
+Lifts a value into the error track.
+
+```typescript
+function err<T = never, E = unknown>(error: E): Result<T, E>
+```
+
+#### Example
+
+```ts
+const r = err({ kind: "parse", message: "bad json" });
+// Result<never, { kind: "parse"; message: string }>
+```
+
+### flatMap
+
+Canonical bind (Fantasy Land `chain`). Chains a Result-returning step,
+widening the error union to `E | F`. Short-circuits on `Err`.
+
+```typescript
+function flatMap<T, U, E, F>(result: Result<T, E>, fn: (value: T) => Result<U, F>): Result<U, E | F>
+function flatMap<T, U, F>(fn: (value: T) => Result<U, F>): <E>(result: Result<T, E>) => Result<U, F | E>
+```
+
+#### Example
+
+```ts
+flatMap(parseInput(raw), (data) =>
+  data.id != null ? ok(data) : err({ kind: "missing_id" as const }),
+);
+// Result<Data, ParseError | { kind: "missing_id" }>
+```
+
+### fold
+
+Curried collapse with named slots — escape valve when positional `match`
+order is unclear at the call site (e.g. when both handlers return the same
+type and a transposed `match(r, onErr, onOk)` would silently compile).
+
+```typescript
+function fold<T, E, U>(handlers: { readonly ok: (value: T) => U; readonly err: (error: E) => U; }): (result: Result<T, E>) => U
+```
+
+### isErr
+
+Type-narrowing predicate: returns `true` when the result is `Err`.
+
+```typescript
+function isErr<T, E>(result: Result<T, E>): result is Err<T, E>
+```
+
+#### Example
+
+```ts
+if (isErr(r)) {
+  metrics.inc("error", { kind: r.error.kind });
+}
+```
+
+### isOk
+
+Type-narrowing predicate: returns `true` when the result is `Ok`.
+
+```typescript
+function isOk<T, E>(result: Result<T, E>): result is Ok<T, E>
+```
+
+#### Example
+
+```ts
+if (isOk(r)) {
+  console.log(r.value);    // narrowed to Ok branch
+}
+```
+
+### map
+
+Transform the `Ok` value, passing `Err` through unchanged. Dual-form:
+call data-first or curried (for use with `pipe`).
+
+```typescript
+function map<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E>
+function map<T, U>(fn: (value: T) => U): <E>(result: Result<T, E>) => Result<U, E>
+```
+
+#### Example
+
+```ts
+map(ok(2), (n) => n * 3);          // Ok 6 — data-first
+pipe(ok("x"), map((s) => s.length));// Ok 1 — curried
+```
+
+### mapErr
+
+Transform the `Err` value, passing `Ok` through unchanged. Useful for
+unifying heterogeneous failure types into one app-level union.
+
+```typescript
+function mapErr<T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F>
+function mapErr<E, F>(fn: (error: E) => F): <T>(result: Result<T, E>) => Result<T, F>
+```
+
+#### Example
+
+```ts
+type AppError = { kind: "http"; status: number } | { kind: "parse" };
+pipe(
+  fetchSync(url),                                     // Result<Body, { status: number }>
+  mapErr((e): AppError => ({ kind: "http", status: e.status })),
+);
+```
+
+### match
+
+Terminal collapse — fold both tracks into a single value. Dual-form:
+3-args data-first, 2-args curried for `pipe`. Returns whatever
+the handlers return.
+
+For files that also import `match` from `ts-pattern`, the
+collision-free alias `matchResult` is identical.
+
+```typescript
+function match<T, E, U>(result: Result<T, E>, onOk: (value: T) => U, onErr: (error: E) => U): U
+function match<T, E, U>(onOk: (value: T) => U, onErr: (error: E) => U): (result: Result<T, E>) => U
+```
+
+#### Example
+
+```ts
+const html = match(parsed, (cfg) => render(cfg), (e) => renderError(e));
+```
+
+### matchResult
+
+Collision-free alias for files that also import `match` from ts-pattern.
+
+```typescript
+function matchResult<T, E, U>(result: Result<T, E>, onOk: (value: T) => U, onErr: (error: E) => U): U
+function matchResult<T, E, U>(onOk: (value: T) => U, onErr: (error: E) => U): (result: Result<T, E>) => U
+```
+
+### of
+
+Fantasy Land `of` — alias of `ok`.
+
+```typescript
+function of<T, E = never>(value: T): Result<T, E>
+```
+
+### ok
+
+Lifts a value into the success track.
+
+```typescript
+function ok<T, E = never>(value: T): Result<T, E>
+```
+
+#### Example
+
+```ts
+const r = ok(42);                          // Result<number, never>
+const typed: Result<number, "parse"> = ok(1);
+```
+
+### pipe
+
+Variadic value-first pipe — threads `value` through up to nine unary fns.
+
+```ts
+pipe(
+  parseConfig(raw),
+  map((cfg) => cfg.name),
+  flatMap((name) => name ? ok(name) : err({ kind: "empty" })),
+  tap(log),
+);
+```
+
+```typescript
+function pipe<A>(value: A): A
+function pipe<A, B>(value: A, ab: (a: A) => B): B
+function pipe<A, B, C>(value: A, ab: (a: A) => B, bc: (b: B) => C): C
+function pipe<A, B, C, D>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D): D
+function pipe<A, B, C, D, E>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E): E
+function pipe<A, B, C, D, E, F>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F): F
+function pipe<A, B, C, D, E, F, G>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G): G
+function pipe<A, B, C, D, E, F, G, H>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H): H
+function pipe<A, B, C, D, E, F, G, H, I>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I): I
+```
+
+### recover
+
+Error-track bind — runs `fn` only when the result is `Err`, allowing
+a failed workflow to recover to `Ok` or remap the failure. Mirror of
+`flatMap` on the error channel.
+
+```typescript
+function recover<T, E, F>(result: Result<T, E>, fn: (error: E) => Result<T, F>): Result<T, F>
+function recover<T, E, F>(fn: (error: E) => Result<T, F>): (result: Result<T, E>) => Result<T, F>
+```
+
+#### Example
+
+```ts
+recover(networkResult, (e) =>
+  e.kind === "rate_limit" ? ok(cachedBody) : err(e),
+);
+```
+
+### tap
+
+Observe the `Ok` value for side effects (logging, metrics) without
+changing the carried value. Passes `Err` through untouched.
+
+```typescript
+function tap<T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E>
+function tap<T>(fn: (value: T) => void): <E>(result: Result<T, E>) => Result<T, E>
+```
+
+#### Example
+
+```ts
+pipe(
+  parseConfig(raw),
+  tap((cfg) => log.info({ msg: "parsed", name: cfg.name })),
+  flatMap(validate),
+);
+```
+
+### tapErr
+
+Observe the `Err` value for side effects (logging, metrics) without
+changing the carried error. Passes `Ok` through untouched.
+
+```typescript
+function tapErr<T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E>
+function tapErr<E>(fn: (error: E) => void): <T>(result: Result<T, E>) => Result<T, E>
+```
+
+#### Example
+
+```ts
+pipe(
+  loadUser(id),
+  tapErr((e) => metrics.inc("user.load.fail", { kind: e.kind })),
+);
+```
+
+### trySync
+
+Wrap a throwing sync function — neverthrow `Result.fromThrowable`
+
+```typescript
+function trySync<A extends readonly unknown[], T, E>(fn: (...args: A) => T, onThrow: (error: unknown) => E): (...args: A) => Result<T, E>
+function trySync<F extends (...args: never) => unknown, E>(fn: F, onThrow: (error: unknown) => E): (...args: Parameters<F>) => Result<ReturnType<F>, E>
+```
+
+### unwrapErr
+
+Test/assert helper — throws TypeError when called on Ok.
+
+```typescript
+function unwrapErr<T, E>(result: Result<T, E>): E
+```
+
+### unwrapOk
+
+Test/assert helper — throws the original Err value when called on Err.
+
+```typescript
+function unwrapOk<T, E>(result: Result<T, E>): T
+```
+
+### unwrapOr
+
+Returns the `Ok` value, or `defaultValue` when the result is `Err`.
+
+```typescript
+function unwrapOr<T, E>(result: Result<T, E>, defaultValue: T): T
+```
+
+#### Example
+
+```ts
+unwrapOr(parsedSetting, "default-value");
+```
+
+### $
+
+```typescript
+function $<T, E>(result: Result<T, E>): T
+```
+
+### tryGen
+
+Run a block that uses `yieldResult`; returns the final `Result` or the first Err.
+
+```typescript
+function tryGen<T, E>(fn: () => Result<T, E>): Result<T, E>
+```
+
+#### Example
+
+```ts
+const out = tryGen(() => {
+  const a = $(parseA());
+  const b = $(parseB());
+  return ok(a + b);
+});
+```
+
+### yieldResult
+
+Unwrap a `Result` inside `tryGen` (Rust `?` for sync code).
+Prefer `flatMap ` / `fluent ` for long pipelines.
+
+```typescript
+function yieldResult<T, E>(result: Result<T, E>): T
+```
+
+## Types
+
+### InferErr
+
+Error type of a `Result` or `ResultAsync`
+
+```typescript
+export type InferErr<R> = R extends { _tag: "Err"; readonly error: infer E }
+  ? E
+  : R extends ResultAsync<unknown, infer E>
+    ? E
+    : never;
+```
+
+### InferOk
+
+Success type of a `Result` or `ResultAsync`
+
+```typescript
+export type InferOk<R> = R extends { _tag: "Ok"; readonly value: infer T }
+  ? T
+  : R extends ResultAsync<infer T, unknown>
+    ? T
+    : never;
+```
+
+### Err
+
+```typescript
+export type Err<T, E> = Extract<Result<T, E>, { _tag: "Err" }>;
+```
+
+### Ok
+
+```typescript
+export type Ok<T, E = never> = Extract<Result<T, E>, { _tag: "Ok" }>;
+```
+
+### Result
+
+Tagged success/failure — no classes, tree-shake friendly.
+
+```typescript
+export type Result<T, E> =
+  | { readonly _tag: "Ok"; readonly value: T }
+  | { readonly _tag: "Err"; readonly error: E };
+```
+

@@ -1,0 +1,36 @@
+---
+title: Getting Started
+description: How to install and start using onrails in your project.
+---
+
+## Installation
+
+Install `@onrails/result`, `@onrails/maybe`, and `@onrails/pattern` via Bun:
+
+```bash
+bun add @onrails/result @onrails/maybe @onrails/pattern
+```
+
+## Basic Example
+
+Here is a quick overview of combining a monadic flow with pattern matching:
+
+```typescript
+import { Result } from "@onrails/result";
+import { match } from "@onrails/pattern";
+
+// Fallible calculation
+function parseId(input: string): Result<number, string> {
+  const parsed = parseInt(input, 10);
+  return isNaN(parsed) ? Result.err("Not a number") : Result.ok(parsed);
+}
+
+const outcome = parseId("42")
+  .map(num => num * 2)
+  .match(
+    (val) => `Success: ${val}`,
+    (err) => `Error: ${err}`
+  );
+
+console.log(outcome); // "Success: 84"
+```
