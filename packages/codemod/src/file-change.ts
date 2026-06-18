@@ -4,6 +4,7 @@ import { concatCollectors, countOccurrences } from "./ast.js";
 import { rewriteCompatMethodChainsToNative } from "./chains.js";
 import { COMPAT_SPEC, IMPORT_RE, NATIVE_SPEC } from "./constants.js";
 import { rewriteCompatImportsToNative } from "./imports.js";
+import { tersify } from "./tersify.js";
 import type { ComputedChange, FileChange, Mode, ModeStrategy } from "./types.js";
 import {
   collectNativeMigrationWarnings,
@@ -34,6 +35,13 @@ const MODES: Record<Mode, ModeStrategy> = {
     transform: rewriteCompatToNative,
     warnings: collectAllNativeWarnings,
     countAfter: (next) => countOccurrences(next, NATIVE_SPEC),
+  },
+  tersify: {
+    countBefore: () => 0,
+    earlyExit: () => false,
+    transform: tersify,
+    warnings: () => [],
+    countAfter: () => 0,
   },
 };
 
