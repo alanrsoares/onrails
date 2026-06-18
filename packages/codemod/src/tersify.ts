@@ -94,12 +94,35 @@ function getTypeParametersText(
   return "";
 }
 
+function isSimpleExpression(expr: ts.Expression): boolean {
+  return (
+    ts.isIdentifier(expr) ||
+    ts.isPropertyAccessExpression(expr) ||
+    ts.isElementAccessExpression(expr) ||
+    ts.isCallExpression(expr)
+  );
+}
+
 function tryTersifyIfElse(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
   if (ts.isIfStatement(node) && node.elseStatement) {
     const x = getSingleReturnExpression(node.thenStatement);
     const y = getSingleReturnExpression(node.elseStatement);
     if (x && y) {
       const condText = node.expression.getText(sf);
+      const xIsTrue = x.kind === ts.SyntaxKind.TrueKeyword;
+      const xIsFalse = x.kind === ts.SyntaxKind.FalseKeyword;
+      const yIsTrue = y.kind === ts.SyntaxKind.TrueKeyword;
+      const yIsFalse = y.kind === ts.SyntaxKind.FalseKeyword;
+
+      if (xIsTrue && yIsFalse) {
+        return some(spanEdit(node, sf, edit(`return ${condText};`)));
+      }
+      if (xIsFalse && yIsTrue) {
+        const needsParens = !isSimpleExpression(node.expression);
+        const text = needsParens ? `return !(${condText});` : `return !${condText};`;
+        return some(spanEdit(node, sf, edit(text)));
+      }
+
       const xText = x.getText(sf);
       const yText = y.getText(sf);
       return some(spanEdit(node, sf, edit(`return ${condText} ? ${xText} : ${yText};`)));
@@ -166,6 +189,154 @@ function tryTersifyFunctionDeclaration(node: ts.Node, sf: ts.SourceFile): Maybe<
   return none();
 }
 
+function tryTersifyPropertyAssignment(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
+  if (ts.isPropertyAssignment(node)) {
+    if (
+      ts.isIdentifier(node.name) &&
+      ts.isIdentifier(node.initializer) &&
+      node.name.text === node.initializer.text
+    ) {
+      return some(spanEdit(node, sf, edit(node.name.text)));
+    }
+  }
+  return none();
+}
+
+function tryTersifyNoSubstitutionTemplateLiteral(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
+  if (ts.isNoSubstitutionTemplateLiteral(node)) {
+    const rawText = node.getText(sf);
+    const content = rawText.slice(1, -1);
+    if (!content.includes("\n") && !content.includes("\r") && !content.includes('"')) {
+      return some(spanEdit(node, sf, edit(`"${content}"`)));
+    }
+  }
+  return none();
+}
+
+function tryTersifyIdentityFilter(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
+  if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
+    if (node.parameters.length === 1) {
+      const param = node.parameters[0];
+      if (param && ts.isIdentifier(param.name)) {
+        const paramName = param.name.text;
+        const body = node.body;
+        const expr = ts.isBlock(body) ? getSingleReturnExpression(body) : body;
+
+        if (expr) {
+          const isDirectIdentity = ts.isIdentifier(expr) && expr.text === paramName;
+          let isDoubleNegatedIdentity = false;
+          if (
+            ts.isPrefixUnaryExpression(expr) &&
+            expr.operator === ts.SyntaxKind.ExclamationToken &&
+            ts.isPrefixUnaryExpression(expr.operand) &&
+            expr.operand.operator === ts.SyntaxKind.ExclamationToken &&
+            ts.isIdentifier(expr.operand.operand) &&
+            expr.operand.operand.text === paramName
+          ) {
+            isDoubleNegatedIdentity = true;
+          }
+
+          if (isDirectIdentity || isDoubleNegatedIdentity) {
+            const parent = node.parent;
+            if (
+              parent &&
+              ts.isCallExpression(parent) &&
+              parent.arguments.includes(node as ts.Expression)
+            ) {
+              if (ts.isPropertyAccessExpression(parent.expression)) {
+                const method = parent.expression.name.text;
+                if (
+                  method === "filter" ||
+                  method === "some" ||
+                  method === "every" ||
+                  method === "find"
+                ) {
+                  return some(spanEdit(node, sf, edit("Boolean")));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return none();
+}
+
+function tryTersifyOptionalChainGuard(
+  stmt: ts.IfStatement,
+  nextStmt: ts.ReturnStatement,
+  sf: ts.SourceFile,
+): Maybe<Edit> {
+  const firstStmt = ts.isBlock(stmt.thenStatement) ? stmt.thenStatement.statements[0] : undefined;
+  const isThenEmptyReturn =
+    (ts.isReturnStatement(stmt.thenStatement) && !stmt.thenStatement.expression) ||
+    (ts.isBlock(stmt.thenStatement) &&
+      stmt.thenStatement.statements.length === 1 &&
+      firstStmt &&
+      ts.isReturnStatement(firstStmt) &&
+      !firstStmt.expression);
+
+  if (
+    isThenEmptyReturn &&
+    ts.isPrefixUnaryExpression(stmt.expression) &&
+    stmt.expression.operator === ts.SyntaxKind.ExclamationToken &&
+    nextStmt.expression &&
+    ts.isPropertyAccessExpression(nextStmt.expression)
+  ) {
+    const target = stmt.expression.operand;
+    const accessExpr = nextStmt.expression;
+    if (accessExpr.expression.getText(sf) === target.getText(sf)) {
+      const targetText = target.getText(sf);
+      const propName = accessExpr.name.getText(sf);
+      const text = `return ${targetText}?.${propName};`;
+      return some({
+        start: stmt.getStart(sf),
+        end: nextStmt.getEnd(),
+        text,
+        imports: [],
+      });
+    }
+  }
+  return none();
+}
+
+function tryTersifyTernaryOrBooleanSequence(
+  stmt: ts.IfStatement,
+  nextStmt: ts.ReturnStatement,
+  sf: ts.SourceFile,
+): Maybe<Edit> {
+  const x = getSingleReturnExpression(stmt.thenStatement);
+  const y = nextStmt.expression;
+  if (x && y) {
+    const condText = stmt.expression.getText(sf);
+    const xIsTrue = x.kind === ts.SyntaxKind.TrueKeyword;
+    const xIsFalse = x.kind === ts.SyntaxKind.FalseKeyword;
+    const yIsTrue = y.kind === ts.SyntaxKind.TrueKeyword;
+    const yIsFalse = y.kind === ts.SyntaxKind.FalseKeyword;
+
+    let text = "";
+    if (xIsTrue && yIsFalse) {
+      text = `return ${condText};`;
+    } else if (xIsFalse && yIsTrue) {
+      const needsParens = !isSimpleExpression(stmt.expression);
+      text = needsParens ? `return !(${condText});` : `return !${condText};`;
+    } else {
+      const xText = x.getText(sf);
+      const yText = y.getText(sf);
+      text = `return ${condText} ? ${xText} : ${yText};`;
+    }
+
+    return some({
+      start: stmt.getStart(sf),
+      end: nextStmt.getEnd(),
+      text,
+      imports: [],
+    });
+  }
+  return none();
+}
+
 function scanIfReturnSequences(
   node: ts.Node,
   sf: ts.SourceFile,
@@ -184,26 +355,34 @@ function scanIfReturnSequences(
         !stmt.elseStatement &&
         ts.isReturnStatement(nextStmt)
       ) {
-        const x = getSingleReturnExpression(stmt.thenStatement);
-        const y = nextStmt.expression;
-        if (x && y) {
-          const condText = stmt.expression.getText(sf);
-          const xText = x.getText(sf);
-          const yText = y.getText(sf);
-          const text = `return ${condText} ? ${xText} : ${yText};`;
+        const optChainEdit = tryTersifyOptionalChainGuard(stmt, nextStmt, sf);
+        if (optChainEdit._tag === "Some") {
           skippedNodes.add(stmt);
           skippedNodes.add(nextStmt);
-          edits.push({
-            start: stmt.getStart(sf),
-            end: nextStmt.getEnd(),
-            text,
-            imports: [],
-          });
+          edits.push(optChainEdit.value);
+          continue;
+        }
+
+        const seqEdit = tryTersifyTernaryOrBooleanSequence(stmt, nextStmt, sf);
+        if (seqEdit._tag === "Some") {
+          skippedNodes.add(stmt);
+          skippedNodes.add(nextStmt);
+          edits.push(seqEdit.value);
         }
       }
     }
   }
 }
+
+const TRANSFORMS: ReadonlyArray<(node: ts.Node, sf: ts.SourceFile) => Maybe<Edit>> = [
+  tryTersifyIfElse,
+  tryTersifyArrowBlock,
+  tryTersifyFunctionExpression,
+  tryTersifyFunctionDeclaration,
+  tryTersifyPropertyAssignment,
+  tryTersifyNoSubstitutionTemplateLiteral,
+  tryTersifyIdentityFilter,
+];
 
 function tersifyOnce(src: string): string {
   const edits: Edit[] = [];
@@ -216,32 +395,13 @@ function tersifyOnce(src: string): string {
 
     scanIfReturnSequences(node, sf, skippedNodes, edits);
 
-    const ifElseEdit = tryTersifyIfElse(node, sf);
-    if (ifElseEdit._tag === "Some") {
-      edits.push(ifElseEdit.value);
-      skippedNodes.add(node);
-      return true;
-    }
-
-    const arrowBlockEdit = tryTersifyArrowBlock(node, sf);
-    if (arrowBlockEdit._tag === "Some") {
-      edits.push(arrowBlockEdit.value);
-      skippedNodes.add(node);
-      return true;
-    }
-
-    const funcExprEdit = tryTersifyFunctionExpression(node, sf);
-    if (funcExprEdit._tag === "Some") {
-      edits.push(funcExprEdit.value);
-      skippedNodes.add(node);
-      return true;
-    }
-
-    const funcDeclEdit = tryTersifyFunctionDeclaration(node, sf);
-    if (funcDeclEdit._tag === "Some") {
-      edits.push(funcDeclEdit.value);
-      skippedNodes.add(node);
-      return true;
+    for (const transform of TRANSFORMS) {
+      const editResult = transform(node, sf);
+      if (editResult._tag === "Some") {
+        edits.push(editResult.value);
+        skippedNodes.add(node);
+        return true;
+      }
     }
 
     return false;
@@ -259,7 +419,6 @@ function tersifyOnce(src: string): string {
 export function tersify(src: string): string {
   let current = src;
   let iterations = 0;
-  // Limit to prevent possible infinite loops on malformed AST trees
   while (iterations < 10) {
     const next = tersifyOnce(current);
     if (next === current) {
