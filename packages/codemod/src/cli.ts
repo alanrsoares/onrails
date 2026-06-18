@@ -16,6 +16,7 @@ const applyArg = (s: ArgState, a: string): ArgState =>
     .returnType<ArgState>()
     .withEither("--dry", "-n", () => ({ ...s, dry: true }))
     .with("--to-native", () => ({ ...s, mode: "native" }))
+    .with("--tersify", () => ({ ...s, mode: "tersify" }))
     .with(
       (x) => x.startsWith(ONRAILS_FLAG),
       (x) => ({ ...s, onrails: resolve(x.slice(ONRAILS_FLAG.length)) }),
@@ -27,7 +28,7 @@ const applyArg = (s: ArgState, a: string): ArgState =>
     .otherwise(() => s);
 
 const USAGE =
-  "usage: onrails-codemod-neverthrow <target-dir> [--dry] [--to-native] [--onrails=<abs-path>]";
+  "usage: onrails-codemod-neverthrow <target-dir> [--dry] [--to-native] [--tersify] [--onrails=<abs-path>]";
 
 export function parseArgs(argv: string[]): Result<Args, string> {
   const initial: ArgState = {
