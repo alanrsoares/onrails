@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "getting-started",
+    "recipes",
     "---api---",
     "api/result",
     "api/maybe",

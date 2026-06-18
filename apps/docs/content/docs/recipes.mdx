@@ -1,0 +1,184 @@
+---
+title: Recipes
+description: Composition patterns — point-free pipelines, generator do-notation, the Railway builder, and reusable step factories.
+---
+
+onrails gives you several ways to compose fallible steps. Reach for the simplest
+one that fits; escalate only when the shape demands it.
+
+| Tier | Use case | Pattern |
+| --- | --- | --- |
+| **1** | 1–2 steps, linear | direct data-first calls |
+| **2** | 3+ steps, linear | `pipe` / `flow` (point-free) |
+| **3** | branchy, a value reused across steps | `tryGen` generator |
+| **4** | 4+ named steps, mixed sync/async IO | `Railway` / `railway()` builder |
+
+## Point-free composition (`pipe` / `flow`)
+
+For linear pipelines, use the curried (data-last) form of each transform. Import
+the package as a namespace so the names never collide with `match` from
+`ts-pattern` or your own helpers.
+
+```ts
+import * as R from "@onrails/result";
+
+// pipe — thread a starting value through the steps
+const name = R.pipe(
+  parseConfig(raw), // Result<Config, ParseError>
+  R.map((cfg) => cfg.name),
+  R.flatMap((n) => (n ? R.ok(n) : R.err({ kind: "empty" as const }))),
+);
+
+// flow — define a reusable point-free function (no value yet)
+const parseName = R.flow(
+  parseConfig,
+  R.map((cfg) => cfg.name),
+  R.flatMap((n) => (n ? R.ok(n) : R.err({ kind: "empty" as const }))),
+);
+
+parseName(raw); // Result<string, ParseError | { kind: "empty" }>
+```
+
+`pipe` takes the value first; `flow` is the same composition with the value
+deferred — ideal for building a parser factory once and reusing it.
+
+## Generator do-notation (`tryGen` / `$`)
+
+When later steps depend on earlier values (and you'd otherwise nest `flatMap`s),
+`tryGen` reads like straight-line code. `$` unwraps an `Ok` or short-circuits the
+whole block with its `Err` — onrails' answer to Rust's `?`.
+
+```ts
+import { $, err, ok, tryGen } from "@onrails/result";
+
+const checkout = tryGen(() => {
+  const cart = $(loadCart(userId)); // Cart, or short-circuit with CartError
+  const user = $(loadUser(userId)); // User, or short-circuit with UserError
+  if (!user.active) return err({ kind: "inactive" as const });
+  return ok({ items: cart.items.length, owner: user.name });
+});
+// Result<{ items: number; owner: string }, CartError | UserError | { kind: "inactive" }>
+```
+
+The error union is inferred from every `$` site and every `err(...)` return — add
+a step that can fail and the type widens automatically.
+
+## The Railway builder
+
+For named, multi-step workflows that mix sync and async IO, `Railway` threads a
+growing context object through each step. Errors accumulate into one union; each
+step sees the keys added before it.
+
+```ts
+import { Railway } from "@onrails/result/railway";
+
+const summary = Railway.fromSync("id", () => IdSchema.parse(raw), toError)
+  .fromPromise("row", ({ id }) => db.profiles.find(id), toError)
+  .require("profile", "row", ({ id }) => ({ kind: "not_found" as const, id }))
+  .derive("greeting", ({ profile }) => `Hi ${profile.name}`)
+  .select(({ greeting }) => greeting);
+// ResultAsync<string, ParseError | DbError | { kind: "not_found"; id: string }>
+```
+
+- `fromSync` / `fromPromise` add a step (mapping a throw/rejection via the error fn).
+- `require` turns a nullable context value into a non-null one or a typed failure.
+- `derive` adds a pure value computed from the context.
+- `select` collapses the final context into your result.
+
+## Reusable steps (`railway(...)`)
+
+The same workflow as a flat list of step factories — handy when you want to name,
+extract, and reuse individual steps across workflows.
+
+```ts
+import {
+  deriveNamed,
+  fromPromiseNamed,
+  parseWith,
+  railway,
+  requireNamed,
+  select,
+} from "@onrails/result/railway";
+
+const summary = railway(
+  rawId,
+  parseWith(IdSchema, toError).as("id"),
+  fromPromiseNamed("row", ({ id }) => db.profiles.find(id), toError),
+  requireNamed("profile", "row", ({ id }) => ({ kind: "not_found" as const, id })),
+  deriveNamed("greeting", ({ profile }) => `Hi ${profile.name}`),
+  select(({ greeting }) => greeting),
+);
+```
+
+Both builders produce the same `ResultAsync` and the same inferred error union —
+pick the fluent `Railway` for a single workflow, or the `railway()` step list when
+the steps are worth naming and sharing.
+
+> `@onrails/result/fluent` (`fluent(r)` / `fluentAsync(ra)`) is app-edge sugar for
+> dot-chaining — keep it out of library and service internals.
+
+## Putting it together
+
+A realistic checkout: a `Railway` that parses input, pulls a **`Maybe` value**
+across the boundary with `toResult`, runs async IO, and accumulates a single
+**tagged-error union** — then `@onrails/pattern` matches every variant
+exhaustively into an HTTP response.
+
+```ts
+import { err, ok } from "@onrails/result";
+import { Railway } from "@onrails/result/railway";
+import { fromNullable } from "@onrails/maybe";
+import { toResult } from "@onrails/maybe/interop";
+import { match } from "@onrails/pattern";
+
+type CheckoutError =
+  | { kind: "parse"; issue: string }
+  | { kind: "no_cart"; userId: string }
+  | { kind: "empty_cart" }
+  | { kind: "out_of_stock"; sku: string }
+  | { kind: "payment"; code: string };
+
+const checkout = (raw: string) =>
+  Railway.fromSync(
+    "userId",
+    () => UserIdSchema.parse(raw),
+    (e): CheckoutError => ({ kind: "parse", issue: String(e) }),
+  )
+    // a Maybe crosses into the railway as a tagged failure
+    .fromResult("cart", ({ userId }) =>
+      toResult(fromNullable(carts.get(userId)), (): CheckoutError => ({ kind: "no_cart", userId })),
+    )
+    .fromResult("filled", ({ cart }) =>
+      cart.items.length > 0 ? ok(cart) : err<Cart, CheckoutError>({ kind: "empty_cart" }),
+    )
+    .fromPromise(
+      "reservation",
+      ({ filled }) => reserveStock(filled),
+      (e): CheckoutError => ({ kind: "out_of_stock", sku: String(e) }),
+    )
+    .fromPromise(
+      "receipt",
+      ({ filled }) => charge(filled.total),
+      (e): CheckoutError => ({ kind: "payment", code: String(e) }),
+    )
+    .select(({ receipt }) => ({ orderId: receipt.id }));
+// ResultAsync<{ orderId: string }, CheckoutError>
+
+// Exhaustively match the tagged-error union — add a variant and this won't compile.
+const respond = async (raw: string) =>
+  match(await checkout(raw))
+    .with({ _tag: "Ok" }, (r) => ({ status: 200, body: r.value }))
+    .with({ _tag: "Err" }, (r) =>
+      match(r.error)
+        .with({ kind: "parse" }, (e) => ({ status: 400, body: e.issue }))
+        .with({ kind: "no_cart" }, () => ({ status: 404, body: "No cart" }))
+        .with({ kind: "empty_cart" }, () => ({ status: 422, body: "Cart is empty" }))
+        .with({ kind: "out_of_stock" }, (e) => ({ status: 409, body: e.sku }))
+        .with({ kind: "payment" }, (e) => ({ status: 402, body: e.code }))
+        .exhaustive(),
+    )
+    .exhaustive();
+```
+
+One workflow, three packages: `Railway` sequences the steps, `Maybe` models the
+missing cart, and `@onrails/pattern` guarantees every failure is handled.
