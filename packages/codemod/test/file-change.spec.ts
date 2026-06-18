@@ -30,7 +30,7 @@ describe("computeFileChange — compat mode", () => {
 
 describe("computeFileChange — native mode", () => {
   it("returns none for a file with nothing to migrate and no warnings", () => {
-    expect(computeFileChange(`const x = 1;\n`, "native")).toEqual(none());
+    expect(computeFileChange("const x = 1;\n", "native")).toEqual(none());
   });
 
   it("rewrites compat imports to the native spec", () => {
@@ -42,7 +42,7 @@ describe("computeFileChange — native mode", () => {
   });
 
   it("surfaces warnings even when no rewrite applies", () => {
-    const m = computeFileChange(`const v = result.value;\n`, "native");
+    const m = computeFileChange("const v = result.value;\n", "native");
     expect(m._tag).toBe("Some");
     if (m._tag !== "Some") return;
     expect(m.value.changed).toBe(false);

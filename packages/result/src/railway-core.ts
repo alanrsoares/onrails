@@ -157,13 +157,12 @@ export class Railway<C extends object, E, M extends RailwayMode> {
         return new Railway({ mode: "sync", result: err(current.error) });
       }
       const next = fn(current.value);
-      if (isErr(next)) {
-        return new Railway({ mode: "sync", result: err(next.error) });
-      }
-      return new Railway({
-        mode: "sync",
-        result: ok(addField(current.value, key, next.value)),
-      });
+      return isErr(next)
+        ? new Railway({ mode: "sync", result: err(next.error) })
+        : new Railway({
+            mode: "sync",
+            result: ok(addField(current.value, key, next.value)),
+          });
     }
 
     return new Railway({

@@ -85,7 +85,7 @@ describe("addNativeValueImports", () => {
   });
 
   it("returns the source unchanged for an empty import list", () => {
-    const src = `const x = 1;\n`;
+    const src = "const x = 1;\n";
     expect(addNativeValueImports(src, [])).toBe(src);
   });
 });

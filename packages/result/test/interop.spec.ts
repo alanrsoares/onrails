@@ -5,14 +5,13 @@ import type { Result } from "../src/types.js";
 
 describe("fromAsync", () => {
   const returnsPromisedResult = async (s: string) => {
-    if (s.length === 0) {
-      return ok("ok" as const);
-    }
-    if (s.length === 1) {
-      return err(1 as const);
-    }
-    if (s.length === 2) {
-      return ok(2 as const);
+    switch (s.length) {
+      case 0:
+        return ok("ok" as const);
+      case 1:
+        return err(1 as const);
+      case 2:
+        return ok(2 as const);
     }
     return err("err" as const);
   };

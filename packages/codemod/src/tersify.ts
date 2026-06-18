@@ -2,6 +2,7 @@ import { type Maybe, none, some } from "@onrails/maybe";
 import ts from "typescript";
 import { edit, spanEdit, walkSource } from "./ast.js";
 import { applyEditStep, byStartDesc } from "./chains.js";
+import { scanIfToSwitchSequences } from "./switch.js";
 import type { Edit } from "./types.js";
 
 // Helper to check for single statement return
@@ -94,13 +95,24 @@ function getTypeParametersText(
   return "";
 }
 
-function isSimpleExpression(expr: ts.Expression): boolean {
-  return (
-    ts.isIdentifier(expr) ||
-    ts.isPropertyAccessExpression(expr) ||
-    ts.isElementAccessExpression(expr) ||
-    ts.isCallExpression(expr)
-  );
+const isSimpleExpression = (expr: ts.Expression): boolean =>
+  ts.isIdentifier(expr) ||
+  ts.isPropertyAccessExpression(expr) ||
+  ts.isElementAccessExpression(expr) ||
+  ts.isCallExpression(expr);
+
+function containsConditional(node: ts.Node): boolean {
+  if (ts.isConditionalExpression(node)) {
+    return true;
+  }
+  let found = false;
+  ts.forEachChild(node, (child) => {
+    if (found) return;
+    if (containsConditional(child)) {
+      found = true;
+    }
+  });
+  return found;
 }
 
 function tryTersifyIfElse(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
@@ -108,6 +120,9 @@ function tryTersifyIfElse(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
     const x = getSingleReturnExpression(node.thenStatement);
     const y = getSingleReturnExpression(node.elseStatement);
     if (x && y) {
+      if (containsConditional(x) || containsConditional(y)) {
+        return none();
+      }
       const condText = node.expression.getText(sf);
       const xIsTrue = x.kind === ts.SyntaxKind.TrueKeyword;
       const xIsFalse = x.kind === ts.SyntaxKind.FalseKeyword;
@@ -204,6 +219,9 @@ function tryTersifyPropertyAssignment(node: ts.Node, sf: ts.SourceFile): Maybe<E
 
 function tryTersifyNoSubstitutionTemplateLiteral(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
   if (ts.isNoSubstitutionTemplateLiteral(node)) {
+    if (node.parent && ts.isTaggedTemplateExpression(node.parent)) {
+      return none();
+    }
     const rawText = node.getText(sf);
     const content = rawText.slice(1, -1);
     if (!content.includes("\n") && !content.includes("\r") && !content.includes('"')) {
@@ -309,6 +327,9 @@ function tryTersifyTernaryOrBooleanSequence(
   const x = getSingleReturnExpression(stmt.thenStatement);
   const y = nextStmt.expression;
   if (x && y) {
+    if (containsConditional(x) || containsConditional(y)) {
+      return none();
+    }
     const condText = stmt.expression.getText(sf);
     const xIsTrue = x.kind === ts.SyntaxKind.TrueKeyword;
     const xIsFalse = x.kind === ts.SyntaxKind.FalseKeyword;
@@ -355,6 +376,13 @@ function scanIfReturnSequences(
         !stmt.elseStatement &&
         ts.isReturnStatement(nextStmt)
       ) {
+        // If this IfStatement is part of a sequence of IfStatements, do not convert it.
+        // We detect this by checking if the previous statement is also an IfStatement.
+        const prev = statements[i - 1];
+        if (prev && ts.isIfStatement(prev)) {
+          continue;
+        }
+
         const optChainEdit = tryTersifyOptionalChainGuard(stmt, nextStmt, sf);
         if (optChainEdit._tag === "Some") {
           skippedNodes.add(stmt);
@@ -394,6 +422,7 @@ function tersifyOnce(src: string): string {
     }
 
     scanIfReturnSequences(node, sf, skippedNodes, edits);
+    scanIfToSwitchSequences(node, sf, skippedNodes, edits);
 
     for (const transform of TRANSFORMS) {
       const editResult = transform(node, sf);

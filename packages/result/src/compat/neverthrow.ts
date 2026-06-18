@@ -78,17 +78,13 @@ export class CompatResult<T, E> {
   asyncAndThen<U, F = E>(
     fn: (value: T) => CompatResultAsync<U, F> | CoreResultAsync<U, F>,
   ): CompatResultAsync<U, E | F> {
-    if (isErr(this.inner)) {
-      return CompatResultAsync.err(this.inner.error);
-    }
-    return CompatResultAsync.fromInner(coerceToCoreAsync(fn(this.inner.value)));
+    return isErr(this.inner)
+      ? CompatResultAsync.err(this.inner.error)
+      : CompatResultAsync.fromInner(coerceToCoreAsync(fn(this.inner.value)));
   }
 
   orElse<F>(fn: (error: E) => CompatResult<T, F>): CompatResult<T, F> {
-    if (isOk(this.inner)) {
-      return new CompatResult<T, F>(this.inner);
-    }
-    return fn(this.inner.error);
+    return isOk(this.inner) ? new CompatResult<T, F>(this.inner) : fn(this.inner.error);
   }
 
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): U1 | U2 {

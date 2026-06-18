@@ -368,4 +368,77 @@ function getCity(user: any) {
       expect(tersify(src)).toBe(expected);
     });
   });
+
+  describe("prevent nesting ternaries (no matroskas)", () => {
+    it("does not convert sequential if/return chains into nested ternaries", () => {
+      const src = `
+function resolveValue(next: any) {
+  if (next instanceof CompatResultAsync) return next.toCore();
+  if (next instanceof CoreResultAsync) return next;
+  if (next instanceof CompatResult) return next.inner;
+  return next;
+}
+      `.trim();
+      expect(tersify(src)).toBe(src);
+    });
+
+    it("does not convert if-else statements containing conditional expressions", () => {
+      const src = `
+function test(cond: boolean, a: any) {
+  if (cond) {
+    return a ? 1 : 2;
+  } else {
+    return 3;
+  }
+}
+      `.trim();
+      expect(tersify(src)).toBe(src);
+    });
+  });
+
+  describe("sequential if statements to switch", () => {
+    it("converts a sequence of 3 or more if statements comparing the same variable to a switch", () => {
+      const src = `
+function handle(name: string, node: any) {
+  if (name === "sequenceTupleAsync") {
+    return some(edit(\`ResultAsync.combineTuple(\${argsToText(node.arguments)})\`, ["ResultAsync"]));
+  }
+  if (name === "getOrElse") {
+    return some(edit(\`unwrapOr(\${argsToText(node.arguments)})\`, ["unwrapOr"]));
+  }
+  if (name === "collect") {
+    return some(edit(\`combine(\${argsToText(node.arguments)})\`, ["combine"]));
+  }
+  if (name === "matchResult" || name === "matchMaybe") {
+    return some(edit(\`match(\${argsToText(node.arguments)})\`, ["match"]));
+  }
+  if (name === "fold") {
+    return map(foldHandlerTexts(node.arguments[0]), ({ okText, errText }) =>
+      edit(\`match(\${okText}, \${errText})\`, ["match"]),
+    );
+  }
+}
+      `.trim();
+      const expected = `
+function handle(name: string, node: any) {
+  switch (name) {
+    case "sequenceTupleAsync":
+      return some(edit(\`ResultAsync.combineTuple(\${argsToText(node.arguments)})\`, ["ResultAsync"]));
+    case "getOrElse":
+      return some(edit(\`unwrapOr(\${argsToText(node.arguments)})\`, ["unwrapOr"]));
+    case "collect":
+      return some(edit(\`combine(\${argsToText(node.arguments)})\`, ["combine"]));
+    case "matchResult":
+    case "matchMaybe":
+      return some(edit(\`match(\${argsToText(node.arguments)})\`, ["match"]));
+    case "fold":
+      return map(foldHandlerTexts(node.arguments[0]), ({ okText, errText }) =>
+        edit(\`match(\${okText}, \${errText})\`, ["match"]),
+      );
+  }
+}
+      `.trim();
+      expect(tersify(src)).toBe(expected);
+    });
+  });
 });
