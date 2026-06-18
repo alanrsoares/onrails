@@ -43,17 +43,17 @@ const status = pipe(
 
 ```ts
 // onrails — Result is value-FIRST: Result<T, E>
-import { pipe, flatMap, map, mapErr, match } from "@onrails/result";
+import * as R from "@onrails/result";
 
 const createUser = (raw: string) =>
-  pipe(
-    parseJson(raw),                                  // Result<Input, ParseError>
-    mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
-    flatMap(validate),                               // Result<User, AppError>
-    map((u) => ({ ...u, id: crypto.randomUUID() })),
+  R.pipe(
+    parseJson(raw), // Result<Input, ParseError>
+    R.mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
+    R.flatMap(validate), // Result<User, AppError>
+    R.map((u) => ({ ...u, id: crypto.randomUUID() })),
   );
 
-const status = match(createUser(raw), () => 201, (e) => (e.kind === "validation" ? 422 : 400));
+const status = R.match(createUser(raw), () => 201, (e) => (e.kind === "validation" ? 422 : 400));
 ```
 
 The shapes rhyme, but note two ergonomic differences:

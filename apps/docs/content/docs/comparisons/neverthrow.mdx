@@ -21,17 +21,17 @@ surface.
 
 ```ts
 // onrails — dual-form functions over a tagged union
-import { flatMap, map, mapErr, match, pipe } from "@onrails/result";
+import * as R from "@onrails/result";
 
 const createUser = (raw: string) =>
-  pipe(
+  R.pipe(
     parseJson(raw), // Result<Input, ParseError>
-    mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
-    flatMap(validate), // Result<User, AppError>
-    map((u) => ({ ...u, id: newId() })),
+    R.mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
+    R.flatMap(validate), // Result<User, AppError>
+    R.map((u) => ({ ...u, id: newId() })),
   );
 
-const status = match(
+const status = R.match(
   createUser(raw),
   () => 201,
   (e) => (e.kind === "validation" ? 422 : 400),

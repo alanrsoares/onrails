@@ -45,40 +45,49 @@ reason to choose Effect.
 ## Same task, both libraries
 
 ```ts
-// Effect — typed errors via tagged-error classes, run on the Effect runtime
-import { Data, Effect, pipe } from "effect";
+// Effect — Effect.gen, tagged errors, and a Layer-provided service (the R channel)
+import { Effect, Schema } from "effect";
 
-class ValidationError extends Data.TaggedError("ValidationError")<{ field: string }> {}
+class ValidationError extends Schema.TaggedError<ValidationError>()("ValidationError", {
+  field: Schema.String,
+}) {}
 
-const createUser = (raw: string): Effect.Effect<User, ParseError | ValidationError> =>
-  pipe(
-    parseJson(raw),
-    Effect.flatMap(validate),
-    Effect.map((u) => ({ ...u, id: crypto.randomUUID() })),
-  );
+const createUser = (raw: string) =>
+  Effect.gen(function* () {
+    const input = yield* parseJson(raw); // Effect<Input, ParseError>
+    const user = yield* validate(input); // Effect<User, ValidationError>
+    const id = yield* Uuid.next; // Uuid is a *service* — supplied through R
+    return { ...user, id };
+  });
 
-const status = await Effect.runPromise(
-  pipe(
-    createUser(raw),
-    Effect.match({ onSuccess: () => 201, onFailure: (e) => (e._tag === "ValidationError" ? 422 : 400) }),
-  ),
+const program = createUser(raw).pipe(
+  Effect.map((user) => ({ status: 201, user })),
+  Effect.catchTag("ValidationError", (e) => Effect.succeed({ status: 422, field: e.field })),
 );
+
+// Run on the Effect runtime, providing the service the program requires.
+const result = await Effect.runPromise(Effect.provide(program, Uuid.Default));
 ```
 
 ```ts
-// onrails — plain values, no runtime; await the carrier directly
-import { tryAsync } from "@onrails/result";
+// onrails — plain values, no runtime, no requirements channel
+import { ResultAsync } from "@onrails/result";
 
-const createUser = (raw: string) =>
-  parseJsonAsync(raw)                                // ResultAsync<Input, ParseError>
-    .flatMap(validate)                               // ResultAsync<User, ParseError | ValidationError>
-    .map((u) => ({ ...u, id: crypto.randomUUID() }));
+const createUser = (raw: string): ResultAsync<User, ParseError | ValidationError> =>
+  parseJson(raw) // ResultAsync<Input, ParseError>
+    .flatMap(validate) // ResultAsync<User, ValidationError>
+    .map((user) => ({ ...user, id: newId() })); // newId is just a function — no DI
 
-const status = await createUser(raw).match(
-  () => 201,
-  (e) => (e.kind === "validation" ? 422 : 400),
+const result = await createUser(raw).match(
+  (user) => ({ status: 201, user }),
+  (e) => (e.kind === "validation" ? { status: 422, field: e.field } : { status: 400 }),
 );
 ```
+
+The Effect version threads `Uuid` through the `R` channel and supplies it with
+`Effect.provide(Uuid.Default)` — the same `Layer`/`Effect.Service` machinery the
+[official examples](https://github.com/Effect-TS/examples) use for every
+dependency. onrails has no `R` channel: `newId` is an ordinary function call.
 
 Both give you a fully typed error union and exhaustive handling. The difference
 is everything *around* it: Effect runs on `Effect.runPromise` and can thread
