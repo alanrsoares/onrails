@@ -1,4 +1,5 @@
 import { compactMap, isSome, type Maybe, map, none, some } from "@onrails/maybe";
+import { match } from "@onrails/pattern";
 import ts from "typescript";
 import { argsToText, edit, lookupMap, spanEdit, walkSource } from "./ast.js";
 import {
@@ -22,6 +23,21 @@ export function isSupportedChainCall(node: ts.Node): node is ts.CallExpression {
   return CHAIN_METHODS.has(method) || TERMINAL_METHODS.has(method);
 }
 
+const HELPERS = [
+  "sequenceTupleAsync",
+  "getOrElse",
+  "collect",
+  "matchResult",
+  "matchMaybe",
+  "fold",
+] as const;
+
+type HelperName = (typeof HELPERS)[number];
+
+function isHelperName(x: string): x is HelperName {
+  return (HELPERS as readonly string[]).includes(x);
+}
+
 function identifierCallToNative(node: ts.CallExpression): Maybe<Edit> {
   if (!ts.isIdentifier(node.expression)) return none();
   const name = node.expression.text;
@@ -30,22 +46,25 @@ function identifierCallToNative(node: ts.CallExpression): Maybe<Edit> {
     if (isSome(zero)) return zero;
   }
 
-  switch (name) {
-    case "sequenceTupleAsync":
-      return some(edit(`ResultAsync.combineTuple(${argsToText(node.arguments)})`, ["ResultAsync"]));
-    case "getOrElse":
-      return some(edit(`unwrapOr(${argsToText(node.arguments)})`, ["unwrapOr"]));
-    case "collect":
-      return some(edit(`combine(${argsToText(node.arguments)})`, ["combine"]));
-    case "matchResult":
-    case "matchMaybe":
-      return some(edit(`match(${argsToText(node.arguments)})`, ["match"]));
-    case "fold":
-      return map(foldHandlerTexts(node.arguments[0]), ({ okText, errText }) =>
-        edit(`match(${okText}, ${errText})`, ["match"]),
-      );
+  if (!isHelperName(name)) {
+    return none();
   }
-  return none();
+
+  return match(name)
+    .with("sequenceTupleAsync", () =>
+      some(edit(`ResultAsync.combineTuple(${argsToText(node.arguments)})`, ["ResultAsync"])),
+    )
+    .with("getOrElse", () => some(edit(`unwrapOr(${argsToText(node.arguments)})`, ["unwrapOr"])))
+    .with("collect", () => some(edit(`combine(${argsToText(node.arguments)})`, ["combine"])))
+    .withOneOf(["matchResult", "matchMaybe"], () =>
+      some(edit(`match(${argsToText(node.arguments)})`, ["match"])),
+    )
+    .with("fold", () =>
+      map(foldHandlerTexts(node.arguments[0]), ({ okText, errText }) =>
+        edit(`match(${okText}, ${errText})`, ["match"]),
+      ),
+    )
+    .exhaustive();
 }
 
 type FoldHandlerTexts = { okText: string; errText: string };
