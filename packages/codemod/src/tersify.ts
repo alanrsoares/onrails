@@ -263,6 +263,80 @@ function tryTersifyIdentityFilter(node: ts.Node, sf: ts.SourceFile): Maybe<Edit>
   return none();
 }
 
+function tryTersifyOptionalChainGuard(
+  stmt: ts.IfStatement,
+  nextStmt: ts.ReturnStatement,
+  sf: ts.SourceFile,
+): Maybe<Edit> {
+  const firstStmt = ts.isBlock(stmt.thenStatement) ? stmt.thenStatement.statements[0] : undefined;
+  const isThenEmptyReturn =
+    (ts.isReturnStatement(stmt.thenStatement) && !stmt.thenStatement.expression) ||
+    (ts.isBlock(stmt.thenStatement) &&
+      stmt.thenStatement.statements.length === 1 &&
+      firstStmt &&
+      ts.isReturnStatement(firstStmt) &&
+      !firstStmt.expression);
+
+  if (
+    isThenEmptyReturn &&
+    ts.isPrefixUnaryExpression(stmt.expression) &&
+    stmt.expression.operator === ts.SyntaxKind.ExclamationToken &&
+    nextStmt.expression &&
+    ts.isPropertyAccessExpression(nextStmt.expression)
+  ) {
+    const target = stmt.expression.operand;
+    const accessExpr = nextStmt.expression;
+    if (accessExpr.expression.getText(sf) === target.getText(sf)) {
+      const targetText = target.getText(sf);
+      const propName = accessExpr.name.getText(sf);
+      const text = `return ${targetText}?.${propName};`;
+      return some({
+        start: stmt.getStart(sf),
+        end: nextStmt.getEnd(),
+        text,
+        imports: [],
+      });
+    }
+  }
+  return none();
+}
+
+function tryTersifyTernaryOrBooleanSequence(
+  stmt: ts.IfStatement,
+  nextStmt: ts.ReturnStatement,
+  sf: ts.SourceFile,
+): Maybe<Edit> {
+  const x = getSingleReturnExpression(stmt.thenStatement);
+  const y = nextStmt.expression;
+  if (x && y) {
+    const condText = stmt.expression.getText(sf);
+    const xIsTrue = x.kind === ts.SyntaxKind.TrueKeyword;
+    const xIsFalse = x.kind === ts.SyntaxKind.FalseKeyword;
+    const yIsTrue = y.kind === ts.SyntaxKind.TrueKeyword;
+    const yIsFalse = y.kind === ts.SyntaxKind.FalseKeyword;
+
+    let text = "";
+    if (xIsTrue && yIsFalse) {
+      text = `return ${condText};`;
+    } else if (xIsFalse && yIsTrue) {
+      const needsParens = !isSimpleExpression(stmt.expression);
+      text = needsParens ? `return !(${condText});` : `return !${condText};`;
+    } else {
+      const xText = x.getText(sf);
+      const yText = y.getText(sf);
+      text = `return ${condText} ? ${xText} : ${yText};`;
+    }
+
+    return some({
+      start: stmt.getStart(sf),
+      end: nextStmt.getEnd(),
+      text,
+      imports: [],
+    });
+  }
+  return none();
+}
+
 function scanIfReturnSequences(
   node: ts.Node,
   sf: ts.SourceFile,
@@ -281,35 +355,19 @@ function scanIfReturnSequences(
         !stmt.elseStatement &&
         ts.isReturnStatement(nextStmt)
       ) {
-        const x = getSingleReturnExpression(stmt.thenStatement);
-        const y = nextStmt.expression;
-        if (x && y) {
-          const condText = stmt.expression.getText(sf);
-          const xIsTrue = x.kind === ts.SyntaxKind.TrueKeyword;
-          const xIsFalse = x.kind === ts.SyntaxKind.FalseKeyword;
-          const yIsTrue = y.kind === ts.SyntaxKind.TrueKeyword;
-          const yIsFalse = y.kind === ts.SyntaxKind.FalseKeyword;
-
-          let text = "";
-          if (xIsTrue && yIsFalse) {
-            text = `return ${condText};`;
-          } else if (xIsFalse && yIsTrue) {
-            const needsParens = !isSimpleExpression(stmt.expression);
-            text = needsParens ? `return !(${condText});` : `return !${condText};`;
-          } else {
-            const xText = x.getText(sf);
-            const yText = y.getText(sf);
-            text = `return ${condText} ? ${xText} : ${yText};`;
-          }
-
+        const optChainEdit = tryTersifyOptionalChainGuard(stmt, nextStmt, sf);
+        if (optChainEdit._tag === "Some") {
           skippedNodes.add(stmt);
           skippedNodes.add(nextStmt);
-          edits.push({
-            start: stmt.getStart(sf),
-            end: nextStmt.getEnd(),
-            text,
-            imports: [],
-          });
+          edits.push(optChainEdit.value);
+          continue;
+        }
+
+        const seqEdit = tryTersifyTernaryOrBooleanSequence(stmt, nextStmt, sf);
+        if (seqEdit._tag === "Some") {
+          skippedNodes.add(stmt);
+          skippedNodes.add(nextStmt);
+          edits.push(seqEdit.value);
         }
       }
     }

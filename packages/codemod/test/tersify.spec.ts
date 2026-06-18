@@ -340,4 +340,32 @@ function isNegative(x: number) {
       expect(tersify(src)).toBe(src);
     });
   });
+
+  describe("optional chaining from guard clauses", () => {
+    it("converts a guard clause returning undefined into an optional chain", () => {
+      const src = `
+function getName(user: any) {
+  if (!user) {
+    return;
+  }
+  return user.name;
+}
+      `.trim();
+      const expected = "const getName = (user: any) => user?.name;";
+      expect(tersify(src)).toBe(expected);
+    });
+
+    it("works with simple negated property accesses in guard clauses", () => {
+      const src = `
+function getCity(user: any) {
+  if (!user.address) {
+    return;
+  }
+  return user.address.city;
+}
+      `.trim();
+      const expected = "const getCity = (user: any) => user.address?.city;";
+      expect(tersify(src)).toBe(expected);
+    });
+  });
 });
