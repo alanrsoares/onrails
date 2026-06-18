@@ -169,12 +169,10 @@ const parseJson = (raw: string): Result<unknown, ParseError> => {
   }
 };
 
-const validateSchema = (x: unknown): Result<Validated, SchemaError> => {
-  if (typeof x === "object" && x !== null && "value" in x && typeof x.value === "string") {
-    return ok({ tag: "validated", value: x.value });
-  }
-  return err({ kind: "schema", field: "value" });
-};
+const validateSchema = (x: unknown): Result<Validated, SchemaError> =>
+  typeof x === "object" && x !== null && "value" in x && typeof x.value === "string"
+    ? ok({ tag: "validated", value: x.value })
+    : err({ kind: "schema", field: "value" });
 
 const addTimestamp = (v: Validated): Enriched => ({ ...v, ts: 1_700_000_000 });
 

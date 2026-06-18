@@ -53,13 +53,13 @@ export function asyncAfter<T, U, E, F>(
  * Lift `(...args) => Promise<Result<T, E>>` to `(...args) => ResultAsync<T, E>`.
  * Catches unexpected promise rejections (defects) via `onDefect` or {@link UnexpectedError}.
  */
-export function fromAsync<A extends readonly unknown[], R extends AnyResult>(
-  fn: (...args: A) => Promise<R>,
-  onDefect?: (error: unknown) => InferErr<R> | UnexpectedError,
-): (...args: A) => ResultAsync<InferOk<R>, InferErr<R> | UnexpectedError> {
-  return (...args: A) =>
+export const fromAsync =
+  <A extends readonly unknown[], R extends AnyResult>(
+    fn: (...args: A) => Promise<R>,
+    onDefect?: (error: unknown) => InferErr<R> | UnexpectedError,
+  ): ((...args: A) => ResultAsync<InferOk<R>, InferErr<R> | UnexpectedError>) =>
+  (...args: A) =>
     ResultAsync.fromResultPromise(fn(...args), onDefect) as ResultAsync<
       InferOk<R>,
       InferErr<R> | UnexpectedError
     >;
-}

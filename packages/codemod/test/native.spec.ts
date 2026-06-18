@@ -10,9 +10,7 @@ import {
 
 const cliPath = resolve(import.meta.dir, "../src/index.ts");
 
-async function makeFixture(): Promise<string> {
-  return await mkdtemp(join(tmpdir(), "onrails-codemod-"));
-}
+const makeFixture = async (): Promise<string> => await mkdtemp(join(tmpdir(), "onrails-codemod-"));
 
 async function writeFixtureFile(root: string, path: string, content: string): Promise<void> {
   const fullPath = join(root, path);
@@ -20,17 +18,15 @@ async function writeFixtureFile(root: string, path: string, content: string): Pr
   await writeFile(fullPath, content);
 }
 
-async function readFixtureFile(root: string, path: string): Promise<string> {
-  return await readFile(join(root, path), "utf8");
-}
+const readFixtureFile = async (root: string, path: string): Promise<string> =>
+  await readFile(join(root, path), "utf8");
 
-function runCli(args: readonly string[]) {
-  return Bun.spawnSync({
+const runCli = (args: readonly string[]) =>
+  Bun.spawnSync({
     cmd: [process.execPath, cliPath, ...args],
     stdout: "pipe",
     stderr: "pipe",
   });
-}
 
 describe("rewriteCompatImportsToNative", () => {
   it("moves type-only native exports into an import type declaration", () => {

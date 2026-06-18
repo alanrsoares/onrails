@@ -98,7 +98,7 @@ describe("lookupMap", () => {
 describe("walkSource / spanEdit", () => {
   it("visits call expressions and stops descending when visit returns truthy", () => {
     const seen: string[] = [];
-    walkSource(`foo(bar(1));`, (node, sf) => {
+    walkSource("foo(bar(1));", (node, sf) => {
       if (ts.isCallExpression(node)) {
         seen.push(node.expression.getText(sf));
         return true; // skip children — bar(1) must not be visited
@@ -110,7 +110,7 @@ describe("walkSource / spanEdit", () => {
 
   it("spanEdit anchors the edit to the node's source span", () => {
     let edit: { start: number; end: number; text: string } | undefined;
-    const src = `const x = target(1);`;
+    const src = "const x = target(1);";
     walkSource(src, (node, sf) => {
       if (ts.isCallExpression(node)) {
         edit = spanEdit(node, sf, { start: 0, end: 0, text: "replaced", imports: [] });

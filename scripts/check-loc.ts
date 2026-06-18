@@ -39,7 +39,7 @@ if (offenders.length > 0) {
   for (const { path, lines } of offenders) {
     console.error(`  ${lines}\t${path}`);
   }
-  console.error(`\nSplit by responsibility; do not raise the cap to dodge.`);
+  console.error("\nSplit by responsibility; do not raise the cap to dodge.");
   process.exit(1);
 }
 

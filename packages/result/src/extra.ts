@@ -47,12 +47,10 @@ export const mapErrKind =
     kind: K,
     fn: (error: Extract<E, { kind: K }>) => F,
   ) =>
-  <T>(result: Result<T, E>): Result<T, E | F> => {
-    if (isErr(result) && hasKind(result.error, kind)) {
-      return { _tag: "Err", error: fn(result.error) };
-    }
-    return result;
-  };
+  <T>(result: Result<T, E>): Result<T, E | F> =>
+    isErr(result) && hasKind(result.error, kind)
+      ? { _tag: "Err", error: fn(result.error) }
+      : result;
 
 /**
  * Collect values when all Ok; otherwise first Err encountered.

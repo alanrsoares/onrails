@@ -30,22 +30,20 @@ function identifierCallToNative(node: ts.CallExpression): Maybe<Edit> {
     if (isSome(zero)) return zero;
   }
 
-  if (name === "sequenceTupleAsync") {
-    return some(edit(`ResultAsync.combineTuple(${argsToText(node.arguments)})`, ["ResultAsync"]));
-  }
-  if (name === "getOrElse") {
-    return some(edit(`unwrapOr(${argsToText(node.arguments)})`, ["unwrapOr"]));
-  }
-  if (name === "collect") {
-    return some(edit(`combine(${argsToText(node.arguments)})`, ["combine"]));
-  }
-  if (name === "matchResult" || name === "matchMaybe") {
-    return some(edit(`match(${argsToText(node.arguments)})`, ["match"]));
-  }
-  if (name === "fold") {
-    return map(foldHandlerTexts(node.arguments[0]), ({ okText, errText }) =>
-      edit(`match(${okText}, ${errText})`, ["match"]),
-    );
+  switch (name) {
+    case "sequenceTupleAsync":
+      return some(edit(`ResultAsync.combineTuple(${argsToText(node.arguments)})`, ["ResultAsync"]));
+    case "getOrElse":
+      return some(edit(`unwrapOr(${argsToText(node.arguments)})`, ["unwrapOr"]));
+    case "collect":
+      return some(edit(`combine(${argsToText(node.arguments)})`, ["combine"]));
+    case "matchResult":
+    case "matchMaybe":
+      return some(edit(`match(${argsToText(node.arguments)})`, ["match"]));
+    case "fold":
+      return map(foldHandlerTexts(node.arguments[0]), ({ okText, errText }) =>
+        edit(`match(${okText}, ${errText})`, ["match"]),
+      );
   }
   return none();
 }
@@ -85,10 +83,11 @@ function curriedFoldToNative(node: ts.CallExpression): Maybe<Edit> {
     return none();
   }
   const receiver = node.arguments[0];
-  if (!receiver) return none();
-  return map(foldHandlerTexts(node.expression.arguments[0]), ({ okText, errText }) =>
-    edit(`match(${okText}, ${errText})(${receiver.getText()})`, ["match"]),
-  );
+  return !receiver
+    ? none()
+    : map(foldHandlerTexts(node.expression.arguments[0]), ({ okText, errText }) =>
+        edit(`match(${okText}, ${errText})(${receiver.getText()})`, ["match"]),
+      );
 }
 
 export function helperCallToNative(node: ts.CallExpression): Maybe<Edit> {

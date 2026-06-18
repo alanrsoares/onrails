@@ -52,8 +52,9 @@ export const computeFileChange = (src: string, mode: Mode): Maybe<ComputedChange
   const next = strat.transform(src);
   const changed = next !== src;
   const warnings = strat.warnings(next);
-  if (!changed && warnings.length === 0) return none();
-  return some({ next, before, after: strat.countAfter(next), changed, warnings });
+  return !changed && warnings.length === 0
+    ? none()
+    : some({ next, before, after: strat.countAfter(next), changed, warnings });
 };
 
 export const toFileChange = (path: string, c: ComputedChange): FileChange => ({

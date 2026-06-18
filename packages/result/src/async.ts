@@ -379,8 +379,7 @@ export function tryAsync<T, E>(
   promise: PromiseLike<T>,
   onReject?: (error: unknown) => E,
 ): ResultAsync<T, E | Error> {
-  if (onReject) {
-    return ResultAsync.fromPromise(promise, onReject);
-  }
-  return ResultAsync.fromPromise(promise, toError);
+  return onReject
+    ? ResultAsync.fromPromise(promise, onReject)
+    : ResultAsync.fromPromise(promise, toError);
 }

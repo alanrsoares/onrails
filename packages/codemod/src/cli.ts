@@ -38,15 +38,14 @@ export function parseArgs(argv: string[]): Result<Args, string> {
     onrails: resolve(import.meta.dir, "../../..", "packages/result"),
   };
   const { positional, dry, mode, onrails } = argv.reduce(applyArg, initial);
-  if (positional.length !== 1) {
-    return err(USAGE);
-  }
-  return ok({
-    target: resolve(positional[0] ?? "."),
-    dry,
-    onrails,
-    mode,
-  });
+  return positional.length !== 1
+    ? err(USAGE)
+    : ok({
+        target: resolve(positional[0] ?? "."),
+        dry,
+        onrails,
+        mode,
+      });
 }
 
 const shouldSkip = (path: string) => path.split("/").some((seg) => SKIP.has(seg));
