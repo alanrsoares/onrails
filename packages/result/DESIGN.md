@@ -21,7 +21,7 @@ type Result<T, E> =
 
 - `flatMap` is the canonical bind and widens error types (`E | F`).
 - `match` is the canonical terminal collapse — positional, dual-form.
-- `fold({ ok, err })(result)` is the curried named-slot escape valve when positional `match` order is ambiguous at the call site.
+- For files that also import `match` from `ts-pattern`, dissolve the collision with a namespace import (`import * as R from "@onrails/result"` → `R.match`).
 - `tap` / `tapErr` observe a track without changing the carried value.
 - `recover` binds the error track and may return a failed workflow back to success.
 - `pipe(value, ...fns)` is the variadic value-first pipe (up to 9 steps); `flow(...fns)` is the variadic point-free composition in `@onrails/result/pipe`.
@@ -69,7 +69,7 @@ Use `Railway` when named context removes nesting or positional tuple plumbing. P
 ## Combining results
 
 - `combine` / `combineTuple` — sync, first-Err wins.
-- `sequenceTupleAsync` — async, sequential, first-Err in input order.
+- `ResultAsync.combineTuple` — async, sequential, first-Err in input order.
 - `parallelTupleAsync` — async, concurrent (branches overlap), first-Err in input order.
 - `ResultAsync.combine` — homogeneous async collection.
 

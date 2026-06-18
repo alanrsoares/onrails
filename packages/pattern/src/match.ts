@@ -120,12 +120,17 @@ export class MatchBuilder<
   Handled extends readonly unknown[] = [],
   Locked extends boolean = false,
 > {
+  /**
+   * Construct a builder directly. Prefer the {@link match} factory — the
+   * constructor exists so internal combinators can thread accumulated `cases`,
+   * the optional captured `input`, and the phantom `_handled` tuple.
+   */
   constructor(
     private readonly cases: readonly Case<T, unknown>[],
     // No default: `= NO_INPUT` would swallow a data-first `undefined` input,
     // because JS applies parameter defaults to explicitly-passed undefined.
     private readonly input: T | NoInput,
-    // Safe: phantom tuple — only used for compile-time exhaustiveness tracking.
+    /** Phantom tuple of handled cases — only its compile-time contents matter. */
     readonly _handled: Handled = [] as unknown as Handled,
   ) {}
 
@@ -141,6 +146,31 @@ export class MatchBuilder<
     );
   }
 
+  /**
+   * Add a case: when `input` satisfies `pattern`, run `handler` on the narrowed
+   * value. The pattern may be a literal, a shallow object pattern, or a guard
+   * ({@link Pattern}); a type-predicate guard narrows the handler input. Each
+   * `.with` advances compile-time exhaustiveness tracking so `.exhaustive()`
+   * knows which union members remain.
+   *
+   * @param pattern - literal, object pattern, or guard to test against
+   * @param handler - run on the narrowed input when the pattern matches
+   * @returns a builder with this case appended
+   *
+   * @example
+   * ```ts
+   * type Event =
+   *   | { type: "message"; content: string }
+   *   | { type: "error"; message: string }
+   *   | { type: "done" };
+   *
+   * const summary = match({ type: "message", content: "hi" } as Event)
+   *   .with({ type: "message" }, (e) => e.content)   // e: { type: "message"; content: string }
+   *   .with({ type: "error" },   (e) => e.message)
+   *   .with({ type: "done" },    () => "—")
+   *   .exhaustive();                                 // "hi"
+   * ```
+   */
   with<const P extends Pattern<T>, R2>(
     pattern: P,
     handler: (input: Narrow<T, P>) => HandlerReturn<Locked, R, R2>,
@@ -157,7 +187,28 @@ export class MatchBuilder<
     });
   }
 
-  /** One handler for several patterns (OR). Handler input is the union of narrowed members. */
+  /**
+   * One handler for several patterns (OR). The handler input is the union of
+   * the members narrowed by each pattern, and all of them are marked handled
+   * for exhaustiveness.
+   *
+   * @param patterns - patterns to test; any match runs `handler`
+   * @param handler - run on the union of narrowed members
+   * @returns a builder with the shared case appended
+   *
+   * @example
+   * ```ts
+   * type Job =
+   *   | { kind: "queued"; id: string }
+   *   | { kind: "running"; id: string }
+   *   | { kind: "done"; ok: boolean };
+   *
+   * const status = match({ kind: "running", id: "j1" } as Job)
+   *   .withOneOf([{ kind: "queued" }, { kind: "running" }], (j) => j.id) // j: queued | running
+   *   .with({ kind: "done" }, (j) => (j.ok ? "yes" : "no"))
+   *   .exhaustive();                                                      // "j1"
+   * ```
+   */
   withOneOf<const Ps extends readonly Pattern<T>[], R2>(
     patterns: Ps,
     handler: (input: NarrowUnion<T, Ps>) => HandlerReturn<Locked, R, R2>,
@@ -173,7 +224,24 @@ export class MatchBuilder<
     );
   }
 
-  /** `withOneOf` for exactly two patterns. */
+  /**
+   * {@link withOneOf} for exactly two patterns — sugar that avoids the array.
+   *
+   * @param pattern1 - first pattern
+   * @param pattern2 - second pattern
+   * @param handler - run on the union of the two narrowed members
+   * @returns a builder with the shared case appended
+   *
+   * @example
+   * ```ts
+   * type Provider = "ollama" | "openrouter";
+   *
+   * const pick = match<Provider>()
+   *   .withEither("ollama", "openrouter", (p) => p) // p: "ollama" | "openrouter"
+   *   .exhaustive();
+   * pick("ollama"); // "ollama"
+   * ```
+   */
   withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>, R2>(
     pattern1: P1,
     pattern2: P2,
@@ -211,7 +279,26 @@ export class MatchBuilder<
     return new MatchBuilder<T, R2, HasInput, Handled, true>(this.cases, this.input, this._handled);
   }
 
-  /** Run on the value passed to {@link match}, or on `input` when curried. */
+  /**
+   * Run the accumulated cases now, without a compile-time exhaustiveness check.
+   * Uses the value passed to {@link match} (data-first), or the value passed to
+   * `run` (curried). Throws `"Non-exhaustive match"` if no case matches at
+   * runtime — prefer {@link exhaustive} when the input is a closed union, or
+   * {@link otherwise} for an explicit fallback.
+   *
+   * @param input - the value to match when the builder was created curried
+   * @returns the matched handler's result
+   * @throws if no case matches the input
+   *
+   * @example
+   * ```ts
+   * type Event = { type: "error"; message: string } | { type: "done" };
+   *
+   * const msg = match({ type: "error", message: "x" } as Event)
+   *   .with({ type: "error" }, (e) => e.message)
+   *   .run({ type: "error", message: "net" }); // "net"
+   * ```
+   */
   run(...input: readonly [input: T] | readonly []): R {
     const value = input.length === 1 ? input[0] : this.input;
     if (value === NO_INPUT) {
@@ -224,6 +311,31 @@ export class MatchBuilder<
     return out as R;
   }
 
+  /**
+   * Settle the match with a compile-time exhaustiveness guarantee. Only
+   * type-checks when every member of `T` has been handled; otherwise the return
+   * type becomes {@link NonExhaustiveError}, surfacing the missing cases as a
+   * type error. Returns the result directly when data-first ({@link match}
+   * called with a value), or a reusable `(input: T) => R` matcher when curried.
+   *
+   * @returns the result (data-first) or a matcher function (curried)
+   *
+   * @example
+   * ```ts
+   * type Event =
+   *   | { type: "message"; content: string }
+   *   | { type: "error"; message: string }
+   *   | { type: "done" };
+   *
+   * // Curried — reusable matcher; omitting a `.with` would be a type error.
+   * const describe = match<Event>()
+   *   .with({ type: "message" }, (e) => e.content)
+   *   .with({ type: "error" },   (e) => `! ${e.message}`)
+   *   .with({ type: "done" },    () => "done")
+   *   .exhaustive();
+   * describe({ type: "done" }); // "done"
+   * ```
+   */
   exhaustive(): ExhaustiveResult<T, Handled, R, HasInput> {
     // Safe: HasInput is true exactly when match(value) captured an input.
     return (
@@ -231,6 +343,27 @@ export class MatchBuilder<
     ) as ExhaustiveResult<T, Handled, R, HasInput>;
   }
 
+  /**
+   * Settle the match with a catch-all fallback, dropping the exhaustiveness
+   * requirement — `handler` runs (on the full input type) when no case matched.
+   * Returns the result directly when data-first, or a reusable matcher when
+   * curried.
+   *
+   * @param handler - fallback run on the input when no prior case matched
+   * @returns the result (data-first) or a matcher function (curried)
+   *
+   * @example
+   * ```ts
+   * type Event =
+   *   | { type: "message"; content: string }
+   *   | { type: "error"; message: string }
+   *   | { type: "done" };
+   *
+   * const len = match({ type: "done" } as Event)
+   *   .with({ type: "message" }, (e) => e.content.length)
+   *   .otherwise(() => -1); // -1
+   * ```
+   */
   otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R {
     const runWithFallback = (value: T): R => {
       const out = runCases(value, this.cases);

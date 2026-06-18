@@ -1,6 +1,8 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
-import { parallelTupleAsync, ResultAsync, tryAsync } from "../src/async.js";
+import { ResultAsync } from "../src/async.js";
+import { parallelTupleAsync, tryAsync } from "../src/async-lift.js";
+import { combine, combineTuple } from "../src/collections.js";
 import type { ErrOf, OkOf, UnionErrors } from "../src/extra.js";
 import { asyncAfter, fromAsync, fromResult, type InferErr, type InferOk } from "../src/interop.js";
 import {
@@ -15,8 +17,6 @@ import {
 } from "../src/railway.js";
 import {
   bimap,
-  combine,
-  combineTuple,
   err,
   flatMap,
   isErr,

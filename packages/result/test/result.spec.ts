@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { combine, combineTuple } from "../src/collections.js";
 import {
-  combine,
-  combineTuple,
   err,
   flatMap,
   map,

@@ -1,7 +1,7 @@
 /** @deprecated Migration shim — prefer `@onrails/result` and `@onrails/result/fluent`. */
 import { ResultAsync as CoreResultAsync } from "../async.js";
+import { combineTuple } from "../collections.js";
 import {
-  combineTuple,
   err as coreErr,
   ok as coreOk,
   flatMap,

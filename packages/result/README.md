@@ -141,9 +141,6 @@ import { match } from "ts-pattern";
 R.match(result, onOk, onErr);
 ```
 
-> [!NOTE]
-> `matchResult` is deprecated and will be removed in the next major version.
-
 `unwrapOk` and `unwrapErr` are test/assertion helpers. Prefer `match`, `isOk`, or `isErr` in production control flow.
 
 ```ts

@@ -8,8 +8,21 @@ class ErrSignal<E> {
 }
 
 /**
- * Unwrap a {@link Result} inside {@link tryGen} (Rust `?` for sync code).
- * Prefer {@link flatMap} / {@link fluent} for long pipelines.
+ * Unwraps a {@link Result} inside a {@link tryGen} block — the sync analogue of
+ * Rust's `?` operator. On `Ok` it returns the value; on `Err` it short-circuits
+ * the enclosing `tryGen`, which returns that `Err`. Only valid inside `tryGen`;
+ * prefer {@link flatMap} / `pipe` for long pipelines.
+ *
+ * @returns the unwrapped `Ok` value
+ *
+ * @example
+ * ```ts
+ * const out = tryGen(() => {
+ *   const a = yieldResult(parseA());   // unwrap or short-circuit
+ *   const b = yieldResult(parseB());
+ *   return ok(a + b);
+ * });
+ * ```
  */
 export const yieldResult = <T, E>(result: Result<T, E>): T => {
   if (isErr(result)) {
@@ -18,6 +31,19 @@ export const yieldResult = <T, E>(result: Result<T, E>): T => {
   return result.value;
 };
 
+/**
+ * Terse alias of {@link yieldResult} (mirrors Rust's `?`), for compact
+ * {@link tryGen} blocks.
+ *
+ * @example
+ * ```ts
+ * const out = tryGen(() => {
+ *   const a = $(parseA());
+ *   const b = $(parseB());
+ *   return ok(a + b);
+ * });
+ * ```
+ */
 export const $ = yieldResult;
 
 /**

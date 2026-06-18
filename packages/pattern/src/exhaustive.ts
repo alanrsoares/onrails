@@ -19,6 +19,7 @@ export type RemainingCases<T, Handled extends readonly unknown[]> = Exclude<
   HandledUnion<Handled>
 >;
 
+/** `true` when every member of `T` appears in `Handled`, otherwise `false`. */
 export type IsExhaustive<T, Handled extends readonly unknown[]> = [
   RemainingCases<T, Handled>,
 ] extends [never]

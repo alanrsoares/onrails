@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
+import { ResultAsync } from "../src/async.js";
 import {
   errAsync,
   fromPromise,
   fromSafePromise,
   okAsync,
   parallelTupleAsync,
-  ResultAsync,
   tryAsync,
-} from "../src/async.js";
+} from "../src/async-lift.js";
 import { err, ok } from "../src/result.js";
 
 describe("ResultAsync: construction", () => {

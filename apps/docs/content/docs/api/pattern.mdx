@@ -80,6 +80,8 @@ constructor<T, R = never, HasInput extends boolean = false, Handled extends read
 
 ### MatchBuilder.prototype._handled <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
+Phantom tuple of handled cases — only its compile-time contents matter.
+
 ```typescript
 _handled: Handled
 ```
@@ -87,6 +89,12 @@ _handled: Handled
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### MatchBuilder.prototype.with <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Add a case: when `input` satisfies `pattern`, run `handler` on the narrowed
+value. The pattern may be a literal, a shallow object pattern, or a guard
+([Pattern](#pattern)); a type-predicate guard narrows the handler input. Each
+`.with` advances compile-time exhaustiveness tracking so `.exhaustive()`
+knows which union members remain.
 
 ```typescript
 with<const P extends Pattern<T>, R2>(pattern: P, handler: (input: Narrow<T, P>) => HandlerReturn<Locked, R, R2>): MatchBuilder<T, NextResult<Locked, R, R2>, HasInput, readonly [......], Locked>
@@ -96,14 +104,35 @@ with<const P extends Pattern<T>, R2>(pattern: P, handler: (input: Narrow<T, P>) 
 
 | Parameter | Type | Description |
 |---|---|---|
-| `pattern` | `P` |  |
-| `handler` | `(input: Narrow<T, P>) => HandlerReturn<Locked, R, R2>` |  |
+| `pattern` | `P` | - literal, object pattern, or guard to test against |
+| `handler` | `(input: Narrow<T, P>) => HandlerReturn<Locked, R, R2>` | - run on the narrowed input when the pattern matches |
+
+#### Returns
+
+a builder with this case appended
+
+#### Example
+
+```ts
+type Event =
+  | { type: "message"; content: string }
+  | { type: "error"; message: string }
+  | { type: "done" };
+
+const summary = match({ type: "message", content: "hi" } as Event)
+  .with({ type: "message" }, (e) => e.content)   // e: { type: "message"; content: string }
+  .with({ type: "error" },   (e) => e.message)
+  .with({ type: "done" },    () => "—")
+  .exhaustive();                                 // "hi"
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### MatchBuilder.prototype.withOneOf <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-One handler for several patterns (OR). Handler input is the union of narrowed members.
+One handler for several patterns (OR). The handler input is the union of
+the members narrowed by each pattern, and all of them are marked handled
+for exhaustiveness.
 
 ```typescript
 withOneOf<const Ps extends readonly Pattern<T>[], R2>(patterns: Ps, handler: (input: NarrowUnion<T, Ps>) => HandlerReturn<Locked, R, R2>): MatchBuilder<T, NextResult<...>, HasInput, readonly [......], Locked>
@@ -113,14 +142,32 @@ withOneOf<const Ps extends readonly Pattern<T>[], R2>(patterns: Ps, handler: (in
 
 | Parameter | Type | Description |
 |---|---|---|
-| `patterns` | `Ps` |  |
-| `handler` | `(input: NarrowUnion<T, Ps>) => HandlerReturn<Locked, R, R2>` |  |
+| `patterns` | `Ps` | - patterns to test; any match runs `handler` |
+| `handler` | `(input: NarrowUnion<T, Ps>) => HandlerReturn<Locked, R, R2>` | - run on the union of narrowed members |
+
+#### Returns
+
+a builder with the shared case appended
+
+#### Example
+
+```ts
+type Job =
+  | { kind: "queued"; id: string }
+  | { kind: "running"; id: string }
+  | { kind: "done"; ok: boolean };
+
+const status = match({ kind: "running", id: "j1" } as Job)
+  .withOneOf([{ kind: "queued" }, { kind: "running" }], (j) => j.id) // j: queued | running
+  .with({ kind: "done" }, (j) => (j.ok ? "yes" : "no"))
+  .exhaustive();                                                      // "j1"
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### MatchBuilder.prototype.withEither <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-`withOneOf` for exactly two patterns.
+[withOneOf](#withoneof) for exactly two patterns — sugar that avoids the array.
 
 ```typescript
 withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>, R2>(pattern1: P1, pattern2: P2, handler: (input: NarrowUnion<T, readonly [P1, P2]>) => HandlerReturn<Locked, R, R2>): MatchBuilder<...>
@@ -130,9 +177,24 @@ withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>, R2>(pattern
 
 | Parameter | Type | Description |
 |---|---|---|
-| `pattern1` | `P1` |  |
-| `pattern2` | `P2` |  |
-| `handler` | `(input: NarrowUnion<T, readonly [P1, P2]>) => HandlerReturn<Locked, R, R2>` |  |
+| `pattern1` | `P1` | - first pattern |
+| `pattern2` | `P2` | - second pattern |
+| `handler` | `(input: NarrowUnion<T, readonly [P1, P2]>) => HandlerReturn<Locked, R, R2>` | - run on the union of the two narrowed members |
+
+#### Returns
+
+a builder with the shared case appended
+
+#### Example
+
+```ts
+type Provider = "ollama" | "openrouter";
+
+const pick = match<Provider>()
+  .withEither("ollama", "openrouter", (p) => p) // p: "ollama" | "openrouter"
+  .exhaustive();
+pick("ollama"); // "ollama"
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -165,7 +227,11 @@ const next = match(flag)
 
 ### MatchBuilder.prototype.run <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Run on the value passed to [match](./result#match), or on `input` when curried.
+Run the accumulated cases now, without a compile-time exhaustiveness check.
+Uses the value passed to [match](./result#match) (data-first), or the value passed to
+`run` (curried). Throws `"Non-exhaustive match"` if no case matches at
+runtime — prefer [exhaustive](#exhaustive) when the input is a closed union, or
+[otherwise](#otherwise) for an explicit fallback.
 
 ```typescript
 run(...input: readonly [input: T] | readonly []): R
@@ -175,19 +241,65 @@ run(...input: readonly [input: T] | readonly []): R
 
 | Parameter | Type | Description |
 |---|---|---|
-| `input` | `readonly [input: T] \| readonly []` |  |
+| `input` | `readonly [input: T] \| readonly []` | - the value to match when the builder was created curried |
+
+#### Returns
+
+the matched handler's result
+
+#### Example
+
+```ts
+type Event = { type: "error"; message: string } | { type: "done" };
+
+const msg = match({ type: "error", message: "x" } as Event)
+  .with({ type: "error" }, (e) => e.message)
+  .run({ type: "error", message: "net" }); // "net"
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### MatchBuilder.prototype.exhaustive <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
+Settle the match with a compile-time exhaustiveness guarantee. Only
+type-checks when every member of `T` has been handled; otherwise the return
+type becomes [NonExhaustiveError](#nonexhaustiveerror), surfacing the missing cases as a
+type error. Returns the result directly when data-first ([match](./result#match)
+called with a value), or a reusable `(input: T) => R` matcher when curried.
+
 ```typescript
 exhaustive(): ExhaustiveResult<T, Handled, R, HasInput>
+```
+
+#### Returns
+
+the result (data-first) or a matcher function (curried)
+
+#### Example
+
+```ts
+type Event =
+  | { type: "message"; content: string }
+  | { type: "error"; message: string }
+  | { type: "done" };
+
+// Curried — reusable matcher; omitting a `.with` would be a type error.
+const describe = match<Event>()
+  .with({ type: "message" }, (e) => e.content)
+  .with({ type: "error" },   (e) => `! ${e.message}`)
+  .with({ type: "done" },    () => "done")
+  .exhaustive();
+describe({ type: "done" }); // "done"
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### MatchBuilder.prototype.otherwise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Settle the match with a catch-all fallback, dropping the exhaustiveness
+requirement — `handler` runs (on the full input type) when no case matched.
+Returns the result directly when data-first, or a reusable matcher when
+curried.
 
 ```typescript
 otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R
@@ -197,13 +309,32 @@ otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R
 
 | Parameter | Type | Description |
 |---|---|---|
-| `handler` | `(input: T) => R` |  |
+| `handler` | `(input: T) => R` | - fallback run on the input when no prior case matched |
+
+#### Returns
+
+the result (data-first) or a matcher function (curried)
+
+#### Example
+
+```ts
+type Event =
+  | { type: "message"; content: string }
+  | { type: "error"; message: string }
+  | { type: "done" };
+
+const len = match({ type: "done" } as Event)
+  .with({ type: "message" }, (e) => e.content.length)
+  .otherwise(() => -1); // -1
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### matchTag <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Exhaustive match on `_tag` — for `@onrails/result` / `@onrails/maybe` style unions.
+Exhaustive match on `_tag` — for `@onrails/result` / `@onrails/maybe` style
+unions. The `handlers` object must supply one branch per `_tag`, and each
+handler receives the member narrowed to its tag.
 
 ```typescript
 function matchTag<T extends Tagged, R>(value: T, handlers: TagHandlers<T, R>): R
@@ -213,8 +344,26 @@ function matchTag<T extends Tagged, R>(value: T, handlers: TagHandlers<T, R>): R
 
 | Parameter | Type | Description |
 |---|---|---|
-| `value` | `T` |  |
-| `handlers` | `TagHandlers<T, R>` |  |
+| `value` | `T` | - a tagged union value to dispatch on |
+| `handlers` | `TagHandlers<T, R>` | - one handler per `_tag`, keyed by tag |
+
+#### Returns
+
+the result of the matched handler
+
+#### Example
+
+```ts
+import { err, ok, type Result } from "@onrails/result";
+
+const label = (r: Result<number, string>) =>
+  matchTag(r, {
+    Ok:  (v) => `ok:${v.value}`,  // v: Ok<number>
+    Err: (e) => `err:${e.error}`, // e: Err<string>
+  });
+label(ok(1));    // "ok:1"
+label(err("x")); // "err:x"
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -226,6 +375,9 @@ Accepts plain boolean guards (`(x) => x.length > 0`) or TS type-predicate
 guards (`(x): x is Foo => ...`). For type predicates, the matched handler's
 input is narrowed to the predicate's target type via [Narrow](#narrow).
 
+Note: a plain boolean guard does not advance exhaustiveness tracking — pair
+it with `.otherwise()`, or use a type predicate to narrow the union.
+
 ```typescript
 function when<T, U extends T>(guard: (input: T) => input is U): (input: T) => input is U
 function when<T>(guard: (input: T) => boolean): Pattern<T>
@@ -235,14 +387,32 @@ function when<T>(guard: (input: T) => boolean): Pattern<T>
 
 | Parameter | Type | Description |
 |---|---|---|
-| `guard` | `(input: T) => input is U` |  |
+| `guard` | `(input: T) => input is U` | - boolean or type-predicate guard function |
+
+#### Returns
+
+the guard, usable as a [Pattern](#pattern) in `.with`
+
+#### Example
+
+```ts
+const sign = match<number>()
+  .with(when((n) => n < 0), () => "neg")
+  .with(when((n) => n >= 0), () => "non-neg")
+  .exhaustive();
+sign(-1); // "neg"
+sign(0);  // "non-neg"
+```
 
 
 ## Diagnostics
 
 ### assertNever <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Use in `default` branches after manual narrowing — compile-time exhaustiveness check.
+Use in `default` branches (or after manual narrowing) to assert a union has
+been fully handled. If every case is handled, `value` is `never` and the call
+type-checks; an unhandled case makes `value` non-`never`, surfacing a compile
+error. Always throws at runtime.
 
 ```typescript
 function assertNever(value: never, message?: string): never
@@ -252,8 +422,22 @@ function assertNever(value: never, message?: string): never
 
 | Parameter | Type | Description |
 |---|---|---|
-| `value` | `never` |  |
-| `message` | `string` |  |
+| `value` | `never` | - the value that should be unreachable (typed `never`) |
+| `message` | `string` | - error message prefix; defaults to `"Unreachable"` |
+
+#### Example
+
+```ts
+type Shape = { kind: "circle"; r: number } | { kind: "square"; s: number };
+
+function area(shape: Shape): number {
+  switch (shape.kind) {
+    case "circle": return Math.PI * shape.r ** 2;
+    case "square": return shape.s ** 2;
+    default: return assertNever(shape); // type error if a case is added
+  }
+}
+```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -310,6 +494,8 @@ export type HandledUnion<Handled extends readonly unknown[]> = Handled[number];
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### IsExhaustive <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+`true` when every member of `T` appears in `Handled`, otherwise `false`.
 
 ```typescript
 export type IsExhaustive<T, Handled extends readonly unknown[]> = [

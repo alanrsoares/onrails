@@ -18,15 +18,16 @@
  *   independent validations   → @onrails/result/validation
  */
 
+export { ResultAsync } from "./async.js";
 export {
   errAsync,
   fromPromise,
   fromSafePromise,
   okAsync,
   parallelTupleAsync,
-  ResultAsync,
   tryAsync,
-} from "./async.js";
+} from "./async-lift.js";
+export { combine, combineTuple } from "./collections.js";
 export {
   asyncAfter,
   fromAsync,
@@ -37,8 +38,6 @@ export {
 export { flow } from "./pipe.js";
 export {
   bimap,
-  combine,
-  combineTuple,
   err,
   flatMap,
   isErr,

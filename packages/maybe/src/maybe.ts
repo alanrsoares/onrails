@@ -36,6 +36,13 @@ export const isSome = <T>(maybe: Maybe<T>): maybe is Some<T> => maybe._tag === "
 
 /**
  * Type-narrowing predicate: returns `true` when the value is `None`.
+ *
+ * @example
+ * ```ts
+ * if (isNone(fromNullable(user))) {
+ *   return redirect("/login");   // narrowed to None branch
+ * }
+ * ```
  */
 export const isNone = <T>(maybe: Maybe<T>): maybe is None => maybe._tag === "None";
 
@@ -106,7 +113,18 @@ export function flatMap(
   return (maybe: Maybe<unknown>) => flatMapImpl(maybe, fn);
 }
 
-/** Alias for {@link flatMap} — same dual-form shape. */
+/**
+ * Neverthrow-compat alias of {@link flatMap} — same dual-form shape. Prefer
+ * {@link flatMap} as the canonical name; reach for `andThen` only when porting
+ * neverthrow code or matching its vocabulary.
+ *
+ * @example
+ * ```ts
+ * andThen(fromNullable(user), (u) =>
+ *   u.active ? some(u) : none(),
+ * );
+ * ```
+ */
 export const andThen = flatMap;
 
 const matchImpl = <T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U =>
