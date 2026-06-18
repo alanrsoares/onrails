@@ -29,83 +29,73 @@ const features = [
 
 const RESULT_SNIPPET = `import { ResultAsync, tryAsync } from "@onrails/result";
 
-type PublishError =
-  | { kind: "not_found"; id: string }
-  | { kind: "forbidden" }
-  | { kind: "db"; cause: unknown };
+type FetchError =
+  | { kind: "network"; cause: unknown }
+  | { kind: "not_found" }
+  | { kind: "decode"; issues: string[] };
 
-// Compose async steps on a single typed error channel — no try/catch, no throws.
-const publishPost = (id: string, user: User) =>
-  // db.posts.find resolves to Post | null
-  tryAsync(db.posts.find(id), (cause): PublishError => ({ kind: "db", cause }))
-    .flatMap((post) =>
-      post
-        ? ResultAsync.ok(post)
-        : ResultAsync.err<Post, PublishError>({ kind: "not_found", id }),
+// neverthrow-style: replace try/catch around fetch with one typed error channel.
+const getUser = (id: string) =>
+  tryAsync(fetch(\`/api/users/\${id}\`), (cause): FetchError => ({ kind: "network", cause }))
+    .flatMap((res) =>
+      res.ok
+        ? ResultAsync.fromSafePromise(res.json())
+        : ResultAsync.err<unknown, FetchError>({ kind: "not_found" }),
     )
-    .flatMap((post) =>
-      post.authorId === user.id
-        ? ResultAsync.ok(post)
-        : ResultAsync.err<Post, PublishError>({ kind: "forbidden" }),
-    )
-    .map((post) => ({ ...post, status: "published" as const }))
-    .tapErr((e) => logger.warn("publish failed", e));
+    .flatMap((json) => decodeUser(json))   // a sync Result<User, FetchError> — accepted as-is
+    .map((user) => user.displayName);
 
-// Settle once; the compiler forces you to handle every branch.
-const status = await publishPost(postId, user).match(
-  () => 200,
-  (e) => (e.kind === "not_found" ? 404 : e.kind === "forbidden" ? 403 : 500),
-);`;
+// Settle once; every error in the union is yours to handle.
+const name = await getUser("u_42").unwrapOr("Anonymous");`;
 
 const PATTERN_SNIPPET = `import { match } from "@onrails/pattern";
 
-type RemoteData =
-  | { status: "idle" }
-  | { status: "loading"; since: number }
-  | { status: "ok"; rows: string[] }
+type Response =
+  | { status: "loading" }
+  | { status: "empty" }
+  | { status: "ok"; posts: Post[] }
   | { status: "error"; code: number };
 
-// Exhaustive & type-narrowed — add a variant and every match stops compiling.
-const render = (state: RemoteData) =>
-  match(state)
-    .with({ status: "idle" }, () => "Ready when you are")
-    .with({ status: "loading" }, (s) => \`Loading… \${Date.now() - s.since}ms\`)
-    .with({ status: "ok" }, (s) => \`\${s.rows.length} rows\`)
-    .with({ status: "error" }, (s) => \`Error \${s.code}\`)
+// ts-pattern-style: render a union to markup, exhaustively.
+// Omit a case (or add a variant) and it stops compiling.
+const view = (res: Response) =>
+  match(res)
+    .with({ status: "loading" }, () => \`<spinner />\`)
+    .with({ status: "empty" }, () => \`<p>No posts yet</p>\`)
+    .with({ status: "ok" }, (r) => \`<ul>\${r.posts.length} posts</ul>\`)
+    .with({ status: "error" }, (r) => \`<p>Failed (\${r.code})</p>\`)
     .exhaustive();`;
 
-const MAYBE_SNIPPET = `import { flatMap, fromNullable, map, match, unwrapOr } from "@onrails/maybe";
+const MAYBE_SNIPPET = `import { flatMap, fromNullable, map, unwrapOr } from "@onrails/maybe";
 
-// Expected absence as a value — no scattered null checks, no optional-chaining soup.
-const user = flatMap(fromNullable(raw.userId), (id) => fromNullable(users.get(id)));
+// fp-ts Option-style: walk nullable fields safely, then supply a default.
+// No optional-chaining soup, no scattered null checks.
+const city = flatMap(fromNullable(user.address), (addr) => fromNullable(addr.city));
 
-const greeting = match(
-  user,
-  (u) => \`Welcome back, \${u.name}\`,
-  () => "Welcome, guest",
-);
+const label = unwrapOr(
+  map(city, (c) => c.name.toUpperCase()),
+  "UNKNOWN",
+);`;
 
-// …or transform and collapse with a fallback in one line.
-const displayName = unwrapOr(map(user, (u) => u.name.trim()), "guest");`;
-
-const COMBINED_SNIPPET = `import { err, flatMap, match, ok } from "@onrails/result";
+const COMBINED_SNIPPET = `import { $, err, ok, tryGen } from "@onrails/result";
 import { fromNullable } from "@onrails/maybe";
 import { toResult } from "@onrails/maybe/interop";
 
-type LoadError = { kind: "not_found"; id: string } | { kind: "inactive" };
+type OrderError =
+  | { kind: "no_user"; id: string }
+  | { kind: "empty_cart" }
+  | { kind: "payment"; code: string };
 
-// Maybe models absence; cross into Result at the boundary where it becomes a failure.
-const loadActiveUser = (id: string) =>
-  flatMap(
-    toResult(fromNullable(users.get(id)), (): LoadError => ({ kind: "not_found", id })),
-    (u) => (u.active ? ok(u) : err<User, LoadError>({ kind: "inactive" })),
-  );
-
-const banner = match(
-  loadActiveUser("u_42"),
-  (u) => \`Hi, \${u.name}\`,
-  (e) => (e.kind === "not_found" ? "User not found" : "Account inactive"),
-);`;
+// Effect.gen-style do-notation: $ unwraps an Ok, or short-circuits the whole block.
+// Maybe crosses into Result at the boundary where absence becomes a failure.
+const placeOrder = (userId: string) =>
+  tryGen(() => {
+    const user = $(toResult(fromNullable(users.get(userId)), (): OrderError => ({ kind: "no_user", id: userId })));
+    const cart = $(loadCart(user.id));                  // Result<Cart, OrderError>
+    if (cart.items.length === 0) return err({ kind: "empty_cart" as const });
+    const receipt = $(charge(user, cart.total));        // Result<Receipt, OrderError>
+    return ok({ orderId: receipt.id, total: cart.total });
+  });`;
 
 const examples = [
   { label: "Result", code: RESULT_SNIPPET },
