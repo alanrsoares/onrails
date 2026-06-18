@@ -13,7 +13,7 @@ import type { Narrow, NarrowUnion } from "./narrow.js";
  *
  * @example
  * ```ts
- * type Event = { kind: "click"; x: number } | { kind: "key"; code: string };
+ * type Event = { kind: "click"; x: number; y: number } | { kind: "key"; code: string };
  *
  * const p1: Pattern<Event> = { kind: "click" };         // object pattern
  * const p2: Pattern<Event> = (e) => e.kind === "key";   // guard
