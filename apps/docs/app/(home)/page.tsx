@@ -47,7 +47,7 @@ export default function HomePage() {
         <span className="mb-5 rounded-full border border-fd-border bg-fd-secondary/60 px-3 py-1 text-xs font-medium tracking-wide text-fd-muted-foreground">
           railway-oriented · zero-any · functional-typescript
         </span>
-        <h1 className="bg-gradient-to-b from-fd-foreground to-fd-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-7xl">
+        <h1 className="bg-linear-to-b from-fd-foreground to-fd-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-7xl">
           onrails
         </h1>
         <p className="mt-5 max-w-2xl text-balance text-lg text-fd-muted-foreground sm:text-xl">
