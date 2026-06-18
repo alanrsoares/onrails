@@ -447,4 +447,30 @@ function handle(name: string, node: any) {
       expect(tersify(src)).toBe(expected);
     });
   });
+
+  // Regression: issues #37 / #38 — JSX files must be parsed in TSX mode, else
+  // `<`/`>` read as comparison operators truncate node boundaries and edits
+  // relocate a statement terminator into the JSX opening tag.
+  describe("jsx (tsx-mode parsing)", () => {
+    it("collapses an if-guard before a JSX return without corrupting the tag", () => {
+      const src = [
+        "function FieldError({ content }: { content: string | null }) {",
+        "  if (!content) {",
+        "    return null;",
+        "  }",
+        '  return <div role="alert">{content}</div>;',
+        "}",
+      ].join("\n");
+      const out = tersify(src, true);
+      // The bug injected `role="alert";` into the opening tag.
+      expect(out).not.toContain('role="alert";');
+      expect(out).toContain('<div role="alert">{content}</div>');
+    });
+
+    it("preserves a `.ts` angle-bracket cast (not parsed as TSX)", () => {
+      const src = "function head<T>(xs: T[]): T {\n  return <T>xs[0];\n}";
+      // jsx=false: `<T>xs[0]` is a valid cast and must survive.
+      expect(tersify(src, false)).toBe("const head = <T,>(xs: T[]): T => <T>xs[0];");
+    });
+  });
 });

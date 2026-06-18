@@ -213,28 +213,32 @@ export const applyEditStep = (acc: EditAcc, e: Edit): EditAcc => ({
   imports: new Set([...acc.imports, ...e.imports]),
 });
 
-export function rewriteCompatMethodChainsToNative(src: string): string {
+export function rewriteCompatMethodChainsToNative(src: string, jsx = false): string {
   const edits: Edit[] = [];
 
-  walkSource(src, (node, sf) => {
-    if (ts.isCallExpression(node)) {
-      const helper = helperCallToNative(node);
-      if (isSome(helper)) {
-        edits.push(spanEdit(node, sf, helper.value));
-        return true;
+  walkSource(
+    src,
+    (node, sf) => {
+      if (ts.isCallExpression(node)) {
+        const helper = helperCallToNative(node);
+        if (isSome(helper)) {
+          edits.push(spanEdit(node, sf, helper.value));
+          return true;
+        }
       }
-    }
 
-    if (
-      isSupportedChainCall(node) &&
-      !isNestedInSupportedChain(node) &&
-      !ts.isPropertyAccessExpression(node.parent)
-    ) {
-      const chain = collectChain(node);
-      const chained = chainToNative(chain.base, chain.steps);
-      if (isSome(chained)) edits.push(spanEdit(node, sf, chained.value));
-    }
-  });
+      if (
+        isSupportedChainCall(node) &&
+        !isNestedInSupportedChain(node) &&
+        !ts.isPropertyAccessExpression(node.parent)
+      ) {
+        const chain = collectChain(node);
+        const chained = chainToNative(chain.base, chain.steps);
+        if (isSome(chained)) edits.push(spanEdit(node, sf, chained.value));
+      }
+    },
+    jsx,
+  );
 
   if (edits.length === 0) return src;
 

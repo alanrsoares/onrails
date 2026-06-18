@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { concatCollectors, walkSource } from "./ast.js";
+import { walkSource } from "./ast.js";
 import { COMPAT_ONLY_PATTERNS, COMPAT_SPEC } from "./constants.js";
 import type { Warning } from "./types.js";
 
@@ -12,7 +12,7 @@ export const collectRegexLineWarnings = (src: string): readonly Warning[] =>
       ),
     );
 
-export const collectAstCompatWarnings = (src: string): readonly Warning[] => {
+export const collectAstCompatWarnings = (src: string, jsx = false): readonly Warning[] => {
   const warnings: Warning[] = [];
   const lines = src.split(/\r?\n/);
   const lineTextAt = (sf: ts.SourceFile, node: ts.Node) => {
@@ -20,32 +20,36 @@ export const collectAstCompatWarnings = (src: string): readonly Warning[] => {
     return { line, text: lines[line - 1]?.trim() ?? node.getText(sf) };
   };
 
-  walkSource(src, (node, sf) => {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
-      const method = node.expression.name.text;
-      if (method === "isOk" || method === "isErr") {
-        warnings.push({ ...lineTextAt(sf, node), label: "compat predicate method" });
-      }
-    }
-
-    if (ts.isPropertyAccessExpression(node)) {
-      const property = node.name.text;
-      if (property === "value" || property === "error") {
-        const receiver = node.expression.getText(sf);
-        if (/result$/i.test(receiver) || /^result$/i.test(receiver)) {
-          warnings.push({ ...lineTextAt(sf, node), label: "compat value/error property" });
+  walkSource(
+    src,
+    (node, sf) => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+        const method = node.expression.name.text;
+        if (method === "isOk" || method === "isErr") {
+          warnings.push({ ...lineTextAt(sf, node), label: "compat predicate method" });
         }
       }
-    }
-  });
+
+      if (ts.isPropertyAccessExpression(node)) {
+        const property = node.name.text;
+        if (property === "value" || property === "error") {
+          const receiver = node.expression.getText(sf);
+          if (/result$/i.test(receiver) || /^result$/i.test(receiver)) {
+            warnings.push({ ...lineTextAt(sf, node), label: "compat value/error property" });
+          }
+        }
+      }
+    },
+    jsx,
+  );
 
   return warnings;
 };
 
-export const collectNativeMigrationWarnings = concatCollectors(
-  collectRegexLineWarnings,
-  collectAstCompatWarnings,
-);
+export const collectNativeMigrationWarnings = (src: string, jsx = false): readonly Warning[] => [
+  ...collectRegexLineWarnings(src),
+  ...collectAstCompatWarnings(src, jsx),
+];
 
 export const collectUnsupportedCompatImportWarnings = (src: string): readonly Warning[] =>
   src.split(/\r?\n/).flatMap((line, i) =>

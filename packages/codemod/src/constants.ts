@@ -8,6 +8,7 @@ export const SKIP = new Set([
   "build",
 ]);
 export const CODE_EXT = /\.(ts|tsx|mts|cts)$/;
+export const JSX_EXT = /\.(tsx|jsx)$/;
 export const IMPORT_RE = /(from\s+|import\s*\(\s*)(['"])neverthrow\2/g;
 export const COMPAT_SPEC = "@onrails/result/compat/neverthrow";
 export const NATIVE_SPEC = "@onrails/result";

@@ -21,8 +21,19 @@ export const concatCollectors =
 export const walkSource = (
   src: string,
   visit: (node: ts.Node, sf: ts.SourceFile) => unknown,
+  jsx = false,
 ): void => {
-  const sf = ts.createSourceFile("codemod.ts", src, ts.ScriptTarget.Latest, true);
+  // Parse JSX files in TSX mode — otherwise `<`/`>` are read as comparison
+  // operators and `<T>expr` as a cast, which truncates node boundaries and
+  // corrupts span-based edits. The scriptKind is set explicitly (not just via
+  // the filename) so it can't drift from the extension.
+  const sf = ts.createSourceFile(
+    jsx ? "codemod.tsx" : "codemod.ts",
+    src,
+    ts.ScriptTarget.Latest,
+    true,
+    jsx ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
   const go = (n: ts.Node) => {
     if (visit(n, sf)) return;
     ts.forEachChild(n, go);
