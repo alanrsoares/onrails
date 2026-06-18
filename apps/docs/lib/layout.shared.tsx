@@ -5,9 +5,9 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: (
-        <span className="flex items-center gap-2 font-semibold">
-          <img src="/icon.svg" width="18" height="18" className="w-4.5 h-4.5" alt="onrails logo" />
-          <span>{appName}</span>
+        <span className="flex items-center gap-2 font-semibold text-base select-none">
+          <img src="/icon.svg" width="24" height="24" className="w-6 h-6 object-contain" alt="onrails logo" />
+          <span className="leading-none">{appName}</span>
         </span>
       ),
     },
