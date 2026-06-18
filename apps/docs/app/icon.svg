@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <style>
+    .rail {
+      stroke: url(#rail-grad);
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .tie {
+      stroke: #737373;
+      stroke-linecap: butt;
+    }
+    @media (prefers-color-scheme: dark) {
+      .tie {
+        stroke: #a3a3a3;
+      }
+    }
+  </style>
+  <defs>
+    <linearGradient id="rail-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Sleepers (ties) using a thick dashed circle -->
+  <circle cx="16" cy="16" r="9.5" class="tie" stroke-width="3.5" stroke-dasharray="1.2 2.6" fill="none" />
+  
+  <!-- Outer Rail -->
+  <circle cx="16" cy="16" r="11.25" class="rail" />
+  
+  <!-- Inner Rail -->
+  <circle cx="16" cy="16" r="7.75" class="rail" />
+</svg>
