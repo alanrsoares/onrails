@@ -35,18 +35,23 @@ type FetchError =
   | { kind: "decode"; issues: string[] };
 
 // neverthrow-style: replace try/catch around fetch with one typed error channel.
-const getUser = (id: string) =>
+const getUser = (id: string): ResultAsync<User, FetchError> =>
   tryAsync(fetch(\`/api/users/\${id}\`), (cause): FetchError => ({ kind: "network", cause }))
     .flatMap((res) =>
-      res.ok
-        ? ResultAsync.fromSafePromise(res.json())
-        : ResultAsync.err<unknown, FetchError>({ kind: "not_found" }),
+      res.status === 404
+        ? ResultAsync.err({ kind: "not_found" as const })
+        : tryAsync(res.json(), (cause): FetchError => ({ kind: "network", cause })),
     )
-    .flatMap((json) => decodeUser(json))   // a sync Result<User, FetchError> — accepted as-is
-    .map((user) => user.displayName);
+    .flatMap(decodeUser); // (json: unknown) => Result<User, FetchError>
 
-// Settle once; every error in the union is yours to handle.
-const name = await getUser("u_42").unwrapOr("Anonymous");`;
+// Settle once and handle every error in the union — exhaustively, no throws.
+const response = await getUser("u_42").match(
+  (user) => ({ status: 200, body: user }),
+  (e) =>
+    e.kind === "not_found"
+      ? { status: 404, body: "No such user" }
+      : { status: 502, body: "Upstream unavailable" },
+);`;
 
 const PATTERN_SNIPPET = `import { match } from "@onrails/pattern";
 
@@ -77,25 +82,41 @@ const label = unwrapOr(
   "UNKNOWN",
 );`;
 
-const COMBINED_SNIPPET = `import { $, err, ok, tryGen } from "@onrails/result";
-import { fromNullable } from "@onrails/maybe";
+const COMBINED_SNIPPET = `import { fromNullable } from "@onrails/maybe";
 import { toResult } from "@onrails/maybe/interop";
+import { match } from "@onrails/pattern";
+import { $, err, ok, tryGen } from "@onrails/result";
 
 type OrderError =
   | { kind: "no_user"; id: string }
   | { kind: "empty_cart" }
-  | { kind: "payment"; code: string };
+  | { kind: "declined"; reason: string };
 
-// Effect.gen-style do-notation: $ unwraps an Ok, or short-circuits the whole block.
-// Maybe crosses into Result at the boundary where absence becomes a failure.
-const placeOrder = (userId: string) =>
+// do-notation: $ unwraps an Ok or short-circuits. Maybe crosses into Result via toResult.
+const checkout = (userId: string) =>
   tryGen(() => {
-    const user = $(toResult(fromNullable(users.get(userId)), (): OrderError => ({ kind: "no_user", id: userId })));
-    const cart = $(loadCart(user.id));                  // Result<Cart, OrderError>
+    const user = $(
+      toResult(
+        fromNullable(users.get(userId)),
+        (): OrderError => ({ kind: "no_user", id: userId }),
+      ),
+    );
+    const cart = $(loadCart(user.id));
     if (cart.items.length === 0) return err({ kind: "empty_cart" as const });
-    const receipt = $(charge(user, cart.total));        // Result<Receipt, OrderError>
-    return ok({ orderId: receipt.id, total: cart.total });
-  });`;
+    return ok(placeOrder(user, cart));
+  });
+
+// Pattern-match the tagged-union outcome — every success and failure, exhaustively.
+const message = match(checkout("u_42"))
+  .with({ _tag: "Ok" }, (r) => \`Order \${r.value.id} confirmed\`)
+  .with({ _tag: "Err" }, (r) =>
+    match(r.error)
+      .with({ kind: "no_user" }, () => "Please sign in")
+      .with({ kind: "empty_cart" }, () => "Your cart is empty")
+      .with({ kind: "declined" }, (e) => \`Payment declined: \${e.reason}\`)
+      .exhaustive(),
+  )
+  .exhaustive();`;
 
 const examples = [
   { label: "Result", code: RESULT_SNIPPET },

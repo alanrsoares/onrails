@@ -19,19 +19,15 @@ surface.
 
 ## Same task, both libraries
 
-Drag the handle to wipe between the two:
-
-<CodeCompare
-  leftLabel="onrails"
-  rightLabel="neverthrow"
-  left={`// dual-form functions over a tagged union
-import { pipe, flatMap, map, mapErr, match } from "@onrails/result";
+```ts
+// onrails — dual-form functions over a tagged union
+import { flatMap, map, mapErr, match, pipe } from "@onrails/result";
 
 const createUser = (raw: string) =>
   pipe(
-    parseJson(raw),                  // Result<Input, ParseError>
+    parseJson(raw), // Result<Input, ParseError>
     mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
-    flatMap(validate),               // Result<User, AppError>
+    flatMap(validate), // Result<User, AppError>
     map((u) => ({ ...u, id: newId() })),
   );
 
@@ -39,9 +35,12 @@ const status = match(
   createUser(raw),
   () => 201,
   (e) => (e.kind === "validation" ? 422 : 400),
-);`}
-  right={`// fluent methods on a Result instance
-import { ok, err, Result } from "neverthrow";
+);
+```
+
+```ts
+// neverthrow — fluent methods on a Result instance
+import { err, ok, Result } from "neverthrow";
 
 const createUser = (raw: string): Result<User, AppError> =>
   parseJson(raw)
@@ -52,8 +51,8 @@ const createUser = (raw: string): Result<User, AppError> =>
 const status = createUser(raw).match(
   () => 201,
   (e) => (e.kind === "validation" ? 422 : 400),
-);`}
-/>
+);
+```
 
 Prefer dots? onrails has an opt-in fluent wrapper too:
 
@@ -113,6 +112,22 @@ bunx @onrails/codemod ./path/to/repo --to-native
 
 Stage 2 is intentionally conservative: it only rewrites imports that have a
 native equivalent, leaving compat-only shapes flagged for manual review.
+
+Stage 1 only touches the import — your call sites are untouched. Drag the handle
+to see exactly what changes:
+
+<CodeCompare
+  leftLabel="before"
+  rightLabel="after stage 1"
+  left={`import { ok, err, Result } from "neverthrow";
+
+const parseConfig = (raw: string): Result<Config, ConfigError> =>
+  ok(raw).andThen(decode).map(normalize);`}
+  right={`import { ok, err, Result } from "@onrails/result/compat/neverthrow";
+
+const parseConfig = (raw: string): Result<Config, ConfigError> =>
+  ok(raw).andThen(decode).map(normalize);`}
+/>
 
 ## Choose neverthrow when
 
