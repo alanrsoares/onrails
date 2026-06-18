@@ -1,7 +1,7 @@
-import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { ArrowRight, Layers, ShieldCheck, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
+import { TwoslashSnippet } from "@/components/twoslash-snippet";
 import { snippets } from "@/lib/snippets.generated";
 import { gitConfig } from "@/lib/shared";
 
@@ -29,13 +29,14 @@ const features = [
 ];
 
 // Each tab's code is the live source of a type-checked, tested module in
-// @onrails/examples (see lib/snippets.generated.ts).
+// @onrails/examples (see lib/snippets.generated.ts), rendered through twoslash
+// so tokens carry hover types.
 const examples = [
-  { label: "Result", code: snippets.result },
-  { label: "Pattern", code: snippets.pattern },
-  { label: "Maybe", code: snippets.maybe },
-  { label: "Railway", code: snippets.railway },
-  { label: "Combined", code: snippets.combined },
+  { label: "Result", code: snippets.result.twoslash },
+  { label: "Pattern", code: snippets.pattern.twoslash },
+  { label: "Maybe", code: snippets.maybe.twoslash },
+  { label: "Railway", code: snippets.railway.twoslash },
+  { label: "Combined", code: snippets.combined.twoslash },
 ];
 
 export default function HomePage() {
@@ -80,7 +81,7 @@ export default function HomePage() {
         <Tabs items={examples.map((e) => e.label)}>
           {examples.map(({ label, code }) => (
             <Tab key={label} value={label}>
-              <DynamicCodeBlock lang="ts" code={code} />
+              <TwoslashSnippet code={code} />
             </Tab>
           ))}
         </Tabs>
