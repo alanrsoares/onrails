@@ -8,12 +8,56 @@ interface DocSymbol {
   signature: string;
   description: string;
   examples: string[];
-  params: { name: string; description: string }[];
+  params: { name: string; type: string; description: string }[];
   returns: string;
+  category: string;
+  isDeprecated: boolean;
+  deprecationMessage: string;
   // Class specific fields
   constructorSig?: string;
   staticMethods?: DocSymbol[];
   instanceMethods?: DocSymbol[];
+}
+
+function slugify(text: string): string {
+  return text.toLowerCase()
+    .replace(/[^a-z0-9-\s]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+function resolveSymbolLink(symbolName: string, currentPackage: string): string {
+  const resultSymbols = new Set([
+    "Result", "Ok", "Err", "ResultAsync", "ok", "err", "map", "flatMap", "match", "bimap", "mapErr", "trySync", "tryAsync"
+  ]);
+  const maybeSymbols = new Set([
+    "Maybe", "Some", "None", "some", "none", "isSome", "isNone", "fromNullable", "getOrElse"
+  ]);
+  const patternSymbols = new Set([
+    "match", "MatchBuilder", "assertNever", "matchTag", "when"
+  ]);
+
+  const slug = slugify(symbolName);
+  
+  if (currentPackage === "@onrails/maybe") {
+    if (resultSymbols.has(symbolName)) return `./result#${slug}`;
+    if (patternSymbols.has(symbolName)) return `./pattern#${slug}`;
+  } else if (currentPackage === "@onrails/result") {
+    if (maybeSymbols.has(symbolName)) return `./maybe#${slug}`;
+    if (patternSymbols.has(symbolName)) return `./pattern#${slug}`;
+  } else if (currentPackage === "@onrails/pattern") {
+    if (resultSymbols.has(symbolName)) return `./result#${slug}`;
+    if (maybeSymbols.has(symbolName)) return `./maybe#${slug}`;
+  }
+  
+  return `#${slug}`;
+}
+
+function formatDescription(desc: string, currentPackage: string): string {
+  return desc.replace(/\{@link\s+([^}]+)\}/g, (_, target) => {
+    const cleanTarget = target.trim();
+    const url = resolveSymbolLink(cleanTarget, currentPackage);
+    return `[${cleanTarget}](${url})`;
+  });
 }
 
 function formatExample(ex: string): string {
@@ -22,10 +66,6 @@ function formatExample(ex: string): string {
     return trimmed;
   }
   return `\`\`\`typescript\n${trimmed}\n\`\`\``;
-}
-
-function formatDescription(desc: string): string {
-  return desc.replace(/\{@link\s+([^}]+)\}/g, "`$1`");
 }
 
 function getBadge(kind: string): string {
@@ -49,15 +89,93 @@ function getBadge(kind: string): string {
   return `<span className="inline-flex items-center rounded-full border ${colors} ${transformClass} font-medium ml-2 align-middle">${label}</span>`;
 }
 
+function getParamTypesMap(checker: ts.TypeChecker, sigs: readonly ts.Signature[]): Map<string, string> {
+  const map = new Map<string, string>();
+  if (sigs.length > 0 && sigs[0]) {
+    const firstSig = sigs[0];
+    for (const paramSym of firstSig.getParameters()) {
+      const pDecl = paramSym.valueDeclaration || paramSym.declarations?.[0];
+      let pType: ts.Type;
+      if (pDecl) {
+        pType = checker.getTypeOfSymbolAtLocation(paramSym, pDecl);
+      } else {
+        pType = checker.getTypeAtLocation(paramSym.declarations?.[0] || firstSig.getDeclaration());
+      }
+      map.set(paramSym.getName(), checker.typeToString(pType));
+    }
+  }
+  return map;
+}
+
+function getDefaultCategory(name: string, packageName: string, tags: readonly ts.JSDocTagInfo[]): string {
+  const catTag = tags.find(t => t.name === "category");
+  if (catTag) {
+    return ts.displayPartsToString(catTag.text).trim();
+  }
+
+  if (packageName === "@onrails/result") {
+    const isAsync = ["ResultAsync", "fromPromise", "fromSafePromise", "parallelTupleAsync", "sequenceTupleAsync", "tryAsync", "okAsync", "errAsync"].includes(name) || name.startsWith("ResultAsync.");
+    if (isAsync) return "Async";
+    
+    if (["combine", "combineTuple"].includes(name)) {
+      return "Collections";
+    }
+    if (["fromResult", "fromAsync", "asyncAfter"].includes(name)) {
+      return "Interop";
+    }
+    if (["$", "tryGen", "yieldResult"].includes(name)) {
+      return "Generators";
+    }
+    if (["Result", "Ok", "Err", "UnexpectedError", "InferOk", "InferErr"].includes(name)) {
+      return "Types";
+    }
+    return "Core";
+  }
+
+  if (packageName === "@onrails/maybe") {
+    if (["some", "none", "of"].includes(name)) {
+      return "Constructors";
+    }
+    if (["Maybe", "Some", "None"].includes(name)) {
+      return "Types";
+    }
+    if (["compact", "compactMap"].includes(name)) {
+      return "Collections";
+    }
+    if (["optional", "fromNullable"].includes(name)) {
+      return "Utilities";
+    }
+    return "Core";
+  }
+
+  if (packageName === "@onrails/pattern") {
+    if (["assertNever", "NonExhaustiveError"].includes(name)) {
+      return "Diagnostics";
+    }
+    if (["match", "MatchBuilder", "matchTag", "when"].includes(name)) {
+      return "Matching";
+    }
+    return "Types";
+  }
+
+  return "Core";
+}
+
 function extractDocSymbol(
   checker: ts.TypeChecker,
   symbol: ts.Symbol,
   decl: ts.Declaration,
-  name: string
+  name: string,
+  packageName: string
 ): DocSymbol {
   const declaredType = checker.getTypeOfSymbolAtLocation(symbol, decl);
   const docComment = ts.displayPartsToString(symbol.getDocumentationComment(checker));
   const tags = symbol.getJsDocTags(checker);
+
+  const category = getDefaultCategory(name, packageName, tags);
+  const deprecationTag = tags.find(t => t.name === "deprecated");
+  const isDeprecated = !!deprecationTag;
+  const deprecationMessage = deprecationTag ? ts.displayPartsToString(deprecationTag.text) : "";
 
   let kind: "function" | "type" | "class" | "other" = "other";
   let signature = "";
@@ -121,17 +239,36 @@ function extractDocSymbol(
           propSig = `static ${prop.name}: ${checker.typeToString(propType)}`;
         }
 
+        const propParamTypesMap = getParamTypesMap(checker, propSigs);
+        const propDepTag = propTags.find(t => t.name === "deprecated");
+        
+        const propParams: { name: string; type: string; description: string }[] = [];
+        if (propSigs.length > 0 && propSigs[0]) {
+          const firstSig = propSigs[0];
+          for (const paramSym of firstSig.getParameters()) {
+            const pName = paramSym.getName();
+            const pType = propParamTypesMap.get(pName) || "any";
+            const paramTag = propTags.find(t => t.name === "param" && t.text && ts.displayPartsToString(t.text).startsWith(pName));
+            let pDesc = "";
+            if (paramTag && paramTag.text) {
+              const fullText = ts.displayPartsToString(paramTag.text);
+              pDesc = fullText.slice(pName.length).trim();
+            }
+            propParams.push({ name: pName, type: pType, description: pDesc });
+          }
+        }
+
         staticMethods.push({
           name: `${name}.${prop.name}`,
           kind: "function",
           signature: propSig,
           description: propDoc,
           examples: propTags.filter(t => t.name === "example").map(t => ts.displayPartsToString(t.text)),
-          params: propTags.filter(t => t.name === "param" && t.text).map(t => {
-            const parts = ts.displayPartsToString(t.text).split(/\s+/);
-            return { name: parts[0] || "", description: parts.slice(1).join(" ") };
-          }),
+          params: propParams,
           returns: ts.displayPartsToString(propTags.find(t => t.name === "returns")?.text),
+          category: getDefaultCategory(`${name}.${prop.name}`, packageName, propTags),
+          isDeprecated: !!propDepTag,
+          deprecationMessage: propDepTag ? ts.displayPartsToString(propDepTag.text) : "",
         });
       }
 
@@ -157,17 +294,36 @@ function extractDocSymbol(
           propSig = `${prop.name}: ${checker.typeToString(propType)}`;
         }
 
+        const propParamTypesMap = getParamTypesMap(checker, propSigs);
+        const propDepTag = propTags.find(t => t.name === "deprecated");
+
+        const propParams: { name: string; type: string; description: string }[] = [];
+        if (propSigs.length > 0 && propSigs[0]) {
+          const firstSig = propSigs[0];
+          for (const paramSym of firstSig.getParameters()) {
+            const pName = paramSym.getName();
+            const pType = propParamTypesMap.get(pName) || "any";
+            const paramTag = propTags.find(t => t.name === "param" && t.text && ts.displayPartsToString(t.text).startsWith(pName));
+            let pDesc = "";
+            if (paramTag && paramTag.text) {
+              const fullText = ts.displayPartsToString(paramTag.text);
+              pDesc = fullText.slice(pName.length).trim();
+            }
+            propParams.push({ name: pName, type: pType, description: pDesc });
+          }
+        }
+
         instanceMethods.push({
           name: `${name}.prototype.${prop.name}`,
           kind: "function",
           signature: propSig,
           description: propDoc,
           examples: propTags.filter(t => t.name === "example").map(t => ts.displayPartsToString(t.text)),
-          params: propTags.filter(t => t.name === "param" && t.text).map(t => {
-            const parts = ts.displayPartsToString(t.text).split(/\s+/);
-            return { name: parts[0] || "", description: parts.slice(1).join(" ") };
-          }),
+          params: propParams,
           returns: ts.displayPartsToString(propTags.find(t => t.name === "returns")?.text),
+          category: getDefaultCategory(`${name}.prototype.${prop.name}`, packageName, propTags),
+          isDeprecated: !!propDepTag,
+          deprecationMessage: propDepTag ? ts.displayPartsToString(propDepTag.text) : "",
         });
       }
     }
@@ -176,22 +332,28 @@ function extractDocSymbol(
     signature = `const ${name}: ${checker.typeToString(declaredType)}`;
   }
 
-  const params: { name: string; description: string }[] = [];
-  let returns = "";
-  const examples: string[] = [];
+  const paramTypesMap = getParamTypesMap(checker, sigs);
+  const params: { name: string; type: string; description: string }[] = [];
 
-  for (const tag of tags) {
-    if (tag.name === "param" && tag.text) {
-      const parts = ts.displayPartsToString(tag.text).split(/\s+/);
-      const pName = parts[0] || "";
-      const pDesc = parts.slice(1).join(" ");
-      params.push({ name: pName, description: pDesc });
-    } else if (tag.name === "returns" && tag.text) {
-      returns = ts.displayPartsToString(tag.text);
-    } else if (tag.name === "example" && tag.text) {
-      examples.push(ts.displayPartsToString(tag.text));
+  if (sigs.length > 0 && sigs[0]) {
+    const firstSig = sigs[0];
+    for (const paramSym of firstSig.getParameters()) {
+      const pName = paramSym.getName();
+      const pType = paramTypesMap.get(pName) || "any";
+      const paramTag = tags.find(t => t.name === "param" && t.text && ts.displayPartsToString(t.text).startsWith(pName));
+      let pDesc = "";
+      if (paramTag && paramTag.text) {
+        const fullText = ts.displayPartsToString(paramTag.text);
+        pDesc = fullText.slice(pName.length).trim();
+      }
+      params.push({ name: pName, type: pType, description: pDesc });
     }
   }
+
+  const returnsTag = tags.find(t => t.name === "returns");
+  const returns = returnsTag ? ts.displayPartsToString(returnsTag.text) : "";
+
+  const examples = tags.filter(t => t.name === "example").map(t => ts.displayPartsToString(t.text));
 
   return {
     name,
@@ -201,10 +363,80 @@ function extractDocSymbol(
     examples,
     params,
     returns,
+    category,
+    isDeprecated,
+    deprecationMessage,
     constructorSig,
     staticMethods,
     instanceMethods,
   };
+}
+
+function renderSymbolMDX(sym: DocSymbol, isFirst: boolean, currentPackage: string): string {
+  let mdx = "";
+  if (!isFirst) {
+    mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+  }
+
+  const deprecationBadge = sym.isDeprecated
+    ? ` <span className="inline-flex items-center rounded-full border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">deprecated</span>`
+    : "";
+
+  mdx += `### ${sym.name} ${getBadge(sym.kind)}${deprecationBadge}\n\n`;
+
+  if (sym.isDeprecated) {
+    mdx += `> [!WARNING]\n> **Deprecated:** ${formatDescription(sym.deprecationMessage, currentPackage) || "This symbol is deprecated and will be removed in a future version."}\n\n`;
+  }
+
+  if (sym.description) {
+    mdx += `${formatDescription(sym.description, currentPackage)}\n\n`;
+  }
+
+  if (sym.signature) {
+    mdx += `\`\`\`typescript\n${sym.signature}\n\`\`\`\n\n`;
+  }
+
+  if (sym.params && sym.params.length > 0) {
+    mdx += `#### Parameters\n\n| Parameter | Type | Description |\n|---|---|---|\n`;
+    for (const p of sym.params) {
+      const escapedType = p.type.replace(/\|/g, "\\|");
+      mdx += `| \`${p.name}\` | \`${escapedType}\` | ${formatDescription(p.description, currentPackage)} |\n`;
+    }
+    mdx += `\n`;
+  }
+
+  if (sym.returns) {
+    mdx += `#### Returns\n\n${formatDescription(sym.returns, currentPackage)}\n\n`;
+  }
+
+  if (sym.examples && sym.examples.length > 0) {
+    mdx += `#### Example\n\n`;
+    for (const ex of sym.examples) {
+      mdx += `${formatExample(ex)}\n\n`;
+    }
+  }
+
+  if (sym.kind === "class") {
+    if (sym.constructorSig) {
+      mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+      mdx += `### new ${sym.name} ${getBadge("constructor")}\n\n`;
+      mdx += `\`\`\`typescript\n${sym.constructorSig}\n\`\`\`\n\n`;
+    }
+
+    if (sym.staticMethods && sym.staticMethods.length > 0) {
+      for (const m of sym.staticMethods) {
+        mdx += renderSymbolMDX(m, false, currentPackage);
+      }
+    }
+
+    if (sym.instanceMethods && sym.instanceMethods.length > 0) {
+      for (const m of sym.instanceMethods) {
+        mdx += renderSymbolMDX(m, false, currentPackage);
+      }
+    }
+  }
+
+  return mdx;
 }
 
 function generateDocsForPackage(entrypoint: string, packageName: string, outputMdxPath: string) {
@@ -241,11 +473,11 @@ function generateDocsForPackage(entrypoint: string, packageName: string, outputM
       const decl = sym.valueDeclaration || sym.declarations?.[0];
       if (!decl) continue;
 
-      symbols.push(extractDocSymbol(checker, sym, decl, name));
+      symbols.push(extractDocSymbol(checker, sym, decl, name, packageName));
     }
   }
 
-  // Generate MDX Content
+  // Generate MDX Content grouped by category
   let mdx = `---
 title: "${packageName} API"
 description: "Complete API reference for ${packageName}"
@@ -255,155 +487,43 @@ description: "Complete API reference for ${packageName}"
 
 `;
 
-  const classes = symbols.filter(s => s.kind === "class");
-  const functions = symbols.filter(s => s.kind === "function");
-  const types = symbols.filter(s => s.kind === "type");
-  const others = symbols.filter(s => s.kind === "other");
-
-  if (classes.length > 0) {
-    mdx += `## Classes\n\n`;
-    for (const c of classes) {
-      mdx += `### ${c.name} ${getBadge("class")}\n\n`;
-      if (c.description) {
-        mdx += `${formatDescription(c.description)}\n\n`;
-      }
-
-      if (c.constructorSig) {
-        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
-        mdx += `### new ${c.name} ${getBadge("constructor")}\n\n`;
-        mdx += `\`\`\`typescript\n${c.constructorSig}\n\`\`\`\n\n`;
-      }
-
-      if (c.staticMethods && c.staticMethods.length > 0) {
-        for (const m of c.staticMethods) {
-          mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
-          mdx += `### ${m.name} ${getBadge("static method")}\n\n`;
-          if (m.description) {
-            mdx += `${formatDescription(m.description)}\n\n`;
-          }
-          mdx += `\`\`\`typescript\n${m.signature}\n\`\`\`\n\n`;
-
-          if (m.params.length > 0) {
-            mdx += `| Parameter | Description |\n|---|---|\n`;
-            for (const p of m.params) {
-              mdx += `| \`${p.name}\` | ${formatDescription(p.description)} |\n`;
-            }
-            mdx += `\n`;
-          }
-
-          if (m.returns) {
-            mdx += `**Returns:** ${formatDescription(m.returns)}\n\n`;
-          }
-
-          if (m.examples.length > 0) {
-            mdx += `**Example:**\n\n`;
-            for (const ex of m.examples) {
-              mdx += `${formatExample(ex)}\n\n`;
-            }
-          }
-        }
-      }
-
-      if (c.instanceMethods && c.instanceMethods.length > 0) {
-        for (const m of c.instanceMethods) {
-          mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
-          mdx += `### ${m.name} ${getBadge("method")}\n\n`;
-          if (m.description) {
-            mdx += `${formatDescription(m.description)}\n\n`;
-          }
-          mdx += `\`\`\`typescript\n${m.signature}\n\`\`\`\n\n`;
-
-          if (m.params.length > 0) {
-            mdx += `| Parameter | Description |\n|---|---|\n`;
-            for (const p of m.params) {
-              mdx += `| \`${p.name}\` | ${formatDescription(p.description)} |\n`;
-            }
-            mdx += `\n`;
-          }
-
-          if (m.returns) {
-            mdx += `**Returns:** ${formatDescription(m.returns)}\n\n`;
-          }
-
-          if (m.examples.length > 0) {
-            mdx += `**Example:**\n\n`;
-            for (const ex of m.examples) {
-              mdx += `${formatExample(ex)}\n\n`;
-            }
-          }
-        }
-      }
+  const categoriesMap = new Map<string, DocSymbol[]>();
+  for (const sym of symbols) {
+    const cat = sym.category;
+    if (!categoriesMap.has(cat)) {
+      categoriesMap.set(cat, []);
     }
+    categoriesMap.get(cat)!.push(sym);
   }
 
-  if (functions.length > 0) {
-    mdx += `## Functions\n\n`;
+  const categoryOrder: Record<string, string[]> = {
+    "@onrails/result": ["Core", "Async", "Collections", "Interop", "Generators", "Types"],
+    "@onrails/maybe": ["Constructors", "Core", "Collections", "Utilities", "Types"],
+    "@onrails/pattern": ["Matching", "Diagnostics", "Types"]
+  };
+
+  const preferred = categoryOrder[packageName] || [];
+  const sortedCategories = Array.from(categoriesMap.keys()).sort((a, b) => {
+    const idxA = preferred.indexOf(a);
+    const idxB = preferred.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  for (const cat of sortedCategories) {
+    mdx += `## ${cat}\n\n`;
+    const catSymbols = categoriesMap.get(cat) || [];
+    // Sort symbols alphabetically inside their category
+    catSymbols.sort((a, b) => a.name.localeCompare(b.name));
+
     let first = true;
-    for (const f of functions) {
-      if (!first) {
-        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
-      }
+    for (const sym of catSymbols) {
+      mdx += renderSymbolMDX(sym, first, packageName);
       first = false;
-
-      mdx += `### ${f.name} ${getBadge("function")}\n\n`;
-      if (f.description) {
-        mdx += `${formatDescription(f.description)}\n\n`;
-      }
-      mdx += `\`\`\`typescript\n${f.signature}\n\`\`\`\n\n`;
-
-      if (f.params.length > 0) {
-        mdx += `#### Parameters\n\n| Parameter | Description |\n|---|---|\n`;
-        for (const p of f.params) {
-          mdx += `| \`${p.name}\` | ${formatDescription(p.description)} |\n`;
-        }
-        mdx += `\n`;
-      }
-
-      if (f.returns) {
-        mdx += `#### Returns\n\n${formatDescription(f.returns)}\n\n`;
-      }
-
-      if (f.examples.length > 0) {
-        mdx += `#### Example\n\n`;
-        for (const ex of f.examples) {
-          mdx += `${formatExample(ex)}\n\n`;
-        }
-      }
     }
-  }
-
-  if (types.length > 0) {
-    mdx += `## Types\n\n`;
-    let first = true;
-    for (const t of types) {
-      if (!first) {
-        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
-      }
-      first = false;
-
-      mdx += `### ${t.name} ${getBadge("type")}\n\n`;
-      if (t.description) {
-        mdx += `${formatDescription(t.description)}\n\n`;
-      }
-      mdx += `\`\`\`typescript\n${t.signature}\n\`\`\`\n\n`;
-    }
-  }
-
-  if (others.length > 0) {
-    mdx += `## Constants / Variables\n\n`;
-    let first = true;
-    for (const o of others) {
-      if (!first) {
-        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
-      }
-      first = false;
-
-      mdx += `### ${o.name} ${getBadge("variable")}\n\n`;
-      if (o.description) {
-        mdx += `${formatDescription(o.description)}\n\n`;
-      }
-      mdx += `\`\`\`typescript\n${o.signature}\n\`\`\`\n\n`;
-    }
+    mdx += "\n";
   }
 
   fs.mkdirSync(path.dirname(outputMdxPath), { recursive: true });

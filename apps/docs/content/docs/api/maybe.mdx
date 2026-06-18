@@ -5,52 +5,81 @@ description: "Complete API reference for @onrails/maybe"
 
 # @onrails/maybe API Reference
 
-## Functions
+## Constructors
+
+### none <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+The `None` value — represents expected absence. Not a failure.
+
+```typescript
+function none<T = never>(): Maybe<T>
+```
+
+#### Example
+
+```ts
+const cached: Maybe<User> = cache.has(id) ? some(cache.get(id)) : none();
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span> <span className="inline-flex items-center rounded-full border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">deprecated</span>
+
+> [!WARNING]
+> **Deprecated:** Use [some](#some) instead.
+
+Fantasy Land `of` — alias of [some](#some).
+
+```typescript
+function of<T>(value: T): Maybe<T>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `T` |  |
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### some <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Lifts a value into the `Some` branch.
+
+```typescript
+function some<T>(value: T): Maybe<T>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `T` |  |
+
+#### Example
+
+```ts
+const m = some(1);   // Maybe<number>
+```
+
+
+## Core
 
 ### andThen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Alias for `flatMap` — same dual-form shape.
+Alias for [flatMap](./result#flatmap) — same dual-form shape.
 
 ```typescript
 function andThen<T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U>
 function andThen<T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U>
 ```
 
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+#### Parameters
 
-### compact <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
-
-Drop every `None` and collect the remaining `Some` values into an array.
-
-```typescript
-function compact<T>(maybes: readonly Maybe<T>[]): T[]
-```
-
-#### Example
-
-```ts
-compact([some(1), none(), some(2)]);    // [1, 2]
-```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
-### compactMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
-
-`compact(items.map(fn))` — map each item to `Maybe`, drop `None`,
-collect the rest.
-
-```typescript
-function compactMap<T, U>(items: readonly T[], fn: (item: T) => Maybe<U>): U[]
-```
-
-#### Example
-
-```ts
-compactMap(rawRows, (row) =>
-  row.deletedAt ? none() : some(row.id),
-);
-// string[]
-```
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `fn` | `(value: T) => Maybe<U>` |  |
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -64,6 +93,13 @@ function flatMap<T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U>
 function flatMap<T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U>
 ```
 
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `fn` | `(value: T) => Maybe<U>` |  |
+
 #### Example
 
 ```ts
@@ -74,31 +110,23 @@ flatMap(fromNullable(user), (u) =>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### fromNullable <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+### getOrElse <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span> <span className="inline-flex items-center rounded-full border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">deprecated</span>
 
-Lift a nullable value into `Maybe<T>` — `null` and `undefined` become
-`None`; anything else becomes `Some`.
-
-```typescript
-function fromNullable<T>(value: T | null | undefined): Maybe<T>
-```
-
-#### Example
-
-```ts
-fromNullable(map.get(key));     // Maybe<V>
-fromNullable(null);             // None
-```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
-### getOrElse <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+> [!WARNING]
+> **Deprecated:** Use canonical [unwrapOr](#unwrapor) instead.
 
 Returns the `Some` value, or `defaultValue` when the value is `None`.
 
 ```typescript
 function getOrElse<T>(maybe: Maybe<T>, defaultValue: T): T
 ```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `defaultValue` | `T` |  |
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -110,6 +138,12 @@ Type-narrowing predicate: returns `true` when the value is `None`.
 function isNone<T>(maybe: Maybe<T>): maybe is { readonly _tag: "None"; }
 ```
 
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
 ### isSome <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
@@ -119,6 +153,12 @@ Type-narrowing predicate: returns `true` when the value is `Some`.
 ```typescript
 function isSome<T>(maybe: Maybe<T>): maybe is Some<T>
 ```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
 
 #### Example
 
@@ -139,6 +179,13 @@ function map<T, U>(maybe: Maybe<T>, fn: (value: T) => U): Maybe<U>
 function map<T, U>(fn: (value: T) => U): (maybe: Maybe<T>) => Maybe<U>
 ```
 
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `fn` | `(value: T) => U` |  |
+
 #### Example
 
 ```ts
@@ -154,12 +201,20 @@ Terminal collapse — fold both branches into a single value. Positional,
 dual-form. Same shape as `Result.match` for sibling consistency.
 
 For files that also import `match` from `ts-pattern`, the alias
-`matchMaybe` is identical.
+[matchMaybe](#matchmaybe) is identical.
 
 ```typescript
 function match<T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U
 function match<T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U
 ```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `onSome` | `(value: T) => U` |  |
+| `onNone` | `() => U` |  |
 
 #### Example
 
@@ -173,7 +228,10 @@ const greeting = match(
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### matchMaybe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+### matchMaybe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span> <span className="inline-flex items-center rounded-full border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">deprecated</span>
+
+> [!WARNING]
+> **Deprecated:** Namespace import carriers (e.g., `import * as Maybe from "@onrails/maybe"`) and use canonical [match](./result#match) instead.
 
 Collision-free alias — mirrors `matchResult` on `@onrails/result`.
 
@@ -182,64 +240,13 @@ function matchMaybe<T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () =
 function matchMaybe<T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U
 ```
 
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+#### Parameters
 
-### none <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
-
-The `None` value — represents expected absence. Not a failure.
-
-```typescript
-function none<T = never>(): Maybe<T>
-```
-
-#### Example
-
-```ts
-const cached: Maybe<User> = cache.has(id) ? some(cache.get(id)) : none();
-```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
-### of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
-
-Fantasy Land `of` — alias of `some`.
-
-```typescript
-function of<T>(value: T): Maybe<T>
-```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
-### optional <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
-
-`flatMap(fromNullable(value), fn)` — lift a nullable then bind through
-a `Maybe`-returning step. Convenient for chaining lookups.
-
-```typescript
-function optional<T, U>(value: T | null | undefined, fn: (value: T) => Maybe<U>): Maybe<U>
-```
-
-#### Example
-
-```ts
-optional(rawId, (id) => fromNullable(cache.get(id)));
-```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
-### some <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
-
-Lifts a value into the `Some` branch.
-
-```typescript
-function some<T>(value: T): Maybe<T>
-```
-
-#### Example
-
-```ts
-const m = some(1);   // Maybe<number>
-```
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `onSome` | `(value: T) => U` |  |
+| `onNone` | `() => U` |  |
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
@@ -253,6 +260,13 @@ function tap<T>(maybe: Maybe<T>, fn: (value: T) => void): Maybe<T>
 function tap<T>(fn: (value: T) => void): (maybe: Maybe<T>) => Maybe<T>
 ```
 
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `fn` | `(value: T) => void` |  |
+
 #### Example
 
 ```ts
@@ -265,12 +279,19 @@ pipe(fromNullable(row), tap((r) => sink.push(r))); // curried — collect on Som
 ### tapNone <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Run a side effect when the `Maybe` is `None`, pass it through unchanged.
-`Some` is a no-op. The `None`-side mirror of `tap`. Dual-form.
+`Some` is a no-op. The `None`-side mirror of [tap](#tap). Dual-form.
 
 ```typescript
 function tapNone<T>(maybe: Maybe<T>, fn: () => void): Maybe<T>
 function tapNone<T>(fn: () => void): (maybe: Maybe<T>) => Maybe<T>
 ```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `fn` | `() => void` |  |
 
 #### Example
 
@@ -289,6 +310,12 @@ Unwraps the `Some` value or throws if the value is `None`.
 function unwrap<T>(maybe: Maybe<T>): T
 ```
 
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+
 #### Example
 
 ```ts
@@ -305,11 +332,118 @@ Returns the `Some` value, or `defaultValue` when the value is `None`.
 function unwrapOr<T>(maybe: Maybe<T>, defaultValue: T): T
 ```
 
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybe` | `Maybe<T>` |  |
+| `defaultValue` | `T` |  |
+
 #### Example
 
 ```ts
 unwrapOr(fromNullable(user), { name: "guest" });
 ```
+
+
+## Collections
+
+### compact <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Drop every `None` and collect the remaining `Some` values into an array.
+
+```typescript
+function compact<T>(maybes: readonly Maybe<T>[]): T[]
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `maybes` | `readonly Maybe<T>[]` |  |
+
+#### Example
+
+```ts
+compact([some(1), none(), some(2)]);    // [1, 2]
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### compactMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+`compact(items.map(fn))` — map each item to `Maybe`, drop `None`,
+collect the rest.
+
+```typescript
+function compactMap<T, U>(items: readonly T[], fn: (item: T) => Maybe<U>): U[]
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `readonly T[]` |  |
+| `fn` | `(item: T) => Maybe<U>` |  |
+
+#### Example
+
+```ts
+compactMap(rawRows, (row) =>
+  row.deletedAt ? none() : some(row.id),
+);
+// string[]
+```
+
+
+## Utilities
+
+### fromNullable <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Lift a nullable value into `Maybe<T>` — `null` and `undefined` become
+`None`; anything else becomes `Some`.
+
+```typescript
+function fromNullable<T>(value: T | null | undefined): Maybe<T>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `T \| null \| undefined` |  |
+
+#### Example
+
+```ts
+fromNullable(map.get(key));     // Maybe<V>
+fromNullable(null);             // None
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### optional <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+`flatMap(fromNullable(value), fn)` — lift a nullable then bind through
+a `Maybe`-returning step. Convenient for chaining lookups.
+
+```typescript
+function optional<T, U>(value: T | null | undefined, fn: (value: T) => Maybe<U>): Maybe<U>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `T \| null \| undefined` |  |
+| `fn` | `(value: T) => Maybe<U>` |  |
+
+#### Example
+
+```ts
+optional(rawId, (id) => fromNullable(cache.get(id)));
+```
+
 
 ## Types
 
@@ -336,4 +470,5 @@ export type None = Extract<Maybe<never>, { _tag: "None" }>;
 ```typescript
 export type Some<T> = Extract<Maybe<T>, { _tag: "Some" }>;
 ```
+
 
