@@ -7,7 +7,6 @@ import {
   map,
   match,
   none,
-  type of,
   some,
   tap,
   unwrapOr,
@@ -36,10 +35,6 @@ describe("Maybe types", () => {
 
   it("andThen is flatMap", () => {
     expectType<TypeEqual<typeof andThen, typeof flatMap>>(true);
-  });
-
-  it("of is some", () => {
-    expectType<TypeEqual<typeof of, typeof some>>(true);
   });
 
   it("fromNullable strips null and undefined", () => {

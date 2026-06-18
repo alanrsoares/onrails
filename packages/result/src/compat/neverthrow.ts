@@ -220,11 +220,17 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   }
 
   isOk(): Promise<boolean> {
-    return this.inner.isOk();
+    return this.inner.match(
+      () => true,
+      () => false,
+    );
   }
 
   isErr(): Promise<boolean> {
-    return this.inner.isErr();
+    return this.inner.match(
+      () => false,
+      () => true,
+    );
   }
 
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2> {

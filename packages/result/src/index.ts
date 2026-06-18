@@ -2,10 +2,10 @@
  * @onrails/result — public surface.
  *
  * Layout:
- *   • core railway          — ok/err, map/flatMap, match, recover, tap, trySync, fold, pipe
+ *   • core railway          — ok/err, map/flatMap, match, recover, tap, trySync, pipe
  *   • collection (sync)     — combine, combineTuple
  *   • async                 — ResultAsync, fromPromise, tryAsync
- *   • async collection      — sequenceTupleAsync, parallelTupleAsync
+ *   • async collection      — ResultAsync.combineTuple, parallelTupleAsync
  *   • sync ↔ async lift     — fromResult, fromAsync, asyncAfter
  *   • generator sugar       — tryGen, yieldResult, $
  *   • types                 — Result, Ok, Err, UnexpectedError
@@ -25,7 +25,6 @@ export {
   okAsync,
   parallelTupleAsync,
   ResultAsync,
-  sequenceTupleAsync,
   tryAsync,
 } from "./async.js";
 export {
@@ -42,14 +41,11 @@ export {
   combineTuple,
   err,
   flatMap,
-  fold,
   isErr,
   isOk,
   map,
   mapErr,
   match,
-  matchResult,
-  of,
   ok,
   pipe,
   recover,

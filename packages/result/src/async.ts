@@ -167,16 +167,6 @@ export class ResultAsync<T, E> {
     return this.flatMap(fn);
   }
 
-  /**
-   * Alias for {@link flatMap}.
-   * @deprecated Use {@link flatMap} or keep/use compat {@link andThen} instead.
-   */
-  chain<U, F = E>(
-    fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
-  ): ResultAsync<U, E | F> {
-    return this.flatMap(fn);
-  }
-
   recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
     return new ResultAsync<T, F>(async () => {
       const first = await this.resolve();
@@ -214,22 +204,6 @@ export class ResultAsync<T, E> {
 
   unwrapOr<U>(defaultValue: U): Promise<T | U> {
     return this.resolve().then((result) => (isErr(result) ? defaultValue : result.value));
-  }
-
-  /**
-   * @deprecated Await the ResultAsync and narrow with {@link isOk} — this method
-   * re-executes deferred factories and cannot narrow.
-   */
-  isOk(): Promise<boolean> {
-    return this.resolve().then((result) => !isErr(result));
-  }
-
-  /**
-   * @deprecated Await the ResultAsync and narrow with {@link isErr} — this method
-   * re-executes deferred factories and cannot narrow.
-   */
-  isErr(): Promise<boolean> {
-    return this.resolve().then((result) => isErr(result));
   }
 
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2> {
@@ -319,20 +293,6 @@ export const fromPromise = ResultAsync.fromPromise;
  * Skips the `onReject` mapper. Use only when the promise is provably safe.
  */
 export const fromSafePromise = ResultAsync.fromSafePromise;
-
-/**
- * Heterogeneous async tuple combine — left-to-right, short-circuit on
- * first `Err` in input order. Preserves tuple positions so destructuring
- * stays type-safe.
- *
- * @example
- * ```ts
- * const combined = sequenceTupleAsync([loadCfg(), loadCatalog()] as const);
- * // ResultAsync<readonly [Cfg, Catalog], CfgError | CatalogError>
- * ```
- * @deprecated Use static {@link ResultAsync.combineTuple} instead.
- */
-export const sequenceTupleAsync = ResultAsync.combineTuple;
 
 /**
  * Heterogeneous async tuple combine — branches overlap in wall-clock time.

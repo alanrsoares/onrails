@@ -54,12 +54,6 @@ export const isOk = <T, E>(result: Result<T, E>): result is Ok<T, E> => result._
  */
 export const isErr = <T, E>(result: Result<T, E>): result is Err<T, E> => result._tag === "Err";
 
-/**
- * Fantasy Land `of` — alias of {@link ok}.
- * @deprecated Use {@link ok} instead.
- */
-export const of = ok;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Dual-form helpers — each export accepts either shape:
 //   data-first: `map(result, fn)`
@@ -284,8 +278,9 @@ const matchImpl = <T, E, U>(
  * 3-args data-first, 2-args curried for {@link pipe}. Returns whatever
  * the handlers return.
  *
- * For files that also import `match` from `ts-pattern`, the
- * collision-free alias {@link matchResult} is identical.
+ * For files that also import `match` from `ts-pattern`, use a namespace
+ * import (`import * as R from "@onrails/result"` → `R.match`) to dissolve
+ * the collision.
  *
  * @example
  * ```ts
@@ -310,23 +305,6 @@ export function match(
   const [onOk, onErr] = args;
   return (result: Result<unknown, unknown>) => matchImpl(result, onOk, onErr);
 }
-
-/**
- * Collision-free alias for files that also import `match` from ts-pattern.
- * @deprecated Namespace import carriers (e.g., `import * as R from "@onrails/result"`) and use canonical {@link match} instead.
- */
-export const matchResult = match;
-
-/**
- * Curried collapse with named slots — escape valve when positional `match`
- * order is unclear at the call site (e.g. when both handlers return the same
- * type and a transposed `match(r, onErr, onOk)` would silently compile).
- * @deprecated Use curried {@link match}(onOk, onErr)(result) instead.
- */
-export const fold =
-  <T, E, U>(handlers: { readonly ok: (value: T) => U; readonly err: (error: E) => U }) =>
-  (result: Result<T, E>): U =>
-    matchImpl(result, handlers.ok, handlers.err);
 
 /**
  * Returns the `Ok` value, or `defaultValue` when the result is `Err`.

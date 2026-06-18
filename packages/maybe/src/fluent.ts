@@ -7,7 +7,7 @@ export type FluentMaybe<T> = Maybe<T> & {
   tap(fn: (value: T) => void): FluentMaybe<T>;
   tapNone(fn: () => void): FluentMaybe<T>;
   match<U>(onSome: (value: T) => U, onNone: () => U): U;
-  getOrElse(defaultValue: T): T;
+
   unwrapOr(defaultValue: T): T;
 };
 
@@ -31,9 +31,7 @@ export const fluent = <T>(maybe: Maybe<T>): FluentMaybe<T> =>
     match<U>(onSome: (value: T) => U, onNone: () => U) {
       return match(maybe, onSome, onNone);
     },
-    getOrElse(defaultValue: T) {
-      return unwrapOr(maybe, defaultValue);
-    },
+
     unwrapOr(defaultValue: T) {
       return unwrapOr(maybe, defaultValue);
     },

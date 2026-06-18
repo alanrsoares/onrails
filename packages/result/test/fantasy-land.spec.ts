@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import * as fc from "fast-check";
-import { err, flatMap, map, of, ok } from "../src/result.js";
+import { err, flatMap, map, ok } from "../src/result.js";
 import type { Result } from "../src/types.js";
 
 const arbResult: fc.Arbitrary<Result<number, string>> = fc.oneof(
@@ -31,18 +31,18 @@ describe("Fantasy Land laws (sync, property-based)", () => {
     );
   });
 
-  it("monad left identity: flatMap(f)(of(a)) === f(a)", () => {
+  it("monad left identity: flatMap(f)(ok(a)) === f(a)", () => {
     fc.assert(
       fc.property(fc.integer(), arbResultFn(), (a, f) => {
-        expect(flatMap(f)(of<number, string>(a))).toEqual(f(a));
+        expect(flatMap(f)(ok<number, string>(a))).toEqual(f(a));
       }),
     );
   });
 
-  it("monad right identity: flatMap(of)(m) === m", () => {
+  it("monad right identity: flatMap(ok)(m) === m", () => {
     fc.assert(
       fc.property(arbResult, (m) => {
-        expect(flatMap((x: number) => of<number, string>(x))(m)).toEqual(m);
+        expect(flatMap((x: number) => ok<number, string>(x))(m)).toEqual(m);
       }),
     );
   });

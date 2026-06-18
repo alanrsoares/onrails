@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
-import { parallelTupleAsync, ResultAsync, sequenceTupleAsync, tryAsync } from "../src/async.js";
+import { parallelTupleAsync, ResultAsync, tryAsync } from "../src/async.js";
 import type { ErrOf, OkOf, UnionErrors } from "../src/extra.js";
 import { asyncAfter, fromAsync, fromResult, type InferErr, type InferOk } from "../src/interop.js";
 import {
@@ -19,13 +19,11 @@ import {
   combineTuple,
   err,
   flatMap,
-  fold,
   isErr,
   isOk,
   map,
   mapErr,
   match,
-  type matchResult,
   ok,
   recover,
   tap,
@@ -97,7 +95,7 @@ describe("Result sync types: mapping", () => {
   });
 });
 
-describe("Result sync types: match and fold", () => {
+describe("Result sync types: match", () => {
   it("match preserves handler return type", () => {
     const out = match(
       ok(1),
@@ -110,18 +108,6 @@ describe("Result sync types: match and fold", () => {
       () => 0,
     )(ok(1));
     expectType<TypeEqual<typeof curried, number>>(true);
-  });
-
-  it("fold preserves handler return type", () => {
-    const curried = fold({
-      ok: (value: number) => value + 1,
-      err: () => 0,
-    })(ok(1) as Result<number, string>);
-    expectType<TypeEqual<typeof curried, number>>(true);
-  });
-
-  it("matchResult is the same type as match", () => {
-    expectType<TypeEqual<typeof matchResult, typeof match>>(true);
   });
 });
 
@@ -209,15 +195,13 @@ describe("ResultAsync types", () => {
     expectType<TypeEqual<typeof rb, ResultAsync<number, string>>>(true);
   });
 
-  it("sequence and parallel tuple aliases preserve tuple shape and union errors", () => {
+  it("combineTuple and parallelTupleAsync preserve tuple shape and union errors", () => {
     const a = ResultAsync.ok<number, "a">(1);
     const b = ResultAsync.ok<string, "b">("x");
-    const sequenced = sequenceTupleAsync([a, b] as const);
+    const combined = ResultAsync.combineTuple([a, b] as const);
     const paralleled = parallelTupleAsync([a, b] as const);
 
-    expectType<TypeEqual<typeof sequenced, ResultAsync<readonly [number, string], "a" | "b">>>(
-      true,
-    );
+    expectType<TypeEqual<typeof combined, ResultAsync<readonly [number, string], "a" | "b">>>(true);
     expectType<TypeEqual<typeof paralleled, ResultAsync<readonly [number, string], "a" | "b">>>(
       true,
     );

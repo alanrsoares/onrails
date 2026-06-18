@@ -13,12 +13,6 @@ export type { Maybe, None, Some } from "./types.js";
 export const some = <T>(value: T): Maybe<T> => ({ _tag: "Some", value });
 
 /**
- * Fantasy Land `of` — alias of {@link some}.
- * @deprecated Use {@link some} instead.
- */
-export const of = some;
-
-/**
  * The `None` value — represents expected absence. Not a failure.
  *
  * @example
@@ -122,8 +116,9 @@ const matchImpl = <T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () =>
  * Terminal collapse — fold both branches into a single value. Positional,
  * dual-form. Same shape as `Result.match` for sibling consistency.
  *
- * For files that also import `match` from `ts-pattern`, the alias
- * {@link matchMaybe} is identical.
+ * For files that also import `match` from `ts-pattern`, use a namespace
+ * import (`import * as Maybe from "@onrails/maybe"` → `Maybe.match`) to
+ * dissolve the collision.
  *
  * @example
  * ```ts
@@ -147,12 +142,6 @@ export function match(
 }
 
 /**
- * Collision-free alias — mirrors `matchResult` on `@onrails/result`.
- * @deprecated Namespace import carriers (e.g., `import * as Maybe from "@onrails/maybe"`) and use canonical {@link match} instead.
- */
-export const matchMaybe = match;
-
-/**
  * Returns the `Some` value, or `defaultValue` when the value is `None`.
  *
  * @example
@@ -162,13 +151,6 @@ export const matchMaybe = match;
  */
 export const unwrapOr = <T>(maybe: Maybe<T>, defaultValue: T): T =>
   isSome(maybe) ? maybe.value : defaultValue;
-
-/**
- * Returns the `Some` value, or `defaultValue` when the value is `None`.
- *
- * @deprecated Use canonical {@link unwrapOr} instead.
- */
-export const getOrElse = unwrapOr;
 
 /**
  * Unwraps the `Some` value or throws if the value is `None`.
