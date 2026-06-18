@@ -28,6 +28,24 @@ function formatDescription(desc: string): string {
   return desc.replace(/\{@link\s+([^}]+)\}/g, "`$1`");
 }
 
+function getBadge(kind: string): string {
+  let colors = "border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400";
+  
+  if (kind === "class") {
+    colors = "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400";
+  } else if (kind === "static method" || kind === "method") {
+    colors = "border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400";
+  } else if (kind === "constructor") {
+    colors = "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400";
+  } else if (kind === "type") {
+    colors = "border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400";
+  } else if (kind === "function") {
+    colors = "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400";
+  }
+
+  return `<span className="inline-flex items-center rounded-full border ${colors} px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">${kind}</span>`;
+}
+
 function extractDocSymbol(
   checker: ts.TypeChecker,
   symbol: ts.Symbol,
@@ -242,19 +260,21 @@ description: "Complete API reference for ${packageName}"
   if (classes.length > 0) {
     mdx += `## Classes\n\n`;
     for (const c of classes) {
-      mdx += `### ${c.name}\n\n`;
+      mdx += `### ${c.name} ${getBadge("class")}\n\n`;
       if (c.description) {
         mdx += `${formatDescription(c.description)}\n\n`;
       }
 
       if (c.constructorSig) {
-        mdx += `#### Constructor\n\n\`\`\`typescript\n${c.constructorSig}\n\`\`\`\n\n`;
+        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+        mdx += `### new ${c.name} ${getBadge("constructor")}\n\n`;
+        mdx += `\`\`\`typescript\n${c.constructorSig}\n\`\`\`\n\n`;
       }
 
       if (c.staticMethods && c.staticMethods.length > 0) {
-        mdx += `#### Static Methods\n\n`;
         for (const m of c.staticMethods) {
-          mdx += `##### ${m.name}\n\n`;
+          mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+          mdx += `### ${m.name} ${getBadge("static method")}\n\n`;
           if (m.description) {
             mdx += `${formatDescription(m.description)}\n\n`;
           }
@@ -282,9 +302,9 @@ description: "Complete API reference for ${packageName}"
       }
 
       if (c.instanceMethods && c.instanceMethods.length > 0) {
-        mdx += `#### Instance Methods\n\n`;
         for (const m of c.instanceMethods) {
-          mdx += `##### ${m.name}\n\n`;
+          mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+          mdx += `### ${m.name} ${getBadge("method")}\n\n`;
           if (m.description) {
             mdx += `${formatDescription(m.description)}\n\n`;
           }
@@ -315,8 +335,14 @@ description: "Complete API reference for ${packageName}"
 
   if (functions.length > 0) {
     mdx += `## Functions\n\n`;
+    let first = true;
     for (const f of functions) {
-      mdx += `### ${f.name}\n\n`;
+      if (!first) {
+        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+      }
+      first = false;
+
+      mdx += `### ${f.name} ${getBadge("function")}\n\n`;
       if (f.description) {
         mdx += `${formatDescription(f.description)}\n\n`;
       }
@@ -345,8 +371,14 @@ description: "Complete API reference for ${packageName}"
 
   if (types.length > 0) {
     mdx += `## Types\n\n`;
+    let first = true;
     for (const t of types) {
-      mdx += `### ${t.name}\n\n`;
+      if (!first) {
+        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+      }
+      first = false;
+
+      mdx += `### ${t.name} ${getBadge("type")}\n\n`;
       if (t.description) {
         mdx += `${formatDescription(t.description)}\n\n`;
       }
@@ -356,8 +388,14 @@ description: "Complete API reference for ${packageName}"
 
   if (others.length > 0) {
     mdx += `## Constants / Variables\n\n`;
+    let first = true;
     for (const o of others) {
-      mdx += `### ${o.name}\n\n`;
+      if (!first) {
+        mdx += `<hr className="my-8 border-neutral-200 dark:border-neutral-800" />\n\n`;
+      }
+      first = false;
+
+      mdx += `### ${o.name} ${getBadge("variable")}\n\n`;
       if (o.description) {
         mdx += `${formatDescription(o.description)}\n\n`;
       }

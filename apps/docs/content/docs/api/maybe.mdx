@@ -7,7 +7,7 @@ description: "Complete API reference for @onrails/maybe"
 
 ## Functions
 
-### andThen
+### andThen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Alias for `flatMap` — same dual-form shape.
 
@@ -16,7 +16,9 @@ function andThen<T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U>
 function andThen<T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U>
 ```
 
-### compact
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### compact <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Drop every `None` and collect the remaining `Some` values into an array.
 
@@ -30,7 +32,9 @@ function compact<T>(maybes: readonly Maybe<T>[]): T[]
 compact([some(1), none(), some(2)]);    // [1, 2]
 ```
 
-### compactMap
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### compactMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 `compact(items.map(fn))` — map each item to `Maybe`, drop `None`,
 collect the rest.
@@ -48,7 +52,9 @@ compactMap(rawRows, (row) =>
 // string[]
 ```
 
-### flatMap
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### flatMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Canonical bind for `Maybe`. Chains a `Maybe`-returning step;
 short-circuits on `None`. Dual-form.
@@ -66,7 +72,9 @@ flatMap(fromNullable(user), (u) =>
 );
 ```
 
-### fromNullable
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### fromNullable <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Lift a nullable value into `Maybe<T>` — `null` and `undefined` become
 `None`; anything else becomes `Some`.
@@ -82,7 +90,9 @@ fromNullable(map.get(key));     // Maybe<V>
 fromNullable(null);             // None
 ```
 
-### getOrElse
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### getOrElse <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Returns the `Some` value, or `defaultValue` when the value is `None`.
 
@@ -90,7 +100,9 @@ Returns the `Some` value, or `defaultValue` when the value is `None`.
 function getOrElse<T>(maybe: Maybe<T>, defaultValue: T): T
 ```
 
-### isNone
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### isNone <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Type-narrowing predicate: returns `true` when the value is `None`.
 
@@ -98,7 +110,9 @@ Type-narrowing predicate: returns `true` when the value is `None`.
 function isNone<T>(maybe: Maybe<T>): maybe is { readonly _tag: "None"; }
 ```
 
-### isSome
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### isSome <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Type-narrowing predicate: returns `true` when the value is `Some`.
 
@@ -114,7 +128,9 @@ if (isSome(m)) {
 }
 ```
 
-### map
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### map <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Transform the `Some` value, passing `None` through unchanged. Dual-form.
 
@@ -130,7 +146,9 @@ map(some(2), (n) => n * 3);                      // Some 6 — data-first
 pipe(fromNullable(input), map((s) => s.trim())); // curried
 ```
 
-### match
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### match <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Terminal collapse — fold both branches into a single value. Positional,
 dual-form. Same shape as `Result.match` for sibling consistency.
@@ -153,7 +171,9 @@ const greeting = match(
 );
 ```
 
-### matchMaybe
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### matchMaybe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Collision-free alias — mirrors `matchResult` on `@onrails/result`.
 
@@ -162,7 +182,9 @@ function matchMaybe<T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () =
 function matchMaybe<T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U
 ```
 
-### none
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### none <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 The `None` value — represents expected absence. Not a failure.
 
@@ -176,7 +198,9 @@ function none<T = never>(): Maybe<T>
 const cached: Maybe<User> = cache.has(id) ? some(cache.get(id)) : none();
 ```
 
-### of
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Fantasy Land `of` — alias of `some`.
 
@@ -184,7 +208,9 @@ Fantasy Land `of` — alias of `some`.
 function of<T>(value: T): Maybe<T>
 ```
 
-### optional
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### optional <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 `flatMap(fromNullable(value), fn)` — lift a nullable then bind through
 a `Maybe`-returning step. Convenient for chaining lookups.
@@ -199,7 +225,9 @@ function optional<T, U>(value: T | null | undefined, fn: (value: T) => Maybe<U>)
 optional(rawId, (id) => fromNullable(cache.get(id)));
 ```
 
-### some
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### some <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Lifts a value into the `Some` branch.
 
@@ -213,7 +241,9 @@ function some<T>(value: T): Maybe<T>
 const m = some(1);   // Maybe<number>
 ```
 
-### tap
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### tap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Run a side effect on the `Some` value, pass the `Maybe` through unchanged.
 `None` is a no-op. Mirrors `tap` from `@onrails/result`. Dual-form.
@@ -230,7 +260,9 @@ tap(some(2), (n) => console.log(n));               // logs 2, returns Some 2
 pipe(fromNullable(row), tap((r) => sink.push(r))); // curried — collect on Some
 ```
 
-### tapNone
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### tapNone <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Run a side effect when the `Maybe` is `None`, pass it through unchanged.
 `Some` is a no-op. The `None`-side mirror of `tap`. Dual-form.
@@ -247,7 +279,9 @@ tapNone(none(), () => metrics.miss());              // runs effect, returns None
 pipe(fromNullable(hit), tapNone(() => metrics.miss())); // curried
 ```
 
-### unwrap
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### unwrap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Unwraps the `Some` value or throws if the value is `None`.
 
@@ -261,7 +295,9 @@ function unwrap<T>(maybe: Maybe<T>): T
 expect(unwrap(parseUser(raw))).toEqual(expected);
 ```
 
-### unwrapOr
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### unwrapOr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
 
 Returns the `Some` value, or `defaultValue` when the value is `None`.
 
@@ -277,7 +313,7 @@ unwrapOr(fromNullable(user), { name: "guest" });
 
 ## Types
 
-### Maybe
+### Maybe <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
 
 Tagged optional value — absence is not failure.
 
@@ -285,13 +321,17 @@ Tagged optional value — absence is not failure.
 export type Maybe<T> = { readonly _tag: "Some"; readonly value: T } | { readonly _tag: "None" };
 ```
 
-### None
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### None <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
 
 ```typescript
 export type None = Extract<Maybe<never>, { _tag: "None" }>;
 ```
 
-### Some
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### Some <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
 
 ```typescript
 export type Some<T> = Extract<Maybe<T>, { _tag: "Some" }>;
