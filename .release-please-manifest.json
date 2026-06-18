@@ -2,7 +2,7 @@
   "packages/result": "0.2.0",
   "packages/maybe": "0.2.0",
   "packages/pattern": "0.2.0",
-  "packages/codemod": "0.2.0",
+  "packages/codemod": "0.2.1",
   "packages/eslint-plugin": "0.1.2",
   "packages/biome-plugin": "0.1.1"
 }

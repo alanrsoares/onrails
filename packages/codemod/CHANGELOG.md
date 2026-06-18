@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.0...codemod-v0.2.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* **codemod:** parse JSX files in TSX mode ([#39](https://github.com/alanrsoares/onrails/issues/39)) ([79af554](https://github.com/alanrsoares/onrails/commit/79af5546471d68bf9153a3fab4bbbec518c0442b))
+
 ## [0.2.0](https://github.com/alanrsoares/onrails/compare/codemod-v0.1.4...codemod-v0.2.0) (2026-06-18)
 
 
