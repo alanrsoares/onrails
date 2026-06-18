@@ -13,6 +13,9 @@ export async function TwoslashSnippet({ code }: { code: string }) {
   return highlight(code, {
     lang: "ts",
     themes: { light: "github-light", dark: "github-dark" },
+    // emit both themes as CSS variables so it follows the .dark class instead of
+    // baking only the first (light) theme.
+    defaultColor: false,
     transformers: [
       transformerTwoslash({
         explicitTrigger: false,

@@ -19,10 +19,19 @@ surface.
 
 ## Same task, both libraries
 
-```ts
+```ts twoslash
 // onrails — dual-form functions over a tagged union
 import * as R from "@onrails/result";
 
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): R.Result<Input, { message: string }>;
+declare function validate(input: Input): R.Result<User, AppError>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
 const createUser = (raw: string) =>
   R.pipe(
     parseJson(raw), // Result<Input, ParseError>

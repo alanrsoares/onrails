@@ -237,13 +237,21 @@ across the boundary with `toResult`, runs async IO, and accumulates a single
 **tagged-error union** — then `@onrails/pattern` matches every variant
 exhaustively into an HTTP response.
 
-```ts
+```ts twoslash
 import { fromNullable } from "@onrails/maybe";
 import { toResult } from "@onrails/maybe/interop";
 import { match } from "@onrails/pattern";
 import * as R from "@onrails/result";
 import { Railway } from "@onrails/result/railway";
 
+// ---cut-start---
+type Cart = { items: string[]; total: number };
+type Receipt = { id: string };
+declare const UserIdSchema: { parse: (raw: string) => string };
+declare const carts: Map<string, Cart>;
+declare function reserveStock(cart: Cart): Promise<{ ok: boolean }>;
+declare function charge(total: number): Promise<Receipt>;
+// ---cut-end---
 type CheckoutError =
   | { kind: "parse"; issue: string }
   | { kind: "no_cart"; userId: string }
@@ -281,7 +289,7 @@ const checkout = (raw: string) =>
 const respond = async (raw: string) =>
   R.match(
     await checkout(raw),
-    (order) => ({ status: 200, body: order }),
+    (order) => ({ status: 200, body: `order ${order.orderId}` }),
     (e) =>
       match(e)
         .with({ kind: "parse" }, (x) => ({ status: 400, body: x.issue }))

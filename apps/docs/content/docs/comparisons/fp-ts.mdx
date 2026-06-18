@@ -41,16 +41,25 @@ const status = pipe(
 );
 ```
 
-```ts
+```ts twoslash
 // onrails — Result is value-FIRST: Result<T, E>
 import * as R from "@onrails/result";
 
+// ---cut-start---
+type Input = { email: string };
+type User = { email: string; id: string };
+type AppError = { kind: "parse"; detail: string } | { kind: "validation"; field: string };
+declare function parseJson(raw: string): R.Result<Input, { message: string }>;
+declare function validate(input: Input): R.Result<User, AppError>;
+declare function newId(): string;
+declare const raw: string;
+// ---cut-end---
 const createUser = (raw: string) =>
   R.pipe(
     parseJson(raw), // Result<Input, ParseError>
     R.mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
     R.flatMap(validate), // Result<User, AppError>
-    R.map((u) => ({ ...u, id: crypto.randomUUID() })),
+    R.map((u) => ({ ...u, id: newId() })),
   );
 
 const status = R.match(createUser(raw), () => 201, (e) => (e.kind === "validation" ? 422 : 400));
