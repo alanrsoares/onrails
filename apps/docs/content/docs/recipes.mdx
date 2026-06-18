@@ -117,6 +117,81 @@ the steps are worth naming and sharing.
 > `@onrails/result/fluent` (`fluent(r)` / `fluentAsync(ra)`) is app-edge sugar for
 > dot-chaining — keep it out of library and service internals.
 
+## Validating with Zod
+
+A Zod schema's `.parse` throws on invalid input, so wrap it once with `trySync`
+to get a `Result`-returning parser — or use `safeParse` if you'd rather not throw:
+
+```ts
+import { err, ok, trySync } from "@onrails/result";
+import { z } from "zod";
+
+const UserInput = z.object({ email: z.string().email(), age: z.number().int() });
+type UserInput = z.infer<typeof UserInput>;
+
+type Invalid = { kind: "invalid"; issues: string[] };
+const toInvalid = (e: unknown): Invalid => ({
+  kind: "invalid",
+  issues: e instanceof z.ZodError ? e.issues.map((i) => i.message) : [String(e)],
+});
+
+// throwing .parse -> Result
+const parseUser = trySync((raw: unknown) => UserInput.parse(raw), toInvalid);
+
+// or non-throwing, via safeParse
+const decodeUser = (raw: unknown) => {
+  const r = UserInput.safeParse(raw);
+  return r.success ? ok(r.data) : err(toInvalid(r.error));
+};
+```
+
+Because a Zod schema is just `{ parse }`, it drops straight into the Railway
+`parseWith` step factory — no adapter needed:
+
+```ts
+import { parseWith } from "@onrails/result/railway";
+
+parseWith(UserInput, toInvalid).as("input"); // the first step of a railway(...)
+```
+
+## Querying with Drizzle
+
+Drizzle queries are promises, so wrap them with `tryAsync`. `findFirst` resolves
+to `undefined` when there is no row — model that with `Maybe`, then cross back
+into the error channel where absence is a real failure:
+
+```ts
+import { fromNullable } from "@onrails/maybe";
+import { toResult } from "@onrails/maybe/interop";
+import { tryAsync } from "@onrails/result";
+import { eq } from "drizzle-orm";
+
+type DbError = { kind: "db"; cause: unknown };
+type NotFound = { kind: "not_found"; id: string };
+
+const findUser = (id: string) =>
+  tryAsync(
+    db.query.users.findFirst({ where: eq(users.id, id) }),
+    (cause): DbError => ({ kind: "db", cause }),
+  ); // ResultAsync<User | undefined, DbError>
+
+const requireUser = (id: string) =>
+  findUser(id).flatMap((row) =>
+    toResult(fromNullable(row), (): NotFound => ({ kind: "not_found", id })),
+  );
+// ResultAsync<User, DbError | NotFound>
+```
+
+Mutations compose the same way — wrap `insert(...).returning()` and pick the row:
+
+```ts
+const createUser = (input: UserInput) =>
+  tryAsync(
+    db.insert(users).values(input).returning(),
+    (cause): DbError => ({ kind: "db", cause }),
+  ).map((rows) => rows[0]); // ResultAsync<User, DbError>
+```
+
 ## Putting it together
 
 A realistic checkout: a `Railway` that parses input, pulls a **`Maybe` value**
