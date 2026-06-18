@@ -203,12 +203,20 @@ Drizzle queries are promises, so wrap them with `tryAsync`. `findFirst` resolves
 to `undefined` when there is no row — model that with `Maybe`, then cross back
 into the error channel where absence is a real failure:
 
-```ts
+```ts twoslash
 import { fromNullable } from "@onrails/maybe";
 import { toResult } from "@onrails/maybe/interop";
 import { tryAsync } from "@onrails/result";
 import { eq } from "drizzle-orm";
 
+// ---cut-start---
+// biome-ignore lint: stub column type so drizzle's `eq` resolves in the demo
+type User = { id: string; email: string };
+declare const users: { id: any };
+declare const db: {
+  query: { users: { findFirst: (opts: { where: unknown }) => Promise<User | undefined> } };
+};
+// ---cut-end---
 type DbError = { kind: "db"; cause: unknown };
 type NotFound = { kind: "not_found"; id: string };
 
@@ -227,7 +235,18 @@ const requireUser = (id: string) =>
 
 Mutations compose the same way — wrap `insert(...).returning()` and pick the row:
 
-```ts
+```ts twoslash
+import { tryAsync } from "@onrails/result";
+
+// ---cut-start---
+type User = { id: string; email: string };
+type UserInput = { email: string };
+type DbError = { kind: "db"; cause: unknown };
+declare const users: unknown;
+declare const db: {
+  insert: (t: unknown) => { values: (v: UserInput) => { returning: () => Promise<User[]> } };
+};
+// ---cut-end---
 const createUser = (input: UserInput) =>
   tryAsync(
     db.insert(users).values(input).returning(),
