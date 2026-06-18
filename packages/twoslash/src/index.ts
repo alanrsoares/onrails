@@ -1,5 +1,5 @@
 /**
- * Generic snippet extractor — zero project coupling.
+ * Generic snippet extractor — zero project coupling, runs on Node and Bun.
  *
  * Extracts the `#region snippet` block from each `*.ts` module in a source
  * directory and emits a generated module keyed by file name. Each module is
@@ -16,8 +16,8 @@
  * The engine is split into a pure core (`buildSnippetsModule`) and an IO wrapper
  * (`extractSnippets`) so the transform logic is unit-testable without a disk.
  */
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { Glob } from "bun";
 
 export interface SnippetForms {
   code: string;
@@ -211,13 +211,15 @@ export interface ExtractResult {
  */
 export async function extractSnippets(opts: ExtractSnippetsOptions): Promise<ExtractResult> {
   const fixtureName = opts.fixtureName ?? "fixtures";
-  const fixturesSource = await Bun.file(resolve(opts.srcDir, `${fixtureName}.ts`)).text();
+  const fixturesSource = await readFile(resolve(opts.srcDir, `${fixtureName}.ts`), "utf8");
 
+  const dirents = await readdir(opts.srcDir, { withFileTypes: true });
   const modules: { name: string; source: string }[] = [];
-  for await (const rel of new Glob("*.ts").scan(opts.srcDir)) {
-    const name = rel.replace(/\.ts$/, "");
+  for (const dirent of dirents) {
+    if (!dirent.isFile() || !dirent.name.endsWith(".ts")) continue;
+    const name = dirent.name.replace(/\.ts$/, "");
     if (name === fixtureName) continue;
-    modules.push({ name, source: await Bun.file(resolve(opts.srcDir, rel)).text() });
+    modules.push({ name, source: await readFile(resolve(opts.srcDir, dirent.name), "utf8") });
   }
 
   const { module, ids, skipped } = buildSnippetsModule(modules, fixturesSource, {
@@ -227,6 +229,6 @@ export async function extractSnippets(opts: ExtractSnippetsOptions): Promise<Ext
     ...(opts.generatedBy !== undefined ? { generatedBy: opts.generatedBy } : {}),
   });
 
-  await Bun.write(opts.outFile, module);
+  await writeFile(opts.outFile, module);
   return { count: ids.length, outFile: opts.outFile, skipped };
 }

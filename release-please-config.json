@@ -36,6 +36,11 @@
       "package-name": "@onrails/biome-plugin",
       "component": "biome-plugin",
       "changelog-path": "CHANGELOG.md"
+    },
+    "packages/twoslash": {
+      "package-name": "@onrails/twoslash",
+      "component": "twoslash",
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": ["node-workspace"]

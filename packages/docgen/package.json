@@ -2,14 +2,13 @@
   "name": "@onrails/docgen",
   "version": "0.0.0",
   "private": true,
-  "description": "Internal docs generators for the onrails docs site — API reference (TS AST → MDX) and snippet extraction (region → twoslash).",
+  "description": "Internal API-reference generator (TS AST → MDX) for the onrails docs site.",
   "license": "MIT",
   "author": "Alan R. Soares",
   "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./snippets": "./src/snippets.ts",
     "./api": "./src/api/generate.ts"
   },
   "scripts": {

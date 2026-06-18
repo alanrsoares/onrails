@@ -1,6 +1,5 @@
-// Snippet extraction (region -> display + twoslash forms).
-
 // API reference (TS AST + JSDoc -> MDX).
+// Snippet extraction lives in the published @onrails/twoslash package.
 export { defaultCategorize, extractExports } from "./api/extract.js";
 export { generateApiDocs } from "./api/generate.js";
 export { defaultResolveLink, renderPackageMdx, slugify } from "./api/render.js";
@@ -12,10 +11,3 @@ export type {
   ExportsByPackage,
   SymbolKind,
 } from "./api/types.js";
-export type {
-  BuildResult,
-  ExtractResult,
-  ExtractSnippetsOptions,
-  SnippetForms,
-} from "./snippets.js";
-export { buildSnippetsModule, extractSnippets } from "./snippets.js";
