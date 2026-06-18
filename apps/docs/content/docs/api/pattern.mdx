@@ -7,7 +7,7 @@ description: "Complete API reference for @onrails/pattern"
 
 ## Classes
 
-### MatchBuilder <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">class</span>
+### MatchBuilder <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">class</span>
 
 Fluent builder for `match`. Tracks the handled cases at the type
 level so `.exhaustive()` only compiles when every union member is covered.
@@ -19,7 +19,7 @@ inference would widen to a union narrower than the target slot
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### new MatchBuilder <span className="inline-flex items-center rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">constructor</span>
+### new MatchBuilder <span className="inline-flex items-center rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">constructor</span>
 
 ```typescript
 constructor<T, R = never, HasInput extends boolean = false, Handled extends readonly unknown[] = [], Locked extends boolean = false>(cases: readonly Case<T, unknown>[], input: T | typeof NO_INPUT, _handled?: Handled): MatchBuilder<T, R, HasInput, Handled, Locked>
@@ -27,7 +27,7 @@ constructor<T, R = never, HasInput extends boolean = false, Handled extends read
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype._handled <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype._handled <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 _handled: Handled
@@ -35,7 +35,7 @@ _handled: Handled
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype.with <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype.with <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 with<const P extends Pattern<T>, R2>(pattern: P, handler: (input: Narrow<T, P>) => HandlerReturn<Locked, R, R2>): MatchBuilder<T, NextResult<Locked, R, R2>, HasInput, readonly [......], Locked>
@@ -43,7 +43,7 @@ with<const P extends Pattern<T>, R2>(pattern: P, handler: (input: Narrow<T, P>) 
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype.withOneOf <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype.withOneOf <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 One handler for several patterns (OR). Handler input is the union of narrowed members.
 
@@ -53,7 +53,7 @@ withOneOf<const Ps extends readonly Pattern<T>[], R2>(patterns: Ps, handler: (in
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype.withEither <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype.withEither <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 `withOneOf` for exactly two patterns.
 
@@ -63,7 +63,7 @@ withEither<const P1 extends Pattern<T>, const P2 extends Pattern<T>, R2>(pattern
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype.returnType <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype.returnType <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 Lock the result type. All subsequent `.with()` handlers must return `R2`.
 Useful when branch return-type inference widens to a union narrower than
@@ -90,7 +90,7 @@ const next = match(flag)
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype.run <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype.run <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 Run on the value passed to `match`, or on `input` when curried.
 
@@ -100,7 +100,7 @@ run(...input: readonly [input: T] | readonly []): R
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype.exhaustive <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype.exhaustive <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 exhaustive(): ExhaustiveResult<T, Handled, R, HasInput>
@@ -108,7 +108,7 @@ exhaustive(): ExhaustiveResult<T, Handled, R, HasInput>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### MatchBuilder.prototype.otherwise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### MatchBuilder.prototype.otherwise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R
@@ -116,7 +116,7 @@ otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R
 
 ## Functions
 
-### assertNever <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### assertNever <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Use in `default` branches after manual narrowing — compile-time exhaustiveness check.
 
@@ -126,7 +126,7 @@ function assertNever(value: never, message?: string): never
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### match <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### match <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Start a pattern-matching expression. Two call shapes:
 
@@ -158,7 +158,7 @@ const describe = match<Event>()
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### matchTag <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### matchTag <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Exhaustive match on `_tag` — for `@onrails/result` / `@onrails/maybe` style unions.
 
@@ -168,7 +168,7 @@ function matchTag<T extends Tagged, R>(value: T, handlers: TagHandlers<T, R>): R
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### when <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### when <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Guard pattern for `match `.with.
 
@@ -183,7 +183,7 @@ function when<T>(guard: (input: T) => boolean): Pattern<T>
 
 ## Types
 
-### ExhaustiveResult <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### ExhaustiveResult <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 `.exhaustive()` return type — `NonExhaustiveError` when cases are missing.
 
@@ -196,7 +196,7 @@ export type ExhaustiveResult<T, Handled extends readonly unknown[], R, HasInput 
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ExhaustMatched <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### ExhaustMatched <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Union members of `T` ruled out by pattern `P`.
 Boolean guards (non-predicates) do not advance exhaustiveness — use `when(isX)` or `.otherwise()`.
@@ -211,7 +211,7 @@ export type ExhaustMatched<T, P> = P extends (input: T) => boolean
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### HandledUnion <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### HandledUnion <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Union of cases already handled by prior branches.
 
@@ -221,7 +221,7 @@ export type HandledUnion<Handled extends readonly unknown[]> = Handled[number];
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### IsExhaustive <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### IsExhaustive <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 ```typescript
 export type IsExhaustive<T, Handled extends readonly unknown[]> = [
@@ -233,7 +233,7 @@ export type IsExhaustive<T, Handled extends readonly unknown[]> = [
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### NonExhaustiveError <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### NonExhaustiveError <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Returned by `.exhaustive()` when union cases are still missing (compile-time error).
 
@@ -246,7 +246,7 @@ export type NonExhaustiveError<Remaining> = {
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### RemainingCases <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### RemainingCases <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Input cases not yet covered by `.with` / `.withOneOf` / `.withEither`.
 
@@ -259,7 +259,7 @@ export type RemainingCases<T, Handled extends readonly unknown[]> = Exclude<
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### LockedMatchBuilder <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### LockedMatchBuilder <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Result-locked variant of `MatchBuilder`. Constructed via
 `match(...).returnType<R>()`. Now a thin type alias over `MatchBuilder`
@@ -276,7 +276,7 @@ export type LockedMatchBuilder<
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### Pattern <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### Pattern <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 A pattern that matches a value of type `T`. One of:
 
@@ -293,7 +293,7 @@ export type Pattern<T> = T | ObjectPattern<T> | PatternGuard<T>;
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### Narrow <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### Narrow <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Narrows `input` when `pattern` is a shallow object, literal discriminant, or type predicate.
 
@@ -311,7 +311,7 @@ export type Narrow<T, P> = P extends (input: T) => boolean
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### NarrowUnion <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### NarrowUnion <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Union of members narrowed by each pattern in `Ps` (multi-branch handlers).
 

@@ -30,6 +30,7 @@ function formatDescription(desc: string): string {
 
 function getBadge(kind: string): string {
   let colors = "border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400";
+  let label = kind;
   
   if (kind === "class") {
     colors = "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400";
@@ -41,9 +42,11 @@ function getBadge(kind: string): string {
     colors = "border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400";
   } else if (kind === "function") {
     colors = "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400";
+    label = "ƒ";
   }
 
-  return `<span className="inline-flex items-center rounded-full border ${colors} px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">${kind}</span>`;
+  const transformClass = kind === "function" ? "text-xs font-semibold px-2.5 py-0.5" : "uppercase tracking-wider px-2 py-0.5 text-[10px]";
+  return `<span className="inline-flex items-center rounded-full border ${colors} ${transformClass} font-medium ml-2 align-middle">${label}</span>`;
 }
 
 function extractDocSymbol(

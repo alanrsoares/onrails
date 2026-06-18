@@ -7,14 +7,14 @@ description: "Complete API reference for @onrails/result"
 
 ## Classes
 
-### ResultAsync <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">class</span>
+### ResultAsync <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">class</span>
 
 Async result — public API never exposes `Promise<Result<…>>` directly;
 await via `.resolve()` or `.match()`.
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### new ResultAsync <span className="inline-flex items-center rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">constructor</span>
+### new ResultAsync <span className="inline-flex items-center rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">constructor</span>
 
 ```typescript
 constructor<T, E>(run: PromiseFactory<T, E>): ResultAsync<T, E>
@@ -22,7 +22,7 @@ constructor<T, E>(run: PromiseFactory<T, E>): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.fromResult <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.fromResult <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E>
@@ -30,7 +30,7 @@ static fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.fromPromise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.fromPromise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static fromPromise<T, E>(promise: PromiseLike<T>, onReject: (error: unknown) => E): ResultAsync<T, E>
@@ -38,7 +38,7 @@ static fromPromise<T, E>(promise: PromiseLike<T>, onReject: (error: unknown) => 
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.fromSafePromise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.fromSafePromise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, E>
@@ -46,7 +46,7 @@ static fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.defer <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.defer <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 Defers work until `resolve`. Unlike `fromPromise`, nothing runs
 until the `ResultAsync` is resolved (e.g. by `combineTuple` / `combineTupleParallel`).
@@ -57,7 +57,7 @@ static defer<T, E>(fn: () => Promise<Result<T, E>>): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.ok <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.ok <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static ok<T>(value: T): ResultAsync<T, never>
@@ -66,7 +66,7 @@ static ok<T, E>(value: T): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.err <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.err <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static err<T = never, E = unknown>(error: E): ResultAsync<T, E>
@@ -74,7 +74,7 @@ static err<T = never, E = unknown>(error: E): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.fromResultPromise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.fromResultPromise <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static fromResultPromise<T, E>(promise: Promise<Result<T, E>>, onDefect?: ((error: unknown) => E | UnexpectedError) | undefined): ResultAsync<T, E | UnexpectedError>
@@ -82,7 +82,7 @@ static fromResultPromise<T, E>(promise: Promise<Result<T, E>>, onDefect?: ((erro
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.combine <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.combine <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static combine<T, E>(results: readonly ResultAsync<T, E>[]): ResultAsync<T[], E>
@@ -90,7 +90,7 @@ static combine<T, E>(results: readonly ResultAsync<T, E>[]): ResultAsync<T[], E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.combineTuple <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.combineTuple <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 ```typescript
 static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
@@ -98,7 +98,7 @@ static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(re
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.combineTupleParallel <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### ResultAsync.combineTupleParallel <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 Like `combineTuple`, but starts every branch before awaiting (wall-clock
 parallel for independent IO). On failure, returns the first `Err` in input order.
@@ -109,7 +109,7 @@ static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknow
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.map <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.map <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 map<U>(fn: (value: T) => U): ResultAsync<U, E>
@@ -117,7 +117,7 @@ map<U>(fn: (value: T) => U): ResultAsync<U, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.mapErr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.mapErr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 mapErr<F>(fn: (error: E) => F): ResultAsync<T, F>
@@ -125,7 +125,7 @@ mapErr<F>(fn: (error: E) => F): ResultAsync<T, F>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.flatMap <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.flatMap <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 flatMap<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
@@ -133,7 +133,7 @@ flatMap<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: 
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.andThen <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.andThen <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
@@ -141,7 +141,7 @@ andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: 
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.chain <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.chain <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 Alias for `flatMap`.
 
@@ -151,7 +151,7 @@ chain<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Re
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.recover <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.recover <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
@@ -159,7 +159,7 @@ recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.orElse <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.orElse <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
@@ -167,7 +167,7 @@ orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.tap <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.tap <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 tap(fn: (value: T) => void): ResultAsync<T, E>
@@ -175,7 +175,7 @@ tap(fn: (value: T) => void): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.tapErr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.tapErr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 tapErr(fn: (error: E) => void): ResultAsync<T, E>
@@ -183,7 +183,7 @@ tapErr(fn: (error: E) => void): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.unwrapOr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.unwrapOr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 unwrapOr<U>(defaultValue: U): Promise<T | U>
@@ -191,7 +191,7 @@ unwrapOr<U>(defaultValue: U): Promise<T | U>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.isOk <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.isOk <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 isOk(): Promise<boolean>
@@ -199,7 +199,7 @@ isOk(): Promise<boolean>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.isErr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.isErr <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 isErr(): Promise<boolean>
@@ -207,7 +207,7 @@ isErr(): Promise<boolean>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.match <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.match <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 | U2>
@@ -215,7 +215,7 @@ match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): Promise<U1 
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.resolve <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.resolve <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 resolve(): Promise<Result<T, E>>
@@ -223,7 +223,7 @@ resolve(): Promise<Result<T, E>>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ResultAsync.prototype.then <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### ResultAsync.prototype.then <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 Thenable shim — `await ra` resolves to a bare tagged-union `Result<T, E>`.
 Narrow with `isOk(r)` / `isErr(r)` to read `.value` / `.error`.
@@ -232,13 +232,13 @@ Narrow with `isOk(r)` / `isErr(r)` to read `.value` / `.error`.
 then<R1 = Result<T, E>, R2 = never>(onfulfilled?: ((value: Result<T, E>) => R1 | PromiseLike<R1>) | null | undefined, onrejected?: ((reason: unknown) => R2 | PromiseLike<...>) | null | undefined): Promise<...>
 ```
 
-### UnexpectedError <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">class</span>
+### UnexpectedError <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">class</span>
 
 Thrown defect mapped when `fromAsync ` has no `onDefect`
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### new UnexpectedError <span className="inline-flex items-center rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">constructor</span>
+### new UnexpectedError <span className="inline-flex items-center rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">constructor</span>
 
 ```typescript
 constructor(message: string, cause?: unknown): UnexpectedError
@@ -246,7 +246,7 @@ constructor(message: string, cause?: unknown): UnexpectedError
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### UnexpectedError.isError <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">static method</span>
+### UnexpectedError.isError <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">static method</span>
 
 Indicates whether the argument provided is a built-in Error instance or not.
 
@@ -256,7 +256,7 @@ static isError(error: unknown): error is Error
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### UnexpectedError.prototype.cause <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### UnexpectedError.prototype.cause <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 cause: unknown
@@ -264,7 +264,7 @@ cause: unknown
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### UnexpectedError.prototype.name <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### UnexpectedError.prototype.name <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 name: string
@@ -272,7 +272,7 @@ name: string
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### UnexpectedError.prototype.message <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### UnexpectedError.prototype.message <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 message: string
@@ -280,7 +280,7 @@ message: string
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### UnexpectedError.prototype.stack <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">method</span>
+### UnexpectedError.prototype.stack <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">method</span>
 
 ```typescript
 stack: string | undefined
@@ -288,7 +288,7 @@ stack: string | undefined
 
 ## Functions
 
-### errAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### errAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts a value into an `Err` async result.
 
@@ -304,7 +304,7 @@ const r = errAsync({ kind: "not_found" as const });
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### fromPromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### fromPromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Wraps a `PromiseLike<T>` into a `ResultAsync`. Reject reasons go
 through `onReject` to become typed `Err`s; success becomes `Ok<T>`.
@@ -324,7 +324,7 @@ const body = fromPromise(
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### fromSafePromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### fromSafePromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Wraps a `PromiseLike<T>` that **never rejects** into `ResultAsync`.
 Skips the `onReject` mapper. Use only when the promise is provably safe.
@@ -335,7 +335,7 @@ function fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, 
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### okAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### okAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts a value into an `Ok` async result.
 
@@ -352,7 +352,7 @@ const r = okAsync(42);                  // ResultAsync<number, never>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### parallelTupleAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### parallelTupleAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Heterogeneous async tuple combine — branches overlap in wall-clock time.
 Returns the first `Err` in **input** order (not completion order).
@@ -374,7 +374,7 @@ const combined = parallelTupleAsync([
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### sequenceTupleAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### sequenceTupleAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Heterogeneous async tuple combine — left-to-right, short-circuit on
 first `Err` in input order. Preserves tuple positions so destructuring
@@ -393,7 +393,7 @@ const combined = sequenceTupleAsync([loadCfg(), loadCatalog()] as const);
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### tryAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### tryAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Convenience wrapper over `fromPromise` with default `Error`
 normalization. Call without `onReject` to get `ResultAsync<T, Error>`,
@@ -419,7 +419,7 @@ const b = tryAsync(db.users.insert(row), (e): DbError => ({
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### asyncAfter <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### asyncAfter <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Bind a sync `Result` into an async step without widening defects.
 Dual-form: data-first for one-shots, data-last (curried) for `pipe`/`flow`.
@@ -438,7 +438,7 @@ asyncAfter((u) => tryAsync(db.insert(u), toErr));         // data-last
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### fromAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### fromAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lift `(...args) => Promise<Result<T, E>>` to `(...args) => ResultAsync<T, E>`.
 Catches unexpected promise rejections (defects) via `onDefect` or `UnexpectedError`.
@@ -449,7 +449,7 @@ function fromAsync<A extends readonly unknown[], R extends AnyResult>(fn: (...ar
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### fromResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### fromResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lift an already-known sync `Result` into `ResultAsync`.
 
@@ -459,7 +459,7 @@ function fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### flow <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### flow <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Variadic point-free composition — left-to-right.
 
@@ -489,7 +489,7 @@ function flow<A extends readonly unknown[], B, C, D, E, F, G, H, I>(ab: (...a: A
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### bimap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### bimap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Transform both tracks at once — `Ok` via `onOk`, `Err` via `onErr`.
 Equivalent to `mapErr(onErr)(map(onOk)(result))` but in one pass.
@@ -507,7 +507,7 @@ bimap(parsed, (cfg) => cfg.name, (e) => ({ kind: "input", cause: e }));
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### combine <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### combine <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 First failure wins; otherwise collects values in order
 
@@ -517,7 +517,7 @@ function combine<T, E>(results: readonly Result<T, E>[]): Result<T[], E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### combineTuple <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### combineTuple <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Tuple-preserving combine (neverthrow-style)
 
@@ -527,7 +527,7 @@ function combineTuple<const R extends readonly Result<unknown, unknown>[]>(resul
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### err <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### err <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts a value into the error track.
 
@@ -544,7 +544,7 @@ const r = err({ kind: "parse", message: "bad json" });
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### flatMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### flatMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Canonical bind (Fantasy Land `chain`). Chains a Result-returning step,
 widening the error union to `E | F`. Short-circuits on `Err`.
@@ -565,7 +565,7 @@ flatMap(parseInput(raw), (data) =>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### fold <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### fold <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Curried collapse with named slots — escape valve when positional `match`
 order is unclear at the call site (e.g. when both handlers return the same
@@ -577,7 +577,7 @@ function fold<T, E, U>(handlers: { readonly ok: (value: T) => U; readonly err: (
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### isErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### isErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Type-narrowing predicate: returns `true` when the result is `Err`.
 
@@ -595,7 +595,7 @@ if (isErr(r)) {
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### isOk <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### isOk <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Type-narrowing predicate: returns `true` when the result is `Ok`.
 
@@ -613,7 +613,7 @@ if (isOk(r)) {
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### map <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### map <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Transform the `Ok` value, passing `Err` through unchanged. Dual-form:
 call data-first or curried (for use with `pipe`).
@@ -632,7 +632,7 @@ pipe(ok("x"), map((s) => s.length));// Ok 1 — curried
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### mapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### mapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Transform the `Err` value, passing `Ok` through unchanged. Useful for
 unifying heterogeneous failure types into one app-level union.
@@ -654,7 +654,7 @@ pipe(
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### match <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### match <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Terminal collapse — fold both tracks into a single value. Dual-form:
 3-args data-first, 2-args curried for `pipe`. Returns whatever
@@ -676,7 +676,7 @@ const html = match(parsed, (cfg) => render(cfg), (e) => renderError(e));
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### matchResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### matchResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Collision-free alias for files that also import `match` from ts-pattern.
 
@@ -687,7 +687,7 @@ function matchResult<T, E, U>(onOk: (value: T) => U, onErr: (error: E) => U): (r
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Fantasy Land `of` — alias of `ok`.
 
@@ -697,7 +697,7 @@ function of<T, E = never>(value: T): Result<T, E>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### ok <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### ok <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts a value into the success track.
 
@@ -714,7 +714,7 @@ const typed: Result<number, "parse"> = ok(1);
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### pipe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### pipe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Variadic value-first pipe — threads `value` through up to nine unary fns.
 
@@ -741,7 +741,7 @@ function pipe<A, B, C, D, E, F, G, H, I>(value: A, ab: (a: A) => B, bc: (b: B) =
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### recover <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### recover <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Error-track bind — runs `fn` only when the result is `Err`, allowing
 a failed workflow to recover to `Ok` or remap the failure. Mirror of
@@ -762,7 +762,7 @@ recover(networkResult, (e) =>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### tap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### tap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Observe the `Ok` value for side effects (logging, metrics) without
 changing the carried value. Passes `Err` through untouched.
@@ -784,7 +784,7 @@ pipe(
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### tapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### tapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Observe the `Err` value for side effects (logging, metrics) without
 changing the carried error. Passes `Ok` through untouched.
@@ -805,7 +805,7 @@ pipe(
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### trySync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### trySync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Wrap a throwing sync function — neverthrow `Result.fromThrowable`
 
@@ -816,7 +816,7 @@ function trySync<F extends (...args: never) => unknown, E>(fn: F, onThrow: (erro
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### unwrapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### unwrapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Test/assert helper — throws TypeError when called on Ok.
 
@@ -826,7 +826,7 @@ function unwrapErr<T, E>(result: Result<T, E>): E
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### unwrapOk <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### unwrapOk <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Test/assert helper — throws the original Err value when called on Err.
 
@@ -836,7 +836,7 @@ function unwrapOk<T, E>(result: Result<T, E>): T
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### unwrapOr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### unwrapOr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Returns the `Ok` value, or `defaultValue` when the result is `Err`.
 
@@ -852,7 +852,7 @@ unwrapOr(parsedSetting, "default-value");
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### $ <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### $ <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 ```typescript
 function $<T, E>(result: Result<T, E>): T
@@ -860,7 +860,7 @@ function $<T, E>(result: Result<T, E>): T
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### tryGen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### tryGen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Run a block that uses `yieldResult`; returns the final `Result` or the first Err.
 
@@ -880,7 +880,7 @@ const out = tryGen(() => {
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### yieldResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">function</span>
+### yieldResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Unwrap a `Result` inside `tryGen` (Rust `?` for sync code).
 Prefer `flatMap ` / `fluent ` for long pipelines.
@@ -891,7 +891,7 @@ function yieldResult<T, E>(result: Result<T, E>): T
 
 ## Types
 
-### InferErr <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### InferErr <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Error type of a `Result` or `ResultAsync`
 
@@ -905,7 +905,7 @@ export type InferErr<R> = R extends { _tag: "Err"; readonly error: infer E }
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### InferOk <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### InferOk <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Success type of a `Result` or `ResultAsync`
 
@@ -919,7 +919,7 @@ export type InferOk<R> = R extends { _tag: "Ok"; readonly value: infer T }
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### Err <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### Err <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 ```typescript
 export type Err<T, E> = Extract<Result<T, E>, { _tag: "Err" }>;
@@ -927,7 +927,7 @@ export type Err<T, E> = Extract<Result<T, E>, { _tag: "Err" }>;
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### Ok <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### Ok <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 ```typescript
 export type Ok<T, E = never> = Extract<Result<T, E>, { _tag: "Ok" }>;
@@ -935,7 +935,7 @@ export type Ok<T, E = never> = Extract<Result<T, E>, { _tag: "Ok" }>;
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### Result <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 px-2 py-0.5 text-[10px] font-medium ml-2 align-middle uppercase tracking-wider">type</span>
+### Result <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Tagged success/failure — no classes, tree-shake friendly.
 
