@@ -1,8 +1,10 @@
-import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
-import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
+import { rehypeCodeDefaultOptions } from "fumadocs-core/mdx-plugins";
+import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
+import { defineConfig, defineDocs } from "fumadocs-mdx/config";
+import { transformerTwoslash } from "fumadocs-twoslash";
 
 export const docs = defineDocs({
-  dir: 'content/docs',
+  dir: "content/docs",
   docs: {
     schema: pageSchema,
     postprocess: {
@@ -16,6 +18,12 @@ export const docs = defineDocs({
 
 export default defineConfig({
   mdxOptions: {
-    // MDX options
+    rehypeCodeOptions: {
+      ...rehypeCodeDefaultOptions,
+      transformers: [
+        ...(rehypeCodeDefaultOptions.transformers ?? []),
+        transformerTwoslash(),
+      ],
+    },
   },
 });
