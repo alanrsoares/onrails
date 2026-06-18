@@ -93,17 +93,21 @@ the wrong branch. onrails treats these as a **test/assertion tier** and the
 
 ## Migration is mechanical
 
-`@onrails/result/compat/neverthrow` mirrors the neverthrow shape, and the
-codemod rewrites imports and call sites:
+`@onrails/result/compat/neverthrow` mirrors the neverthrow shape, so migration
+is two mechanical stages — preview either with `--dry` first:
 
 ```bash
-bunx onrails-codemod-neverthrow ./src            # to the compat shim
-bunx onrails-codemod-neverthrow ./src --to-native # to canonical @onrails/result
+# stage 1 — rewrite neverthrow imports + package.json deps to the compat shim
+bunx @onrails/codemod ./path/to/repo --dry
+bunx @onrails/codemod ./path/to/repo
+
+# stage 2 — rewrite compat-shim imports to canonical @onrails/result
+bunx @onrails/codemod ./path/to/repo --to-native --dry
+bunx @onrails/codemod ./path/to/repo --to-native
 ```
 
-The codemod maps neverthrow names to onrails canonical/compat names
-(`chain → flatMap`, `orElse → recover`, keeping `andThen`), so migrated code
-never lands on a deprecated alias.
+Stage 2 is intentionally conservative: it only rewrites imports that have a
+native equivalent, leaving compat-only shapes flagged for manual review.
 
 ## Choose neverthrow when
 
