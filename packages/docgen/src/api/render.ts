@@ -1,3 +1,4 @@
+import { match } from "@onrails/pattern";
 import type { ApiDocsOptions, DocSymbol, ExportsByPackage } from "./types.js";
 
 type LinkResolver = (symbol: string) => string;
@@ -38,28 +39,38 @@ const formatExample = (ex: string): string => {
   return trimmed.startsWith("```") ? trimmed : `\`\`\`typescript\n${trimmed}\n\`\`\``;
 };
 
-const getBadge = (kind: string): string => {
-  let colors =
-    "border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400";
-  let label = kind;
+const NEUTRAL =
+  "border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400";
 
-  if (kind === "class") {
-    colors =
-      "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400";
-  } else if (kind === "static method" || kind === "method") {
-    colors =
-      "border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400";
-  } else if (kind === "constructor") {
-    colors =
-      "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400";
-  } else if (kind === "type") {
-    colors =
-      "border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400";
-  } else if (kind === "function") {
-    colors =
-      "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400";
-    label = "ƒ";
-  }
+const getBadge = (kind: string): string => {
+  const { colors, label } = match(kind)
+    .returnType<{ colors: string; label: string }>()
+    .with("class", () => ({
+      colors:
+        "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400",
+      label: kind,
+    }))
+    .withEither("static method", "method", () => ({
+      colors:
+        "border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400",
+      label: kind,
+    }))
+    .with("constructor", () => ({
+      colors:
+        "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400",
+      label: kind,
+    }))
+    .with("type", () => ({
+      colors:
+        "border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400",
+      label: kind,
+    }))
+    .with("function", () => ({
+      colors:
+        "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400",
+      label: "ƒ",
+    }))
+    .otherwise(() => ({ colors: NEUTRAL, label: kind }));
 
   const transformClass =
     kind === "function"

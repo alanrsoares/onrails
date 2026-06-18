@@ -9,6 +9,7 @@
  * packages.
  */
 import { generateApiDocs } from "@onrails/docgen";
+import { isErr } from "@onrails/result";
 import ts from "typescript";
 
 // Symbol -> category, by package. Falls through to "Core". An explicit
@@ -116,7 +117,7 @@ const resolveLink = (symbol: string, currentPackage: string): string => {
   return `#${slug}`;
 };
 
-generateApiDocs(
+const result = generateApiDocs(
   [
     {
       entry: "packages/result/src/index.ts",
@@ -136,3 +137,8 @@ generateApiDocs(
   ],
   { categorize, categoryOrder, resolveLink },
 );
+
+if (isErr(result)) {
+  console.error(result.error.message);
+  process.exit(1);
+}
