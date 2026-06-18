@@ -19,36 +19,41 @@ surface.
 
 ## Same task, both libraries
 
-```ts
-// neverthrow — fluent methods on a Result instance
+Drag the handle to wipe between the two:
+
+<CodeCompare
+  leftLabel="onrails"
+  rightLabel="neverthrow"
+  left={`// dual-form functions over a tagged union
+import { pipe, flatMap, map, mapErr, match } from "@onrails/result";
+
+const createUser = (raw: string) =>
+  pipe(
+    parseJson(raw),                  // Result<Input, ParseError>
+    mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
+    flatMap(validate),               // Result<User, AppError>
+    map((u) => ({ ...u, id: newId() })),
+  );
+
+const status = match(
+  createUser(raw),
+  () => 201,
+  (e) => (e.kind === "validation" ? 422 : 400),
+);`}
+  right={`// fluent methods on a Result instance
 import { ok, err, Result } from "neverthrow";
 
 const createUser = (raw: string): Result<User, AppError> =>
   parseJson(raw)
     .mapErr((e): AppError => ({ kind: "parse", detail: e.message }))
     .andThen(validate)
-    .map((u) => ({ ...u, id: crypto.randomUUID() }));
+    .map((u) => ({ ...u, id: newId() }));
 
 const status = createUser(raw).match(
   () => 201,
   (e) => (e.kind === "validation" ? 422 : 400),
-);
-```
-
-```ts
-// onrails — dual-form functions over a tagged union
-import { pipe, flatMap, map, mapErr, match } from "@onrails/result";
-
-const createUser = (raw: string) =>
-  pipe(
-    parseJson(raw),                                           // Result<Input, ParseError>
-    mapErr((e): AppError => ({ kind: "parse", detail: e.message })),
-    flatMap(validate),                                        // Result<User, AppError>
-    map((u) => ({ ...u, id: crypto.randomUUID() })),
-  );
-
-const status = match(createUser(raw), () => 201, (e) => (e.kind === "validation" ? 422 : 400));
-```
+);`}
+/>
 
 Prefer dots? onrails has an opt-in fluent wrapper too:
 
