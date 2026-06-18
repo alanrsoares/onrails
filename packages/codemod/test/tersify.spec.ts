@@ -16,6 +16,12 @@ describe("tersify", () => {
       expect(tersify(src)).toBe(expected);
     });
 
+    it("wraps an object literal returned with an `as` cast in parentheses", () => {
+      const src = "const make = (x) => { return { val: x } as Foo; };";
+      const expected = "const make = (x) => ({ val: x } as Foo);";
+      expect(tersify(src)).toBe(expected);
+    });
+
     it("does not change arrow functions with multiple statements", () => {
       const src = "const add = (a, b) => { const sum = a + b; return sum; };";
       expect(tersify(src)).toBe(src);
