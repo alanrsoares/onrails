@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/alanrsoares/onrails/compare/result-v0.1.4...result-v0.2.0) (2026-06-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* removed deprecated aliases and the @onrails/result/mcp subpath. Migrate to canonical names with onrails-codemod-neverthrow.
+
+### Features
+
+* **repo:** adopt @tanstack/intent for skill distribution ([#29](https://github.com/alanrsoares/onrails/issues/29)) ([b9a7bb4](https://github.com/alanrsoares/onrails/commit/b9a7bb4e7b580c8c52f1536a06607cf3d84355a5))
+
+
+### Code Refactoring
+
+* API coherence — remove deprecated alias tier (RFC 0001) ([#36](https://github.com/alanrsoares/onrails/issues/36)) ([7b9f157](https://github.com/alanrsoares/onrails/commit/7b9f157cedebf1a1904a46005cee96bb98bfe296))
+
 ## [0.1.4](https://github.com/alanrsoares/onrails/compare/result-v0.1.3...result-v0.1.4) (2026-06-13)
 
 

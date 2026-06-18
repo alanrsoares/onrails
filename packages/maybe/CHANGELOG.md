@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.0](https://github.com/alanrsoares/onrails/compare/maybe-v0.1.4...maybe-v0.2.0) (2026-06-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* removed deprecated aliases and the @onrails/result/mcp subpath. Migrate to canonical names with onrails-codemod-neverthrow.
+
+### Code Refactoring
+
+* API coherence — remove deprecated alias tier (RFC 0001) ([#36](https://github.com/alanrsoares/onrails/issues/36)) ([7b9f157](https://github.com/alanrsoares/onrails/commit/7b9f157cedebf1a1904a46005cee96bb98bfe296))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.2.0
+  * peerDependencies
+    * @onrails/result bumped to 0.2.0
+
 ## [0.1.4](https://github.com/alanrsoares/onrails/compare/maybe-v0.1.3...maybe-v0.1.4) (2026-06-13)
 
 
