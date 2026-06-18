@@ -1,4 +1,5 @@
 import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { ArrowRight, Layers, ShieldCheck, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { gitConfig } from "@/lib/shared";
@@ -26,19 +27,89 @@ const features = [
   },
 ];
 
-const SNIPPET = `import { Result } from "@onrails/result";
+const RESULT_SNIPPET = `import { ResultAsync, tryAsync } from "@onrails/result";
 
-// Parse and validate cleanly
-const parseUser = (json: string): Result<User, Error> =>
-  Result.trySync(() => JSON.parse(json))
-    .flatMap(validateUserSchema)
-    .map(normalizeUserData);
+type PublishError =
+  | { kind: "not_found"; id: string }
+  | { kind: "forbidden" }
+  | { kind: "db"; cause: unknown };
 
-// Match branches exhaustively
-const response = parseUser(rawJson).match(
-  (user) => ({ status: 200, body: user }),
-  (error) => ({ status: 400, body: { error: error.message } })
+// Compose async steps on a single typed error channel — no try/catch, no throws.
+const publishPost = (id: string, user: User) =>
+  tryAsync(db.posts.find(id), (cause): PublishError => ({ kind: "db", cause }))
+    .flatMap((post) =>
+      post ? ResultAsync.ok(post) : ResultAsync.err({ kind: "not_found", id }),
+    )
+    .flatMap((post) =>
+      post.authorId === user.id
+        ? ResultAsync.ok(post)
+        : ResultAsync.err<Post, PublishError>({ kind: "forbidden" }),
+    )
+    .map((post) => ({ ...post, status: "published" as const }))
+    .tapErr((e) => logger.warn("publish failed", e));
+
+// Settle once; the compiler forces you to handle every branch.
+const status = await publishPost(postId, user).match(
+  () => 200,
+  (e) => (e.kind === "not_found" ? 404 : e.kind === "forbidden" ? 403 : 500),
 );`;
+
+const PATTERN_SNIPPET = `import { match } from "@onrails/pattern";
+
+type RemoteData =
+  | { status: "idle" }
+  | { status: "loading"; since: number }
+  | { status: "ok"; rows: string[] }
+  | { status: "error"; code: number };
+
+// Exhaustive & type-narrowed — add a variant and every match stops compiling.
+const render = (state: RemoteData) =>
+  match(state)
+    .with({ status: "idle" }, () => "Ready when you are")
+    .with({ status: "loading" }, (s) => \`Loading… \${Date.now() - s.since}ms\`)
+    .with({ status: "ok" }, (s) => \`\${s.rows.length} rows\`)
+    .with({ status: "error" }, (s) => \`Error \${s.code}\`)
+    .exhaustive();`;
+
+const MAYBE_SNIPPET = `import { flatMap, fromNullable, map, match, unwrapOr } from "@onrails/maybe";
+
+// Expected absence as a value — no scattered null checks, no optional-chaining soup.
+const user = flatMap(fromNullable(raw.userId), (id) => fromNullable(users.get(id)));
+
+const greeting = match(
+  user,
+  (u) => \`Welcome back, \${u.name}\`,
+  () => "Welcome, guest",
+);
+
+// …or transform and collapse with a fallback in one line.
+const displayName = unwrapOr(map(user, (u) => u.name.trim()), "guest");`;
+
+const COMBINED_SNIPPET = `import { err, flatMap, match, ok } from "@onrails/result";
+import { fromNullable } from "@onrails/maybe";
+import { toResult } from "@onrails/maybe/interop";
+
+type LoadError = { kind: "not_found"; id: string } | { kind: "inactive" };
+
+// Maybe models absence; cross into Result at the boundary where it becomes a failure.
+const loadActiveUser = (id: string) =>
+  flatMap(
+    toResult(fromNullable(users.get(id)), (): LoadError => ({ kind: "not_found", id })),
+    (u) => (u.active ? ok(u) : err<User, LoadError>({ kind: "inactive" })),
+  );
+
+const banner = match(
+  loadActiveUser("u_42"),
+  (u) => \`Hi, \${u.name}\`,
+  (e) => (e.kind === "not_found" ? "User not found" : "Account inactive"),
+);`;
+
+const examples = [
+  { label: "Result", code: RESULT_SNIPPET },
+  { label: "Pattern", code: PATTERN_SNIPPET },
+  { label: "Maybe", code: MAYBE_SNIPPET },
+  { label: "Combined", code: COMBINED_SNIPPET },
+];
 
 export default function HomePage() {
   return (
@@ -77,9 +148,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* code sample */}
+      {/* code sample — one tab per package */}
       <section className="w-full max-w-3xl pb-20 text-left">
-        <DynamicCodeBlock lang="ts" code={SNIPPET} />
+        <Tabs items={examples.map((e) => e.label)}>
+          {examples.map(({ label, code }) => (
+            <Tab key={label} value={label}>
+              <DynamicCodeBlock lang="ts" code={code} />
+            </Tab>
+          ))}
+        </Tabs>
       </section>
 
       {/* features */}
