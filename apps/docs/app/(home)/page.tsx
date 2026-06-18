@@ -36,9 +36,12 @@ type PublishError =
 
 // Compose async steps on a single typed error channel — no try/catch, no throws.
 const publishPost = (id: string, user: User) =>
+  // db.posts.find resolves to Post | null
   tryAsync(db.posts.find(id), (cause): PublishError => ({ kind: "db", cause }))
     .flatMap((post) =>
-      post ? ResultAsync.ok(post) : ResultAsync.err({ kind: "not_found", id }),
+      post
+        ? ResultAsync.ok(post)
+        : ResultAsync.err<Post, PublishError>({ kind: "not_found", id }),
     )
     .flatMap((post) =>
       post.authorId === user.id
