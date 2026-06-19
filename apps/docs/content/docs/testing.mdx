@@ -1,0 +1,125 @@
+---
+title: Testing
+description: Why onrails code tests cleanly — inert data, no mocks, plus compile-time type tests.
+---
+
+onrails primitives are **plain data and pure functions**, so testing them needs
+no mocks, no `try`/`catch` harness, and no renderer. A `Result` is a tagged
+union you can assert on directly; a fallible function is `(input) => Result`, so
+it tests like any other function.
+
+Examples use `bun:test`, but nothing here is bun-specific.
+
+## 1. Assert on the Result directly
+
+Call the function, check which track it landed on, and read the payload. The
+guards (`isOk` / `isErr`) narrow the type, so the value is typed inside the
+branch.
+
+```ts title="parse-id.spec.ts"
+import { describe, expect, it } from "bun:test";
+import { isErr, isOk, unwrapOk } from "@onrails/result";
+import { parseId } from "../src/parse-id";
+
+describe("parseId", () => {
+  it("returns Ok for a numeric string", () => {
+    const result = parseId("42");
+    expect(isOk(result)).toBe(true);
+    expect(unwrapOk(result)).toBe(42);
+  });
+
+  it("returns a typed Err for garbage", () => {
+    const result = parseId("nope");
+    expect(isErr(result)).toBe(true);
+  });
+});
+```
+
+<Callout title="Why this is the whole point">
+  No spies, no fakes. The failure is a value in the `Err` channel, so you assert
+  on it instead of catching a thrown exception.
+</Callout>
+
+## 2. Fold both branches with `match`
+
+When a test cares about the *outcome*, fold the `Result` into a plain value and
+assert on that — one assertion covers both tracks.
+
+```ts title="respond.spec.ts"
+import { expect, it } from "bun:test";
+import { match } from "@onrails/result";
+import { parseId } from "../src/parse-id";
+
+const label = (input: string) =>
+  match(
+    parseId(input),
+    (n) => `ok:${n}`,
+    (e) => `err:${e}`,
+  );
+
+it("folds Ok and Err into one shape", () => {
+  expect(label("42")).toBe("ok:42");
+  expect(label("nope")).toBe("err:Not a number");
+});
+```
+
+## 3. Async — await, then assert
+
+`ResultAsync` is awaitable. Resolve it to a `Result` and assert as above; no
+timers, no done-callbacks. To drive the failure path, point the function at
+input that fails — the error is still just data.
+
+```ts title="get-user.spec.ts"
+import { expect, it } from "bun:test";
+import { isOk, match } from "@onrails/result";
+import { getUser } from "../src/get-user";
+
+it("settles to a typed channel", async () => {
+  const result = await getUser("u1");
+
+  const status = match(
+    result,
+    () => 200,
+    (e) => (e.kind === "not_found" ? 404 : 502),
+  );
+  expect([200, 404, 502]).toContain(status);
+});
+```
+
+## 4. Type tests (the inference is part of the contract)
+
+The error union and the inferred `Ok` type are part of the API, so pin them at
+compile time with [`ts-expect`](https://github.com/TypeStrong/ts-expect). `tsc`
+enforces these — they never run.
+
+```ts title="parse-id.types.spec.ts"
+import { expectType, type TypeEqual } from "ts-expect";
+import type { Result } from "@onrails/result";
+import { parseId } from "../src/parse-id";
+
+// keep type-only assertions in an uncalled function — tsc checks it, the
+// runtime never executes the @ts-expect-error lines
+function _types() {
+  const r = parseId("42");
+
+  // the error channel is exactly the union you declared
+  expectType<TypeEqual<typeof r, Result<number, "Not a number">>>(true);
+
+  // @ts-expect-error parseId takes a string, not a number
+  parseId(42);
+}
+```
+
+<Callout type="warn">
+  Make sure your `tsconfig` `include`s the test files, otherwise `tsc` never
+  checks these assertions.
+</Callout>
+
+## What to test where
+
+| Layer | Tooling | What |
+| --- | --- | --- |
+| Pure fallible functions | `bun:test` + `isOk` / `isErr` / `unwrapOk` | most of your logic |
+| Outcomes | `match` folded to a value | both tracks in one assertion |
+| Async boundaries | `await` the `ResultAsync`, then `match` | the settled channel |
+| Inference | `ts-expect` + `tsc` | the `Ok` type and the error union |

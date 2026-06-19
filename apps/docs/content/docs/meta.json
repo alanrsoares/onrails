@@ -1,9 +1,13 @@
 {
-  "title": "Docs",
+  "title": "onrails",
   "pages": [
     "index",
     "getting-started",
+    "core-concepts",
     "recipes",
+    "testing",
+    "migration",
+    "agents",
     "---api---",
     "api/result",
     "api/maybe",
