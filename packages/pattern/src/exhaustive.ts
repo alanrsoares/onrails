@@ -26,6 +26,7 @@ export type IsExhaustive<T, Handled extends readonly unknown[]> = [
   ? true
   : false;
 
+/** `.exhaustive()` shape: the value `R` when an input was given, else a `(input: T) => R` matcher. */
 export type ExhaustiveOutput<R, HasInput extends boolean, T> = HasInput extends true
   ? R
   : (input: T) => R;

@@ -272,7 +272,7 @@ export class ResultAsync<T, E> {
    *
    * @example
    * ```ts
-   * load(id).mapErr((e): AppError => ({ kind: "load", cause: e }));
+   * load(id).mapErr((e): AppError => ({ kind: "load", cause: e })); // ResultAsync<T, AppError>
    * ```
    */
   mapErr<F>(fn: (error: E) => F): ResultAsync<T, F> {
@@ -311,7 +311,7 @@ export class ResultAsync<T, E> {
 
   /**
    * neverthrow-compat alias of {@link flatMap}. Kept as the documented compat
-   * tier; prefer `flatMap` in new code.
+   * tier; prefer {@link flatMap} in new code.
    *
    * @example
    * ```ts
@@ -331,7 +331,7 @@ export class ResultAsync<T, E> {
    *
    * @example
    * ```ts
-   * loadFromCache(id).recover(() => loadFromOrigin(id));
+   * loadFromCache(id).recover(() => loadFromOrigin(id)); // ResultAsync<T, F>
    * ```
    */
   recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F> {
@@ -347,7 +347,7 @@ export class ResultAsync<T, E> {
 
   /**
    * neverthrow-compat alias of {@link recover}. Kept as the documented compat
-   * tier; prefer `recover` in new code.
+   * tier; prefer {@link recover} in new code.
    *
    * @example
    * ```ts

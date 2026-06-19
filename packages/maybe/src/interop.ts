@@ -4,6 +4,7 @@ import { fromNullable, isSome, type Maybe, none, some } from "./maybe.js";
 /** Sentinel error tag — `Maybe<T>` bridges to `Result<T, NoneError>`. */
 export type NoneError = { readonly _tag: "None" };
 
+/** Construct the {@link NoneError} sentinel. */
 export const noneError = (): NoneError => ({ _tag: "None" });
 
 /** Lift absence into a domain error. */

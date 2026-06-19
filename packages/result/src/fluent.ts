@@ -14,6 +14,15 @@ export type FluentResult<T, E> = {
   unwrapOr: (defaultValue: T) => T;
 };
 
+/**
+ * Wrap a {@link Result} for opt-in dot chaining — app-edge sugar. Keep the
+ * data-first helpers ({@link map}, {@link flatMap}) in library internals.
+ *
+ * @example
+ * ```ts
+ * fluent(ok(2)).map((n) => n * 3).unwrapOr(0); // 6
+ * ```
+ */
 export const fluent = <T, E>(result: Result<T, E>): FluentResult<T, E> => ({
   result,
   map: (fn) => fluent(map(result, fn)),
@@ -36,6 +45,15 @@ export type FluentResultAsync<T, E> = {
   match: <U>(onOk: (value: T) => U, onErr: (error: E) => U) => Promise<U>;
 };
 
+/**
+ * Wrap a {@link ResultAsync} for opt-in dot chaining — the async counterpart of
+ * {@link fluent}. App-edge sugar; await the terminal `match`.
+ *
+ * @example
+ * ```ts
+ * fluentAsync(okAsync(2)).map((n) => n * 3); // FluentResultAsync<number, never>
+ * ```
+ */
 export const fluentAsync = <T, E>(resultAsync: ResultAsync<T, E>): FluentResultAsync<T, E> => ({
   resultAsync,
   map: (fn) => fluentAsync(resultAsync.map(fn)),
