@@ -35,7 +35,7 @@ export interface ApiPackage {
 }
 
 /** Maps each package name to the set of symbol names it exports. */
-export type ExportsByPackage = ReadonlyMap<string, ReadonlySet<string>>;
+export type ExportsByPackage = ReadonlyMap<string, ReadonlyMap<string, SymbolKind>>;
 
 export interface ApiDocsOptions {
   /**

@@ -88,8 +88,8 @@ flatMap(parseInput(raw), (data) =>
 
 Variadic point-free composition — chains up to nine unary fns left-to-right
 into one reusable function. The first fn may take multiple arguments; the
-rest are unary. Use [pipe](#pipe) from `@onrails/result` when you already
-have a starting value; use [flow](#flow) to define a reusable composed
+rest are unary. Use [pipe](#pipe-ƒ) from `@onrails/result` when you already
+have a starting value; use [flow](#flow-ƒ) to define a reusable composed
 function with no value yet.
 
 ```typescript
@@ -174,7 +174,7 @@ if (isOk(r)) {
 ### map <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Transform the `Ok` value, passing `Err` through unchanged. Dual-form:
-call data-first or curried (for use with [pipe](#pipe)).
+call data-first or curried (for use with [pipe](#pipe-ƒ)).
 
 ```typescript
 function map<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E>
@@ -229,7 +229,7 @@ pipe(
 ### match <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Terminal collapse — fold both tracks into a single value. Dual-form:
-3-args data-first, 2-args curried for [pipe](#pipe). Returns whatever
+3-args data-first, 2-args curried for [pipe](#pipe-ƒ). Returns whatever
 the handlers return.
 
 For files that also import `match` from `ts-pattern`, use a namespace
@@ -283,8 +283,8 @@ const typed: Result<number, "parse"> = ok(1);
 ### pipe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Variadic value-first pipe — threads `value` through up to nine unary fns,
-left-to-right. Use [pipe](#pipe) when you already have a starting value;
-use [flow](#flow) to define a reusable composed function with no value yet.
+left-to-right. Use [pipe](#pipe-ƒ) when you already have a starting value;
+use [flow](#flow-ƒ) to define a reusable composed function with no value yet.
 
 ```typescript
 function pipe<A>(value: A): A
@@ -321,7 +321,7 @@ pipe(
 
 Error-track bind — runs `fn` only when the result is `Err`, allowing
 a failed workflow to recover to `Ok` or remap the failure. Mirror of
-[flatMap](#flatmap) on the error channel.
+[flatMap](#flatmap-ƒ) on the error channel.
 
 ```typescript
 function recover<T, E, F>(result: Result<T, E>, fn: (error: E) => Result<T, F>): Result<T, F>
@@ -405,7 +405,7 @@ pipe(
 ### trySync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Wraps a throwing sync function, returning a function that produces a
-[Result](#result) instead of throwing. Thrown errors pass through `onThrow` to
+[Result](#result-type) instead of throwing. Thrown errors pass through `onThrow` to
 become a typed `Err`; a normal return becomes `Ok`. The neverthrow analogue
 is `Result.fromThrowable`.
 
@@ -442,9 +442,9 @@ parse("nope");    // Err({ kind: "parse", … })
 ### unwrapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Test/assert helper — returns the `Err` value, or **throws a `TypeError`**
-when called on an `Ok`. Mirror of [unwrapOk](#unwrapok) on the error track and
+when called on an `Ok`. Mirror of [unwrapOk](#unwrapok-ƒ) on the error track and
 part of the same assertion tier (RFC 0001 §4): intended for `*.spec.ts` /
-`*.test.ts`. Prefer [match](./pattern#match) / [unwrapOr](./maybe#unwrapor) in business logic; the
+`*.test.ts`. Prefer [match](./pattern#match-ƒ) / [unwrapOr](./maybe#unwrapor-ƒ) in business logic; the
 lint plugins flag `unwrapErr` outside test files.
 
 ```typescript
@@ -476,7 +476,7 @@ expect(() => unwrapErr(ok(5))).toThrow(TypeError);
 Test/assert helper — returns the `Ok` value, or **throws the original `Err`
 value** when called on an `Err`. This is the assertion tier (RFC 0001 §4):
 intended for `*.spec.ts` / `*.test.ts`, where throwing fails the test loudly.
-In business logic prefer [match](./pattern#match) or [unwrapOr](./maybe#unwrapor); the lint plugins
+In business logic prefer [match](./pattern#match-ƒ) or [unwrapOr](./maybe#unwrapor-ƒ); the lint plugins
 flag `unwrapOk` outside test files.
 
 ```typescript
@@ -551,7 +551,7 @@ const r = errAsync({ kind: "not_found" as const });
 
 ### fromPromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Wraps a `PromiseLike<T>` into a [ResultAsync](#resultasync). Reject reasons go
+Wraps a `PromiseLike<T>` into a [ResultAsync](#resultasync-class). Reject reasons go
 through `onReject` to become typed `Err`s; success becomes `Ok<T>`.
 
 ```typescript
@@ -578,7 +578,7 @@ const body = fromPromise(
 
 ### fromSafePromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Wraps a `PromiseLike<T>` that **never rejects** into [ResultAsync](#resultasync).
+Wraps a `PromiseLike<T>` that **never rejects** into [ResultAsync](#resultasync-class).
 Skips the `onReject` mapper. Use only when the promise is provably safe.
 
 ```typescript
@@ -647,12 +647,12 @@ const combined = parallelTupleAsync([
 ### ResultAsync <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">class</span>
 
 Async railway carrier. Wraps a deferred `Promise<Result<T, E>>` and exposes
-the same dual-track transforms as the sync [Result](#result) — `map`, `flatMap`,
+the same dual-track transforms as the sync [Result](#result-type) — `map`, `flatMap`,
 `recover`, `tap`, `match`. The public API never surfaces `Promise<Result<…>>`
 directly: `await` the instance (it is thenable) or call [resolve](#resolve) /
-[match](./pattern#match) to settle it.
+[match](./pattern#match-ƒ) to settle it.
 
-Construct via the static factories ([ok](#ok), [err](#err), [fromPromise](#frompromise),
+Construct via the static factories ([ok](#ok-ƒ), [err](#err-ƒ), [fromPromise](#frompromise-ƒ),
 [defer](#defer), …) rather than `new` — the constructor is `protected`.
 
 ```typescript
@@ -681,7 +681,7 @@ constructor<T, E>(run: PromiseFactory<T, E>): ResultAsync<T, E>
 
 ### ResultAsync.fromResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Lifts an already-settled sync [Result](#result) into a [ResultAsync](#resultasync).
+Lifts an already-settled sync [Result](#result-type) into a [ResultAsync](#resultasync-class).
 
 ```typescript
 static fromResult<T, E>(result: Result<T, E>): ResultAsync<T, E>
@@ -753,7 +753,7 @@ const now = ResultAsync.fromSafePromise(Promise.resolve(Date.now()));
 
 ### ResultAsync.defer <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Defers work until [resolve](#resolve). Unlike [fromPromise](#frompromise), the factory
+Defers work until [resolve](#resolve). Unlike [fromPromise](#frompromise-ƒ), the factory
 does not run until the `ResultAsync` is resolved (e.g. by `combineTuple` /
 `combineTupleParallel`). The factory runs at most once — `resolve` memoizes.
 
@@ -825,8 +825,8 @@ const r = ResultAsync.err({ kind: "not_found" as const });
 ### ResultAsync.fromResultPromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts an existing `Promise<Result<T, E>>` (e.g. from interop code) into a
-[ResultAsync](#resultasync), auto-flattening one level of double-wrapping. A thrown
-defect is routed through `onDefect`, defaulting to [UnexpectedError](#unexpectederror).
+[ResultAsync](#resultasync-class), auto-flattening one level of double-wrapping. A thrown
+defect is routed through `onDefect`, defaulting to [UnexpectedError](#unexpectederror-class).
 
 ```typescript
 static fromResultPromise<T, E>(promise: Promise<Result<T, E>>, onDefect?: ((error: unknown) => E | UnexpectedError) | undefined): ResultAsync<T, E | UnexpectedError>
@@ -846,7 +846,7 @@ static fromResultPromise<T, E>(promise: Promise<Result<T, E>>, onDefect?: ((erro
 Combines a homogeneous array of async results into one. Resolves
 **sequentially** in input order, short-circuiting on the first `Err`.
 For heterogeneous tuples that preserve per-index types, use
-[combineTuple](#combinetuple); for wall-clock overlap, [combineTupleParallel](#combinetupleparallel).
+[combineTuple](#combinetuple-ƒ); for wall-clock overlap, [combineTupleParallel](#combinetupleparallel).
 
 ```typescript
 static combine<T, E>(results: readonly ResultAsync<T, E>[]): ResultAsync<T[], E>
@@ -900,7 +900,7 @@ if (isOk(r)) {
 
 ### ResultAsync.combineTupleParallel <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Like [combineTuple](#combinetuple), but starts every branch before awaiting (wall-clock
+Like [combineTuple](#combinetuple-ƒ), but starts every branch before awaiting (wall-clock
 parallel for independent IO). On failure, returns the first `Err` in input order.
 
 ```typescript
@@ -997,8 +997,8 @@ authenticate(req)
 
 ### ResultAsync.prototype.andThen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-neverthrow-compat alias of [flatMap](#flatmap). Kept as the documented compat
-tier; prefer [flatMap](#flatmap) in new code.
+neverthrow-compat alias of [flatMap](#flatmap-ƒ). Kept as the documented compat
+tier; prefer [flatMap](#flatmap-ƒ) in new code.
 
 ```typescript
 andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
@@ -1022,7 +1022,7 @@ authenticate(req).andThen((user) => loadProfile(user.id));
 
 Error-channel bind — runs `fn` only on `Err`, swapping in a recovery
 `ResultAsync` or sync `Result`. `Ok` passes through. The mirror of
-[flatMap](#flatmap) on the error track.
+[flatMap](#flatmap-ƒ) on the error track.
 
 ```typescript
 recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
@@ -1044,8 +1044,8 @@ loadFromCache(id).recover(() => loadFromOrigin(id)); // ResultAsync<T, F>
 
 ### ResultAsync.prototype.orElse <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-neverthrow-compat alias of [recover](#recover). Kept as the documented compat
-tier; prefer [recover](#recover) in new code.
+neverthrow-compat alias of [recover](#recover-ƒ). Kept as the documented compat
+tier; prefer [recover](#recover-ƒ) in new code.
 
 ```typescript
 orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
@@ -1068,7 +1068,7 @@ loadFromCache(id).orElse(() => loadFromOrigin(id));
 ### ResultAsync.prototype.tap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Runs a side effect on the `Ok` value and passes the result through
-unchanged; a no-op on `Err`. Mirrors [tapErr](#taperr).
+unchanged; a no-op on `Err`. Mirrors [tapErr](#taperr-ƒ).
 
 ```typescript
 tap(fn: (value: T) => void): ResultAsync<T, E>
@@ -1091,7 +1091,7 @@ saveUser(u).tap((saved) => analytics.track("user_saved", saved.id));
 ### ResultAsync.prototype.tapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Runs a side effect on the `Err` value and passes the result through
-unchanged; a no-op on `Ok`. The error-track mirror of [tap](#tap).
+unchanged; a no-op on `Ok`. The error-track mirror of [tap](#tap-ƒ).
 
 ```typescript
 tapErr(fn: (error: E) => void): ResultAsync<T, E>
@@ -1163,9 +1163,9 @@ const status = await save(row).match(
 
 ### ResultAsync.prototype.resolve <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Settles the carrier to a bare sync [Result](#result), memoizing so the
+Settles the carrier to a bare sync [Result](#result-type), memoizing so the
 underlying factory runs at most once. Prefer `await ra` (the thenable) or
-[match](./pattern#match) in app code; use `resolve` when you need the tagged union back.
+[match](./pattern#match-ƒ) in app code; use `resolve` when you need the tagged union back.
 
 ```typescript
 resolve(): Promise<Result<T, E>>
@@ -1200,7 +1200,7 @@ then<R1 = Result<T, E>, R2 = never>(onfulfilled?: ((value: Result<T, E>) => R1 |
 
 ### tryAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Convenience wrapper over [fromPromise](#frompromise) with default `Error`
+Convenience wrapper over [fromPromise](#frompromise-ƒ) with default `Error`
 normalization. Call without `onReject` to get `ResultAsync<T, Error>`,
 or pass a custom mapper for a typed error.
 
@@ -1236,7 +1236,7 @@ const b = tryAsync(db.users.insert(row), (e): DbError => ({
 Combines a homogeneous array of results into a single result holding an
 array of the `Ok` values, in input order. Short-circuits on the first `Err`
 (first failure wins). For heterogeneous tuples that preserve per-index
-types, use [combineTuple](#combinetuple).
+types, use [combineTuple](#combinetuple-ƒ).
 
 ```typescript
 function combine<T, E>(results: readonly Result<T, E>[]): Result<T[], E>
@@ -1259,7 +1259,7 @@ combine([ok(1), err("e")]);     // Err("e")
 
 ### combineTuple <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Heterogeneous tuple combine — like [combine](#combine) but preserves each
+Heterogeneous tuple combine — like [combine](#combine-ƒ) but preserves each
 branch's `Ok` type by position, so the result destructures type-safely.
 Short-circuits on the first `Err` in input order (neverthrow-style).
 
@@ -1288,7 +1288,7 @@ if (isOk(r)) {
 
 ### asyncAfter <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Bind a sync [Result](#result) into an async step without widening defects.
+Bind a sync [Result](#result-type) into an async step without widening defects.
 Dual-form: data-first for one-shots, data-last (curried) for `pipe`/`flow`.
 
 ```typescript
@@ -1317,7 +1317,7 @@ asyncAfter((u) => tryAsync(db.insert(u), toErr));         // data-last
 Lifts a `(...args) => Promise<Result<T, E>>` function (typical of interop or
 boundary code) into one returning `(...args) => ResultAsync<T, E>`. Expected
 `Err`s pass through; an unexpected promise rejection (a defect) is routed via
-`onDefect`, defaulting to [UnexpectedError](#unexpectederror) and widening the error union.
+`onDefect`, defaulting to [UnexpectedError](#unexpectederror-class) and widening the error union.
 
 ```typescript
 function fromAsync<A extends readonly unknown[], R extends AnyResult>(fn: (...args: A) => Promise<R>, onDefect?: ((error: unknown) => UnexpectedError | InferErr<R>) | undefined): (...args: A) => ResultAsync<...>
@@ -1343,7 +1343,7 @@ const ra = loadUser("u1");   // ResultAsync<User, NotFound | UnexpectedError>
 
 ### fromResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Lifts an already-settled sync [Result](#result) into a [ResultAsync](#resultasync), so
+Lifts an already-settled sync [Result](#result-type) into a [ResultAsync](#resultasync-class), so
 it can be chained alongside async steps in a railway.
 
 ```typescript
@@ -1368,8 +1368,8 @@ await fromResult(err(error)).resolve();  // Err(error)
 
 ### $ <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Terse alias of [yieldResult](#yieldresult) (mirrors Rust's `?`), for compact
-[tryGen](#trygen) blocks.
+Terse alias of [yieldResult](#yieldresult-ƒ) (mirrors Rust's `?`), for compact
+[tryGen](#trygen-ƒ) blocks.
 
 ```typescript
 function $<T, E>(result: Result<T, E>): T
@@ -1395,7 +1395,7 @@ const out = tryGen(() => {
 
 ### tryGen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Run a block that uses [yieldResult](#yieldresult); returns the final `Result` or the first Err.
+Run a block that uses [yieldResult](#yieldresult-ƒ); returns the final `Result` or the first Err.
 
 ```typescript
 function tryGen<T, E>(fn: () => Result<T, E>): Result<T, E>
@@ -1421,10 +1421,10 @@ const out = tryGen(() => {
 
 ### yieldResult <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Unwraps a [Result](#result) inside a [tryGen](#trygen) block — the sync analogue of
+Unwraps a [Result](#result-type) inside a [tryGen](#trygen-ƒ) block — the sync analogue of
 Rust's `?` operator. On `Ok` it returns the value; on `Err` it short-circuits
 the enclosing `tryGen`, which returns that `Err`. Only valid inside `tryGen`;
-prefer [flatMap](#flatmap) / `pipe` for long pipelines.
+prefer [flatMap](#flatmap-ƒ) / `pipe` for long pipelines.
 
 ```typescript
 function yieldResult<T, E>(result: Result<T, E>): T
@@ -1455,7 +1455,7 @@ const out = tryGen(() => {
 
 ### Err <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-The failure branch of a [Result](#result) — `{ _tag: "Err"; error: E }`.
+The failure branch of a [Result](#result-type) — `{ _tag: "Err"; error: E }`.
 
 ```typescript
 export type Err<T, E> = Extract<Result<T, E>, { _tag: "Err" }>;
@@ -1465,8 +1465,8 @@ export type Err<T, E> = Extract<Result<T, E>, { _tag: "Err" }>;
 
 ### InferErr <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-Extracts the `Err` error type from a [Result](#result) or [ResultAsync](#resultasync),
-resolving to `never` for any other type. Mirror of [InferOk](#inferok).
+Extracts the `Err` error type from a [Result](#result-type) or [ResultAsync](#resultasync-class),
+resolving to `never` for any other type. Mirror of [InferOk](#inferok-type).
 
 ```typescript
 export type InferErr<R> = R extends { _tag: "Err"; readonly error: infer E }
@@ -1487,7 +1487,7 @@ type F = InferErr<ResultAsync<User, AppError>>;    // AppError
 
 ### InferOk <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-Extracts the `Ok` value type from a [Result](#result) or [ResultAsync](#resultasync),
+Extracts the `Ok` value type from a [Result](#result-type) or [ResultAsync](#resultasync-class),
 resolving to `never` for any other type.
 
 ```typescript
@@ -1509,7 +1509,7 @@ type U = InferOk<ResultAsync<User, AppError>>;    // User
 
 ### Ok <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-The success branch of a [Result](#result) — `{ _tag: "Ok"; value: T }`.
+The success branch of a [Result](#result-type) — `{ _tag: "Ok"; value: T }`.
 The `E` parameter keeps the type assignable to `Result<T, E>`.
 
 ```typescript
@@ -1523,7 +1523,7 @@ export type Ok<T, E = never> = Extract<Result<T, E>, { _tag: "Ok" }>;
 The core railway type: a tagged union carrying either a success value
 (`Ok<T>`) or a failure value (`Err<E>`). It is a plain discriminated union
 on `_tag` — no classes — so it is immutable and tree-shake friendly. Narrow
-with [isOk](#isok) / [isErr](#iserr) to read `.value` / `.error`.
+with [isOk](#isok-ƒ) / [isErr](#iserr-ƒ) to read `.value` / `.error`.
 
 ```typescript
 export type Result<T, E> =
@@ -1546,7 +1546,7 @@ function parse(raw: string): Result<number, "nan"> {
 
 Error subclass representing an **unexpected** defect — a thrown exception or
 promise rejection that was not part of the modelled `Err` union. Used as the
-default mapping when [fromAsync](#fromasync) is called without an `onDefect`
+default mapping when [fromAsync](#fromasync-ƒ) is called without an `onDefect`
 handler; the original cause is preserved on `.cause`.
 
 ```typescript

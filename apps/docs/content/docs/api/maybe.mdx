@@ -48,8 +48,8 @@ const m = some(1);   // Maybe<number>
 
 ### andThen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Neverthrow-compat alias of [flatMap](./result#flatmap) — same dual-form shape. Prefer
-[flatMap](./result#flatmap) as the canonical name; reach for `andThen` only when porting
+Neverthrow-compat alias of [flatMap](./result#flatmap-ƒ) — same dual-form shape. Prefer
+[flatMap](./result#flatmap-ƒ) as the canonical name; reach for `andThen` only when porting
 neverthrow code or matching its vocabulary.
 
 ```typescript
@@ -237,7 +237,7 @@ pipe(fromNullable(row), tap((r) => sink.push(r))); // curried — collect on Som
 ### tapNone <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Run a side effect when the `Maybe` is `None`, pass it through unchanged.
-`Some` is a no-op. The `None`-side mirror of [tap](#tap). Dual-form.
+`Some` is a no-op. The `None`-side mirror of [tap](#tap-ƒ). Dual-form.
 
 ```typescript
 function tapNone<T>(maybe: Maybe<T>, fn: () => void): Maybe<T>
@@ -408,9 +408,9 @@ optional(rawId, (id) => fromNullable(cache.get(id)));
 ### Maybe <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Tagged optional value — a discriminated union over `_tag` where absence
-(`None`) is an expected outcome, not a failure. Construct with [some](#some) /
-[none](#none), narrow with [isSome](#issome) / [isNone](#isnone), and collapse with
-[match](./result#match).
+(`None`) is an expected outcome, not a failure. Construct with [some](#some-ƒ) /
+[none](#none-ƒ), narrow with [isSome](#issome-ƒ) / [isNone](#isnone-ƒ), and collapse with
+[match](./result#match-ƒ).
 
 ```typescript
 export type Maybe<T> = { readonly _tag: "Some"; readonly value: T } | { readonly _tag: "None" };
@@ -428,7 +428,7 @@ function findUser(id: string): Maybe<User> {
 
 ### None <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-The `None` branch of a [Maybe](#maybe) — expected absence, tagged `"None"`.
+The `None` branch of a [Maybe](#maybe-type) — expected absence, tagged `"None"`.
 
 ```typescript
 export type None = Extract<Maybe<never>, { _tag: "None" }>;
@@ -438,7 +438,7 @@ export type None = Extract<Maybe<never>, { _tag: "None" }>;
 
 ### Some <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-The `Some` branch of a [Maybe](#maybe) — a present value tagged `"Some"`.
+The `Some` branch of a [Maybe](#maybe-type) — a present value tagged `"Some"`.
 
 ```typescript
 export type Some<T> = Extract<Maybe<T>, { _tag: "Some" }>;
