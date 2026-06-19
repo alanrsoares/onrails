@@ -3,17 +3,59 @@ title: Getting Started
 description: How to install and start using onrails in your project.
 ---
 
-## Installation
+<Steps>
 
-Install `@onrails/result`, `@onrails/maybe`, and `@onrails/pattern` via Bun:
+<Step>
+
+### Install
+
+Add the three primitives — `Result`, `Maybe`, and exhaustive `match`. They're
+independent; install only what you need.
+
+<Tabs items={["bun", "npm", "pnpm", "yarn"]}>
+
+<Tab value="bun">
 
 ```bash
 bun add @onrails/result @onrails/maybe @onrails/pattern
 ```
 
-## Basic Example
+</Tab>
 
-Here is a quick overview of combining a monadic flow with pattern matching:
+<Tab value="npm">
+
+```bash
+npm install @onrails/result @onrails/maybe @onrails/pattern
+```
+
+</Tab>
+
+<Tab value="pnpm">
+
+```bash
+pnpm add @onrails/result @onrails/maybe @onrails/pattern
+```
+
+</Tab>
+
+<Tab value="yarn">
+
+```bash
+yarn add @onrails/result @onrails/maybe @onrails/pattern
+```
+
+</Tab>
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Combine a flow with pattern matching
+
+A fallible calculation returns a `Result`; matching collapses both branches into
+one value — no thrown exceptions on the expected path.
 
 ```typescript
 import { Result } from "@onrails/result";
@@ -34,3 +76,17 @@ const outcome = parseId("42")
 
 console.log(outcome); // "Success: 84"
 ```
+
+</Step>
+
+</Steps>
+
+<Callout type="warn">
+  Keep `Result` at boundaries: don't return `Promise<Result<…>>` from public
+  signatures — return `ResultAsync<T, E>` instead. `@onrails/eslint-plugin` and
+  `@onrails/biome-plugin` enforce this for consumers.
+</Callout>
+
+Next: [Recipes](/docs/recipes) for composition patterns, or the API reference
+for [`Result`](/docs/api/result), [`Maybe`](/docs/api/maybe), and
+[`match`](/docs/api/pattern).
