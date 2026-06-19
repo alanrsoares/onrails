@@ -52,7 +52,7 @@ export const isNone = <T>(maybe: Maybe<T>): maybe is None => maybe._tag === "Non
  *
  * @example
  * ```ts
- * fromNullable(map.get(key));     // Maybe<V>
+ * fromNullable(cache.get(key));   // Maybe<V>
  * fromNullable(null);             // None
  * ```
  */

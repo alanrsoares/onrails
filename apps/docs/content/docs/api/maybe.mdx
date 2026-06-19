@@ -374,7 +374,7 @@ function fromNullable<T>(value: T | null | undefined): Maybe<T>
 #### Example
 
 ```ts
-fromNullable(map.get(key));     // Maybe<V>
+fromNullable(cache.get(key));   // Maybe<V>
 fromNullable(null);             // None
 ```
 
