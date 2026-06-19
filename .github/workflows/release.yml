@@ -38,6 +38,7 @@ jobs:
           - { name: codemod,       path: packages/codemod,       build: false, needs_result: false }
           - { name: eslint-plugin, path: packages/eslint-plugin, build: false, needs_result: false }
           - { name: biome-plugin,  path: packages/biome-plugin,  build: false, needs_result: false }
+          - { name: twoslash,      path: packages/twoslash,      build: true,  needs_result: false }
     steps:
       - id: gate
         env:
