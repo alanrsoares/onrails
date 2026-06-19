@@ -1,9 +1,8 @@
 import { resolve } from "node:path";
 import { err, flatMap, ok, type Result, trySync } from "@onrails/result";
 import ts from "typescript";
+import { toError } from "./to-error.js";
 import type { DocParam, DocSymbol } from "./types.js";
-
-const toError = (e: unknown): Error => (e instanceof Error ? e : new Error(String(e)));
 
 /** Resolves a symbol's category from JSDoc tags + package context. */
 export type Categorize = (
@@ -220,9 +219,17 @@ const COMPILER_OPTIONS: ts.CompilerOptions = {
   skipLibCheck: true,
 };
 
-// ts.createProgram is a third-party boundary — a safe, Result-returning form.
+// The TS compiler is a third-party boundary — both program creation and the
+// symbol walk can throw (e.g. synthesized signatures whose getDeclaration() is
+// typed non-null but is undefined at runtime). Wrap both as Result.
 const createProgram = trySync(
   (entryPath: string) => ts.createProgram([entryPath], COMPILER_OPTIONS),
+  toError,
+);
+
+const walkExports = trySync(
+  (checker: ts.TypeChecker, moduleSymbol: ts.Symbol, packageName: string, categorize: Categorize) =>
+    moduleSymbols(checker, moduleSymbol, packageName, categorize),
   toError,
 );
 
@@ -237,6 +244,6 @@ export const extractExports = (
     const sourceFile = prog.getSourceFile(absoluteEntry);
     if (!sourceFile) return err(new Error(`Could not find source file for ${entry}`));
     const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
-    return ok(moduleSymbol ? moduleSymbols(checker, moduleSymbol, packageName, categorize) : []);
+    return moduleSymbol ? walkExports(checker, moduleSymbol, packageName, categorize) : ok([]);
   });
 };
