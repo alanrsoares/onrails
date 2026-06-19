@@ -1,0 +1,102 @@
+---
+title: Core concepts
+description: The railway model, the three primitives, and the one hard constraint — serializable data.
+---
+
+onrails is three small primitives and one discipline. This page is the mental
+model; the [API reference](/docs/api/result) is the surface.
+
+## The railway
+
+A fallible step has two tracks: the **Ok** track carries the value forward, the
+**Err** track carries a typed failure straight to the end. Composition keeps you
+on the Ok track and short-circuits to Err on the first failure — so the happy
+path reads top-to-bottom with no `try`/`catch` and no `null` checks interleaved.
+
+```ts twoslash
+import * as R from "@onrails/result";
+
+// Each step either advances the Ok value or diverts to Err — once on Err, the
+// rest is skipped and the error falls through to the end.
+const result = R.pipe(
+  R.ok(7),
+  R.map((n) => n * 2),
+  R.flatMap((n) => (n < 100 ? R.ok(n) : R.err("too big" as const))),
+); // Result<number, "too big">
+
+result;
+// ^?
+```
+
+## Three primitives, three jobs
+
+| Primitive | Models | Reach for it when |
+| --- | --- | --- |
+| `Result<T, E>` / `ResultAsync<T, E>` | **expected failure** | the caller needs to inspect *why* it failed |
+| `Maybe<T>` | **expected absence** | a value is normally missing, and that's fine |
+| `match` (`@onrails/pattern`) | **exhaustive branching** | collapsing a tagged union, with no case forgotten |
+
+The distinction is the whole design:
+
+- **Expected failure** — a parser on malformed input. The caller wants the
+  diagnostic, so it goes in a `Result`'s `Err` channel.
+- **Expected absence** — a cache miss, an optional relation, no match. Nothing
+  went wrong, so it's a `Maybe`, not an error.
+- **Defect** — a third-party `throw` (e.g. inside `JSON.parse`). It's not part of
+  ordinary flow until you convert it at an explicit boundary with `trySync` /
+  `tryAsync`.
+
+```ts twoslash
+import { fromNullable, map, match } from "@onrails/maybe";
+
+// A cache miss is expected absence — Maybe, not Result.
+const cache = new Map<string, string>();
+const greeting = match(
+  map(fromNullable(cache.get("u1")), (name) => `Hi ${name}`),
+  (msg) => msg,
+  () => "Hello, stranger",
+);
+
+greeting;
+// ^?
+```
+
+## Data-first core, fluent async
+
+The sync core is **data-first** — every transform takes the value as its first
+argument: `map(result, fn)`, not `result.map(fn)`. Each transform is also
+**dual-form**: call it curried (`map(fn)`) to drop straight into `pipe` / `flow`.
+
+```ts twoslash
+import { flow, map, flatMap, ok, err } from "@onrails/result";
+
+// curried form composes point-free — value supplied later
+const validate = flow(
+  map((n: number) => n + 1),
+  flatMap((n) => (n > 0 ? ok(n) : err("non-positive" as const))),
+);
+
+const checked = validate(ok(41));
+//    ^?
+```
+
+`ResultAsync<T, E>` *is* fluent — `.map`, `.flatMap`, `.match` chain directly —
+because awaiting a half-built pipeline reads better than nesting. (For
+neverthrow muscle memory, `.andThen` is an alias of `.flatMap`.)
+
+## The one hard constraint: serializable data
+
+A `Result` is a plain tagged union — `{ _tag: "Ok"; value }` or
+`{ _tag: "Err"; error }` — not a class instance. The same for `Maybe`. That's
+deliberate and non-negotiable: the data crosses process and network boundaries
+(RSC payloads, workers, queues) and survives `structuredClone` and JSON. The
+*helpers* are functions; the *data* is inert.
+
+<Callout title="Why it matters">
+  Ergonomics are tuned freely, but serializability is the line we don't cross. A
+  `Result` you can't send through a worker postMessage or an RSC boundary would
+  defeat the point. Tagged unions in, classes out.
+</Callout>
+
+Next: [Recipes](/docs/recipes) for the composition tiers, or
+[Testing](/docs/testing) to see how inert data pays off under test.

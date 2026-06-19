@@ -1,0 +1,85 @@
+---
+title: Migrating from neverthrow
+description: A two-phase, codemod-driven path — compat shim first, then native onrails.
+---
+
+onrails was built so a neverthrow codebase can move over without a big-bang
+rewrite. The path is two phases: a **drop-in compat shim** that changes only
+import specifiers, then an optional **native rewrite** when you want the
+data-first core. Both phases are codemod-driven.
+
+See also the side-by-side [vs neverthrow](/docs/comparisons/neverthrow)
+comparison for the data-model differences.
+
+## Phase 1 — the compat shim (no code changes)
+
+`@onrails/result/compat/neverthrow` re-exports a neverthrow-shaped API:
+`Result`, `ok`, `err`, `ResultAsync`, `okAsync`, `errAsync`, `fromPromise`, and
+the `.map` / `.andThen` / `.match` method chain. Switching is a specifier swap.
+
+```ts twoslash
+import { ok, err, type Result } from "@onrails/result/compat/neverthrow";
+
+const parse = (raw: string): Result<number, string> => {
+  const n = Number.parseInt(raw, 10);
+  return Number.isNaN(n) ? err("not a number") : ok(n);
+};
+
+// neverthrow-style fluent chain — works unchanged through the shim
+const out = parse("41").map((n) => n + 1).unwrapOr(0); // number
+```
+
+The codemod does the swap for you across the repo — imports *and* `package.json`
+deps — and is idempotent:
+
+```bash
+# preview
+bunx @onrails/codemod /path/to/repo --dry
+
+# apply: rewrites `from "neverthrow"` -> `@onrails/result/compat/neverthrow`
+bunx @onrails/codemod /path/to/repo
+```
+
+After this phase your code compiles and runs against onrails, still written in
+the neverthrow idiom. Ship it; migrate to native incrementally.
+
+## Phase 2 — go native (optional)
+
+When you want the data-first core and `ResultAsync`, run the codemod in
+`--to-native` mode. It rewrites safe compat imports to `@onrails/result`,
+converts supported sync method chains to native `pipe(...)`, and leaves `TODO`
+markers where a construct needs a human.
+
+```bash
+bunx @onrails/codemod /path/to/repo --to-native --dry   # review first
+bunx @onrails/codemod /path/to/repo --to-native
+```
+
+The native shape of the example above:
+
+```ts twoslash
+import { ok, err, pipe, map, unwrapOr, type Result } from "@onrails/result";
+
+const parse = (raw: string): Result<number, string> => {
+  const n = Number.parseInt(raw, 10);
+  return Number.isNaN(n) ? err("not a number") : ok(n);
+};
+
+// fluent chain becomes a data-first pipe
+const out = unwrapOr(pipe(parse("41"), map((n) => n + 1)), 0); // number
+```
+
+## What still needs a human
+
+The `--to-native` pass reports `TODO` lines instead of guessing. Expect to hand-migrate:
+
+- **Compat-only properties** with no native equivalent — left as-is with a `TODO`.
+- **Unusual import shapes** the rewriter can't safely match.
+- **`Promise<Result<…>>` signatures** — these should become `ResultAsync<T, E>`;
+  `@onrails/eslint-plugin` / `@onrails/biome-plugin` flag the ones the codemod
+  doesn't reach.
+
+<Callout title="You can stop after Phase 1">
+  The compat shim is a supported destination, not just a waypoint. Migrate to
+  native where it buys you clarity; leave stable code on the shim.
+</Callout>

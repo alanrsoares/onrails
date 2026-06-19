@@ -1,0 +1,66 @@
+---
+title: Agents & LLMs
+description: Machine-readable docs and lint rules so coding agents write correct onrails code.
+---
+
+onrails ships first-class context for coding agents — so an LLM writing onrails
+code gets the real API and the gotchas, not a guess.
+
+## LLM-readable docs
+
+This site serves the standard [llms.txt](https://llmstxt.org/) endpoints, plus a
+Markdown copy of every page:
+
+| URL (relative to the site root) | What |
+| --- | --- |
+| `/llms.txt` | Index of every page (titles, descriptions, links) |
+| `/llms-full.txt` | The entire docs as one Markdown document |
+| `/llms.mdx/docs/<page>/content.md` | A single page as raw Markdown |
+
+Every doc page also has a **Copy Markdown** button in its header (next to the
+view options). Point your agent at `/llms-full.txt` for the whole corpus, or
+`/llms.txt` to let it fetch pages on demand.
+
+## Lint the type-blind mistakes
+
+TypeScript catches most onrails misuse on its own, but two rules encode the
+conventions the types can't:
+
+- **No `Promise<Result<…>>`** — the async carrier is always `ResultAsync<T, E>`.
+  A `Promise` of a `Result` type-checks fine but breaks the railway; the lint
+  rule rejects it at the boundary.
+
+Pair the docs with the lint plugins so agent-written code is checked the same way
+yours is:
+
+<Tabs items={["ESLint", "Biome"]}>
+
+<Tab value="ESLint">
+
+```bash
+bun add -D @onrails/eslint-plugin
+```
+
+</Tab>
+
+<Tab value="Biome">
+
+```bash
+bun add -D @onrails/biome-plugin
+```
+
+</Tab>
+
+</Tabs>
+
+Both ship the same rule set; pick whichever your project already runs. With the
+plugin enabled, an agent that returns `Promise<Result<…>>` gets the same error a
+reviewer would flag — at lint time, before the PR.
+
+## Why this matters
+
+The three primitives are small, but their *discipline* is what an LLM tends to
+miss: data-first sync core vs. fluent `ResultAsync`, `Maybe` for expected absence
+vs. `Result` for failure, and exhaustive `match` over tagged unions. The
+machine-readable docs carry that discipline into the agent's context, and the
+lint rules catch the slip TypeScript lets through.
