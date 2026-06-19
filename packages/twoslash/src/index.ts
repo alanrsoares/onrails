@@ -1,8 +1,8 @@
 /**
  * Generic snippet extractor — zero project coupling, runs on Node and Bun.
  *
- * Extracts the `#region snippet` block from each `*.ts` module in a source
- * directory and emits a generated module keyed by file name. Each module is
+ * Extracts the `#region snippet` block from each `*.ts` / `*.tsx` module in a
+ * source directory and emits a generated module keyed by file name. Each is
  * assumed to be type-checked / tested by the consumer's gate, so every rendered
  * snippet compiles against the real API.
  *
@@ -25,7 +25,7 @@ export interface SnippetForms {
 }
 
 export interface ExtractSnippetsOptions {
-  /** Directory scanned for `*.ts` snippet modules. */
+  /** Directory scanned for `*.ts` / `*.tsx` snippet modules. */
   srcDir: string;
   /** Path of the generated module to write. */
   outFile: string;
@@ -213,21 +213,37 @@ export interface ExtractResult {
   skipped: string[];
 }
 
+const SNIPPET_EXT = /\.tsx?$/;
+const moduleId = (fileName: string): string => fileName.replace(SNIPPET_EXT, "");
+
 /**
- * IO wrapper: scan `srcDir` for `*.ts`, read the fixtures module, build the
- * generated module and write it to `outFile`.
+ * IO wrapper: scan `srcDir` for `*.ts` / `*.tsx`, read the fixtures module,
+ * build the generated module and write it to `outFile`.
  */
 export async function extractSnippets(opts: ExtractSnippetsOptions): Promise<ExtractResult> {
   const fixtureName = opts.fixtureName ?? "fixtures";
-  const fixturesSource = await readFile(resolve(opts.srcDir, `${fixtureName}.ts`), "utf8");
 
-  const dirents = await readdir(opts.srcDir, { withFileTypes: true });
+  const sourceFiles = (await readdir(opts.srcDir, { withFileTypes: true }))
+    .filter((d) => d.isFile() && SNIPPET_EXT.test(d.name))
+    .map((d) => d.name);
+
+  const fixtureFile = sourceFiles.find((name) => moduleId(name) === fixtureName);
+  if (!fixtureFile) {
+    throw new Error(`fixtures module "${fixtureName}.ts[x]" not found in ${opts.srcDir}`);
+  }
+  const fixturesSource = await readFile(resolve(opts.srcDir, fixtureFile), "utf8");
+
+  const seen = new Set<string>();
   const modules: { name: string; source: string }[] = [];
-  for (const dirent of dirents) {
-    if (!dirent.isFile() || !dirent.name.endsWith(".ts")) continue;
-    const name = dirent.name.replace(/\.ts$/, "");
+  for (const fileName of sourceFiles) {
+    const name = moduleId(fileName);
     if (name === fixtureName) continue;
-    modules.push({ name, source: await readFile(resolve(opts.srcDir, dirent.name), "utf8") });
+    if (seen.has(name)) {
+      console.warn(`skip ${fileName}: duplicate snippet id "${name}"`);
+      continue;
+    }
+    seen.add(name);
+    modules.push({ name, source: await readFile(resolve(opts.srcDir, fileName), "utf8") });
   }
 
   const { module, ids, skipped } = buildSnippetsModule(modules, fixturesSource, {

@@ -76,7 +76,7 @@ Scans `srcDir`, writes the generated module to `outFile`. Returns
 
 | Option | Default | Purpose |
 | --- | --- | --- |
-| `srcDir` | — | directory scanned for `*.ts` snippet modules |
+| `srcDir` | — | directory scanned for `*.ts` / `*.tsx` snippet modules |
 | `outFile` | — | path of the generated module to write |
 | `fixtureName` | `"fixtures"` | basename of the shared fixtures module in `srcDir` |
 | `rewriteImport` | identity | rewrites a single import line (e.g. relative → package specifier) |
