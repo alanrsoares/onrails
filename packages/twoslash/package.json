@@ -1,6 +1,6 @@
 {
   "name": "@onrails/twoslash",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Extract #region snippet blocks from real, tested source modules into display + twoslash forms for type-checked documentation.",
   "license": "MIT",
   "author": "Alan R. Soares",
