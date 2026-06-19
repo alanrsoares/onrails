@@ -4,7 +4,13 @@ import { isErr, ok, type Result, trySync } from "@onrails/result";
 import { type Categorize, defaultCategorize, extractExports } from "./extract.js";
 import { renderPackageMdx } from "./render.js";
 import { toError } from "./to-error.js";
-import type { ApiDocsOptions, ApiPackage, DocSymbol } from "./types.js";
+import type {
+  ApiDocsOptions,
+  ApiPackage,
+  DocSymbol,
+  ExportsByPackage,
+  SymbolKind,
+} from "./types.js";
 
 // fs writes are a boundary — a safe, Result-returning writer.
 const writeMdx = trySync((out: string, mdx: string) => {
@@ -33,8 +39,21 @@ export const generateApiDocs = (
     parsed.push({ pkg, symbols: extracted.value });
   }
 
-  const exports = new Map<string, ReadonlySet<string>>(
-    parsed.map(({ pkg, symbols }) => [pkg.name, new Set(symbols.map((s) => s.name))]),
+  const exports: ExportsByPackage = new Map<string, ReadonlyMap<string, SymbolKind>>(
+    parsed.map(({ pkg, symbols }) => {
+      const map = new Map<string, SymbolKind>();
+      const addSymbol = (s: DocSymbol) => {
+        map.set(s.name, s.kind);
+        if (s.kind === "class") {
+          for (const m of s.staticMethods ?? []) addSymbol(m);
+          for (const m of s.instanceMethods ?? []) addSymbol(m);
+        }
+      };
+      for (const s of symbols) {
+        addSymbol(s);
+      }
+      return [pkg.name, map];
+    }),
   );
 
   const written: string[] = [];

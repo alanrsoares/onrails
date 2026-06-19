@@ -7,7 +7,7 @@
  * (the source has no `@category` tags, so categories are derived by name), and
  * how `{@link}` targets resolve across the three packages.
  */
-import { generateApiDocs, slugify } from "@onrails/docgen";
+import { generateApiDocs, slugify, type ExportsByPackage, type SymbolKind } from "@onrails/docgen";
 import { isErr } from "@onrails/result";
 import ts from "typescript";
 
@@ -99,19 +99,27 @@ const MAYBE_SYMBOLS = new Set([
 ]);
 const PATTERN_SYMBOLS = new Set(["match", "MatchBuilder", "assertNever", "matchTag", "when"]);
 
-const resolveLink = (symbol: string, currentPackage: string): string => {
-  const slug = slugify(symbol);
+const resolveLink = (symbol: string, currentPackage: string, exports: ExportsByPackage): string => {
+  let targetPackage = currentPackage;
   if (currentPackage === "@onrails/maybe") {
-    if (RESULT_SYMBOLS.has(symbol)) return `./result#${slug}`;
-    if (PATTERN_SYMBOLS.has(symbol)) return `./pattern#${slug}`;
+    if (RESULT_SYMBOLS.has(symbol)) targetPackage = "@onrails/result";
+    else if (PATTERN_SYMBOLS.has(symbol)) targetPackage = "@onrails/pattern";
   } else if (currentPackage === "@onrails/result") {
-    if (MAYBE_SYMBOLS.has(symbol)) return `./maybe#${slug}`;
-    if (PATTERN_SYMBOLS.has(symbol)) return `./pattern#${slug}`;
+    if (MAYBE_SYMBOLS.has(symbol)) targetPackage = "@onrails/maybe";
+    else if (PATTERN_SYMBOLS.has(symbol)) targetPackage = "@onrails/pattern";
   } else if (currentPackage === "@onrails/pattern") {
-    if (RESULT_SYMBOLS.has(symbol)) return `./result#${slug}`;
-    if (MAYBE_SYMBOLS.has(symbol)) return `./maybe#${slug}`;
+    if (RESULT_SYMBOLS.has(symbol)) targetPackage = "@onrails/result";
+    else if (MAYBE_SYMBOLS.has(symbol)) targetPackage = "@onrails/maybe";
   }
-  return `#${slug}`;
+
+  const kind = exports.get(targetPackage)?.get(symbol);
+  const label = kind ? (kind === "function" ? "ƒ" : kind) : undefined;
+  const slugText = label ? `${symbol} ${label}` : symbol;
+  const slug = slugify(slugText);
+
+  if (targetPackage === currentPackage) return `#${slug}`;
+  const shortName = targetPackage.split("/").pop() ?? targetPackage;
+  return `./${shortName}#${slug}`;
 };
 
 const result = generateApiDocs(

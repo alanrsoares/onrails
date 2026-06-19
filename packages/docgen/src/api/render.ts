@@ -1,12 +1,12 @@
 import { match } from "@onrails/pattern";
-import type { ApiDocsOptions, DocSymbol, ExportsByPackage } from "./types.js";
+import type { ApiDocsOptions, DocSymbol, ExportsByPackage, SymbolKind } from "./types.js";
 
 type LinkResolver = (symbol: string) => string;
 
 export const slugify = (text: string): string =>
   text
     .toLowerCase()
-    .replace(/[^a-z0-9-\s]/g, "")
+    .replace(/[^a-z0-9\s\-_ƒ]/g, "")
     .replace(/\s+/g, "-");
 
 const shortName = (packageName: string): string => packageName.split("/").pop() ?? packageName;
@@ -20,12 +20,28 @@ export const defaultResolveLink = (
   currentPackage: string,
   exports: ExportsByPackage,
 ): string => {
-  const slug = slugify(symbol);
-  if (exports.get(currentPackage)?.has(symbol)) return `#${slug}`;
-  for (const [pkg, syms] of exports) {
-    if (pkg !== currentPackage && syms.has(symbol)) return `./${shortName(pkg)}#${slug}`;
+  let targetPackage = currentPackage;
+  let kind: SymbolKind | undefined;
+
+  const currentExports = exports.get(currentPackage);
+  if (currentExports?.has(symbol)) {
+    kind = currentExports.get(symbol);
+  } else {
+    for (const [pkg, syms] of exports) {
+      if (pkg !== currentPackage && syms.has(symbol)) {
+        targetPackage = pkg;
+        kind = syms.get(symbol);
+        break;
+      }
+    }
   }
-  return `#${slug}`;
+
+  const label = kind ? (kind === "function" ? "ƒ" : kind) : undefined;
+  const slugText = label ? `${symbol} ${label}` : symbol;
+  const slug = slugify(slugText);
+
+  if (targetPackage === currentPackage) return `#${slug}`;
+  return `./${shortName(targetPackage)}#${slug}`;
 };
 
 const formatDescription = (desc: string, link: LinkResolver): string =>

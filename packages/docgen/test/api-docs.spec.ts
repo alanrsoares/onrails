@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { isOk, unwrapOr } from "@onrails/result";
 import { defaultCategorize, extractExports } from "../src/api/extract.js";
 import { defaultResolveLink, renderPackageMdx, slugify } from "../src/api/render.js";
-import type { DocSymbol, ExportsByPackage } from "../src/api/types.js";
+import type { DocSymbol, ExportsByPackage, SymbolKind } from "../src/api/types.js";
 
 const FIXTURE = resolve(import.meta.dir, "fixtures/sample.ts");
 
@@ -15,17 +15,17 @@ describe("slugify", () => {
 });
 
 describe("defaultResolveLink", () => {
-  const exports: ExportsByPackage = new Map([
-    ["@scope/a", new Set(["Alpha"])],
-    ["@scope/b", new Set(["Beta"])],
+  const exports: ExportsByPackage = new Map<string, ReadonlyMap<string, SymbolKind>>([
+    ["@scope/a", new Map<string, SymbolKind>([["Alpha", "function"]])],
+    ["@scope/b", new Map<string, SymbolKind>([["Beta", "type"]])],
   ]);
 
   it("uses a local anchor when the current package owns the symbol", () => {
-    expect(defaultResolveLink("Beta", "@scope/b", exports)).toBe("#beta");
+    expect(defaultResolveLink("Beta", "@scope/b", exports)).toBe("#beta-type");
   });
 
   it("links to the owning sibling package", () => {
-    expect(defaultResolveLink("Alpha", "@scope/b", exports)).toBe("./a#alpha");
+    expect(defaultResolveLink("Alpha", "@scope/b", exports)).toBe("./a#alpha-ƒ");
   });
 
   it("falls back to a local anchor for unknown symbols", () => {
@@ -88,7 +88,15 @@ describe("renderPackageMdx", () => {
       deprecationMessage: "",
     },
   ];
-  const exports: ExportsByPackage = new Map([["@test/pkg", new Set(["alpha", "beta"])]]);
+  const exports: ExportsByPackage = new Map<string, ReadonlyMap<string, SymbolKind>>([
+    [
+      "@test/pkg",
+      new Map<string, SymbolKind>([
+        ["alpha", "type"],
+        ["beta", "function"],
+      ]),
+    ],
+  ]);
   const mdx = renderPackageMdx("@test/pkg", symbols, exports, {
     categoryOrder: { "@test/pkg": ["Core", "Types"] },
   });
@@ -107,6 +115,6 @@ describe("renderPackageMdx", () => {
   });
 
   it("resolves {@link} via the exports map (local anchor)", () => {
-    expect(mdx).toContain("[alpha](#alpha)");
+    expect(mdx).toContain("[alpha](#alpha-type)");
   });
 });
