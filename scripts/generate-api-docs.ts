@@ -4,66 +4,69 @@
  *
  * The engine (TS AST -> MDX) is project-agnostic. This runner supplies the
  * onrails specifics: which packages to document, how to categorize symbols
- * (the source has no `@category` tags, so categories are derived by name), the
- * preferred category order, and how `{@link}` targets resolve across the three
- * packages.
+ * (the source has no `@category` tags, so categories are derived by name), and
+ * how `{@link}` targets resolve across the three packages.
  */
-import { generateApiDocs } from "@onrails/docgen";
+import { generateApiDocs, slugify } from "@onrails/docgen";
 import { isErr } from "@onrails/result";
 import ts from "typescript";
 
-// Symbol -> category, by package. Falls through to "Core". An explicit
-// `@category` tag (none today) always wins.
-const categorize = (
-  name: string,
-  packageName: string,
-  tags: readonly ts.JSDocTagInfo[],
-): string => {
-  const catTag = tags.find((t) => t.name === "category");
-  if (catTag) return ts.displayPartsToString(catTag.text).trim();
-
-  if (packageName === "@onrails/result") {
-    const isAsync =
-      [
-        "ResultAsync",
-        "fromPromise",
-        "fromSafePromise",
-        "parallelTupleAsync",
-        "tryAsync",
-        "okAsync",
-        "errAsync",
-      ].includes(name) || name.startsWith("ResultAsync.");
-    if (isAsync) return "Async";
-    if (["combine", "combineTuple"].includes(name)) return "Collections";
-    if (["fromResult", "fromAsync", "asyncAfter"].includes(name)) return "Interop";
-    if (["$", "tryGen", "yieldResult"].includes(name)) return "Generators";
-    if (["Result", "Ok", "Err", "UnexpectedError", "InferOk", "InferErr"].includes(name)) {
-      return "Types";
-    }
-    return "Core";
-  }
-
-  if (packageName === "@onrails/maybe") {
-    if (["some", "none"].includes(name)) return "Constructors";
-    if (["Maybe", "Some", "None"].includes(name)) return "Types";
-    if (["compact", "compactMap"].includes(name)) return "Collections";
-    if (["optional", "fromNullable"].includes(name)) return "Utilities";
-    return "Core";
-  }
-
-  if (packageName === "@onrails/pattern") {
-    if (["assertNever", "NonExhaustiveError"].includes(name)) return "Diagnostics";
-    if (["match", "MatchBuilder", "matchTag", "when"].includes(name)) return "Matching";
-    return "Types";
-  }
-
-  return "Core";
+// Single source of truth for categories: ordered category -> the base symbols
+// it owns, per package. Key order IS the doc order; membership IS the
+// categorization. The one empty-list bucket per package is the catch-all
+// (everything not listed elsewhere lands there).
+const CATEGORIES: Record<string, Record<string, readonly string[]>> = {
+  "@onrails/result": {
+    Core: [],
+    Async: [
+      "ResultAsync",
+      "fromPromise",
+      "fromSafePromise",
+      "parallelTupleAsync",
+      "tryAsync",
+      "okAsync",
+      "errAsync",
+    ],
+    Collections: ["combine", "combineTuple"],
+    Interop: ["fromResult", "fromAsync", "asyncAfter"],
+    Generators: ["$", "tryGen", "yieldResult"],
+    Types: ["Result", "Ok", "Err", "UnexpectedError", "InferOk", "InferErr"],
+  },
+  "@onrails/maybe": {
+    Constructors: ["some", "none"],
+    Core: [],
+    Collections: ["compact", "compactMap"],
+    Utilities: ["optional", "fromNullable"],
+    Types: ["Maybe", "Some", "None"],
+  },
+  "@onrails/pattern": {
+    Matching: ["match", "MatchBuilder", "matchTag", "when"],
+    Diagnostics: ["assertNever", "NonExhaustiveError"],
+    Types: [],
+  },
 };
 
-const categoryOrder: Record<string, readonly string[]> = {
-  "@onrails/result": ["Core", "Async", "Collections", "Interop", "Generators", "Types"],
-  "@onrails/maybe": ["Constructors", "Core", "Collections", "Utilities", "Types"],
-  "@onrails/pattern": ["Matching", "Diagnostics", "Types"],
+// Both derived from CATEGORIES so they can't drift from the membership table.
+const categoryOrder: Record<string, readonly string[]> = Object.fromEntries(
+  Object.entries(CATEGORIES).map(([pkg, buckets]) => [pkg, Object.keys(buckets)]),
+);
+const defaultCategory: Record<string, string> = Object.fromEntries(
+  Object.entries(CATEGORIES).map(([pkg, buckets]) => [
+    pkg,
+    Object.entries(buckets).find(([, names]) => names.length === 0)?.[0] ?? "Core",
+  ]),
+);
+
+const categorize = (name: string, packageName: string, tags: readonly ts.JSDocTagInfo[]): string => {
+  const explicit = tags.find((t) => t.name === "category");
+  if (explicit) return ts.displayPartsToString(explicit.text).trim();
+  // result's ResultAsync.* members categorize by prefix, not by listed name.
+  if (packageName === "@onrails/result" && name.startsWith("ResultAsync.")) return "Async";
+  const buckets = CATEGORIES[packageName] ?? {};
+  for (const [category, names] of Object.entries(buckets)) {
+    if (names.includes(name)) return category;
+  }
+  return defaultCategory[packageName] ?? "Core";
 };
 
 // Cross-package `{@link}` targets. Each set lists the symbols a package owns;
@@ -95,12 +98,6 @@ const MAYBE_SYMBOLS = new Set([
   "unwrapOr",
 ]);
 const PATTERN_SYMBOLS = new Set(["match", "MatchBuilder", "assertNever", "matchTag", "when"]);
-
-const slugify = (text: string): string =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9-\s]/g, "")
-    .replace(/\s+/g, "-");
 
 const resolveLink = (symbol: string, currentPackage: string): string => {
   const slug = slugify(symbol);
@@ -142,3 +139,5 @@ if (isErr(result)) {
   console.error(result.error.message);
   process.exit(1);
 }
+
+for (const out of result.value) console.log(`Generated ${out}`);
