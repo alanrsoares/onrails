@@ -25,7 +25,7 @@ hidden in the rendered output but kept for type-checking:
 
 ```ts
 // examples/checkout.ts
-import { charge } from "./fixtures.js";
+import { cart, charge } from "./fixtures.js"; // hidden in docs, kept for type-checking
 
 // #region snippet
 import { ok } from "@scope/result";

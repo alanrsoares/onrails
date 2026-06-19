@@ -71,19 +71,81 @@ describe("buildSnippetsModule", () => {
     expect(module).toContain("} as const;");
     expect(module).toContain("export type SnippetId = keyof typeof snippets;");
   });
+
+  it("handles a fixtureName containing regex metacharacters without throwing", () => {
+    const fx = 'import { stub } from "./test.helpers.js";\nexport const stub = 1;';
+    const source = [
+      'import { stub } from "./test.helpers.js";',
+      "// #region snippet",
+      "export const v = stub;",
+      "// #endregion",
+    ].join("\n");
+    // "test.helpers" has a `.`; unescaped it would over-match (or "(" would throw).
+    const run = () =>
+      buildSnippetsModule([{ name: "ex", source }], fx, { fixtureName: "test.helpers" });
+    expect(run).not.toThrow();
+    // The fixture import is matched (and dropped from display), not leaked.
+    expect(run().module).toContain('"ex": { code: "const v = stub;"');
+  });
+
+  it("treats CRLF input identically to LF", () => {
+    const region = ["// #region snippet", "export const v = helper();", "// #endregion"];
+    const lf = buildSnippetsModule([{ name: "ex", source: region.join("\n") }], fixtures);
+    const crlf = buildSnippetsModule(
+      [{ name: "ex", source: region.join("\r\n") }],
+      fixtures.replace(/\n/g, "\r\n"),
+    );
+    expect(crlf.module).toBe(lf.module);
+    expect(crlf.module).not.toContain("\\r");
+  });
+
+  it("dedupes a fixture's named binding the region already imports from the same module", () => {
+    const fx = 'import { ok, err } from "@scope/result";\nexport const stub = ok(1);';
+    const source = [
+      "// #region snippet",
+      'import { ok } from "@scope/result";',
+      "export const v = ok(stub);",
+      "// #endregion",
+    ].join("\n");
+    const { module } = buildSnippetsModule([{ name: "ex", source }], fx);
+    // twoslash hides fixtures but must not re-import `ok` (region already shows it);
+    // `err` is fixture-only and stays.
+    expect(module).toContain('import { err } from \\"@scope/result\\"');
+    expect(module).not.toContain('import { ok, err } from \\"@scope/result\\"');
+  });
+
+  it("drops a fixture's `* as` namespace import the region already brings in", () => {
+    const fx = 'import * as R from "@scope/result";\nexport const stub = R.ok(1);';
+    const source = [
+      "// #region snippet",
+      'import * as R from "@scope/result";',
+      "export const v = R.ok(stub);",
+      "// #endregion",
+    ].join("\n");
+    const { module } = buildSnippetsModule([{ name: "ex", source }], fx);
+    // Inside the hidden cut region, the fixture's duplicate `* as R` is dropped
+    // (the shown region already imports it); the fixture body stays.
+    const cut = module.match(/---cut-start---([\s\S]*?)---cut-end---/)?.[1] ?? "";
+    expect(cut).not.toContain("import * as R");
+    expect(cut).toContain("stub = R.ok(1)");
+  });
 });
 
 describe("extractSnippets (filesystem IO)", () => {
   const FIXTURES = resolve(import.meta.dir, "fixtures");
-  let outFile = "";
+  const tmpRoots: string[] = [];
+  const tmpRoot = async () => {
+    const dir = await mkdtemp(join(tmpdir(), "twoslash-"));
+    tmpRoots.push(dir);
+    return dir;
+  };
 
   afterAll(async () => {
-    if (outFile) await rm(outFile.replace(/\/[^/]+$/, ""), { recursive: true, force: true });
+    await Promise.all(tmpRoots.map((d) => rm(d, { recursive: true, force: true })));
   });
 
   it("scans a directory, skips fixtures, and writes the generated module", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "twoslash-"));
-    outFile = join(dir, "snippets.generated.ts");
+    const outFile = join(await tmpRoot(), "snippets.generated.ts");
 
     const result = await extractSnippets({ srcDir: FIXTURES, outFile });
 
@@ -96,8 +158,7 @@ describe("extractSnippets (filesystem IO)", () => {
   });
 
   it("creates the outFile's parent directory when it does not exist", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "twoslash-"));
-    outFile = join(dir, "nested", "deep", "snippets.generated.ts");
+    const outFile = join(await tmpRoot(), "nested", "deep", "snippets.generated.ts");
 
     const result = await extractSnippets({ srcDir: FIXTURES, outFile });
 
