@@ -965,7 +965,7 @@ mapErr<F>(fn: (error: E) => F): ResultAsync<T, F>
 #### Example
 
 ```ts
-load(id).mapErr((e): AppError => ({ kind: "load", cause: e }));
+load(id).mapErr((e): AppError => ({ kind: "load", cause: e })); // ResultAsync<T, AppError>
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -998,7 +998,7 @@ authenticate(req)
 ### ResultAsync.prototype.andThen <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 neverthrow-compat alias of [flatMap](#flatmap). Kept as the documented compat
-tier; prefer `flatMap` in new code.
+tier; prefer [flatMap](#flatmap) in new code.
 
 ```typescript
 andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
@@ -1037,7 +1037,7 @@ recover<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F
 #### Example
 
 ```ts
-loadFromCache(id).recover(() => loadFromOrigin(id));
+loadFromCache(id).recover(() => loadFromOrigin(id)); // ResultAsync<T, F>
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -1045,7 +1045,7 @@ loadFromCache(id).recover(() => loadFromOrigin(id));
 ### ResultAsync.prototype.orElse <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 neverthrow-compat alias of [recover](#recover). Kept as the documented compat
-tier; prefer `recover` in new code.
+tier; prefer [recover](#recover) in new code.
 
 ```typescript
 orElse<F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>): ResultAsync<T, F>
