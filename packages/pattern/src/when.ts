@@ -16,8 +16,8 @@ import type { Pattern } from "./match.js";
  * @example
  * ```ts
  * const sign = match<number>()
- *   .with(when((n) => n < 0), () => "neg")
- *   .with(when((n) => n >= 0), () => "non-neg")
+ *   .with(when((n: number) => n < 0), () => "neg")
+ *   .with(when((n: number) => n >= 0), () => "non-neg")
  *   .exhaustive();
  * sign(-1); // "neg"
  * sign(0);  // "non-neg"
