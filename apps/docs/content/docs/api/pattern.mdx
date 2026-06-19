@@ -397,8 +397,8 @@ the guard, usable as a [Pattern](#pattern) in `.with`
 
 ```ts
 const sign = match<number>()
-  .with(when((n) => n < 0), () => "neg")
-  .with(when((n) => n >= 0), () => "non-neg")
+  .with(when((n: number) => n < 0), () => "neg")
+  .with(when((n: number) => n >= 0), () => "non-neg")
   .exhaustive();
 sign(-1); // "neg"
 sign(0);  // "non-neg"
