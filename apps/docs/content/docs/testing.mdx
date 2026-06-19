@@ -1,20 +1,20 @@
 ---
 title: Testing
-description: Why onrails code tests cleanly — inert data, no mocks, plus compile-time type tests.
+description: Learn how to assert on results, verify happy and sad paths, test composed steps in isolation, mock async boundaries, and enforce type contracts.
 ---
 
-onrails primitives are **plain data and pure functions**, so testing them needs
-no mocks, no `try`/`catch` harness, and no renderer. A `Result` is a tagged
-union you can assert on directly; a fallible function is `(input) => Result`, so
-it tests like any other function.
+Because `@onrails` workflows are composed of pure data and deterministic transformations, testing them is incredibly clean. Failures are represented as values (`Result<T, E>` / `Maybe<T>`) rather than side-effects (thrown exceptions). You do not need complex nested `try`/`catch` blocks, frame-level monkey-patching, or heavy mock frameworks to test your application logic.
 
-Examples use `bun:test`, but nothing here is bun-specific.
+This guide demonstrates key testing patterns for code using `@onrails` primitives and the **Railway-Oriented Programming (ROP)** model.
 
-## 1. Assert on the Result directly
+---
 
-Call the function, check which track it landed on, and read the payload. The
-guards (`isOk` / `isErr`) narrow the type, so the value is typed inside the
-branch.
+## 1. Direct Assertions & Pattern Matching
+
+The most fundamental testing pattern is asserting on the outcome of a function returning a `Result` or `Maybe`.
+
+### Testing Ok and Err branches
+The type guards `isOk` and `isErr` narrow the TypeScript type inside the branch, ensuring that once you assert a branch, accessing the payload is fully type-safe.
 
 ```ts title="parse-id.spec.ts"
 import { describe, expect, it } from "bun:test";
@@ -25,101 +25,430 @@ describe("parseId", () => {
   it("returns Ok for a numeric string", () => {
     const result = parseId("42");
     expect(isOk(result)).toBe(true);
+    
+    // Type is narrowed to Ok<number, string>, allowing type-safe extraction
     expect(unwrapOk(result)).toBe(42);
   });
 
   it("returns a typed Err for garbage", () => {
     const result = parseId("nope");
     expect(isErr(result)).toBe(true);
+    expect(result.error).toBe("Not a number");
   });
 });
 ```
 
-<Callout title="Why this is the whole point">
-  No spies, no fakes. The failure is a value in the `Err` channel, so you assert
-  on it instead of catching a thrown exception.
-</Callout>
+### Resolving `ResultAsync`
+`ResultAsync` is thenable. Resolving it (using `await` directly or via `.resolve()`) yields a standard `Result` that you can narrow and assert on.
 
-## 2. Fold both branches with `match`
+```ts title="async-service.spec.ts"
+import { expect, it } from "bun:test";
+import { isOk, unwrapOk } from "@onrails/result";
+import { fetchUser } from "../src/fetch-user";
 
-When a test cares about the *outcome*, fold the `Result` into a plain value and
-assert on that — one assertion covers both tracks.
+it("resolves to a bare Result", async () => {
+  // ResultAsync can be directly awaited
+  const result = await fetchUser("usr_100");
+  
+  expect(isOk(result)).toBe(true);
+  expect(unwrapOk(result).name).toBe("Ada");
+});
+```
+
+### Collapsing paths with `match`
+If your test cares only about the final mapped outcome rather than individual channel assertions, you can fold both the success and failure branches into a single value using `match`.
 
 ```ts title="respond.spec.ts"
 import { expect, it } from "bun:test";
 import { match } from "@onrails/result";
 import { parseId } from "../src/parse-id";
 
-const label = (input: string) =>
+const getResponseStatus = (input: string) =>
   match(
     parseId(input),
-    (n) => `ok:${n}`,
-    (e) => `err:${e}`,
+    () => 200,          // Ok track
+    () => 400,          // Err track
   );
 
-it("folds Ok and Err into one shape", () => {
-  expect(label("42")).toBe("ok:42");
-  expect(label("nope")).toBe("err:Not a number");
+it("folds Ok and Err into a status code", () => {
+  expect(getResponseStatus("42")).toBe(200);
+  expect(getResponseStatus("nope")).toBe(400);
 });
 ```
 
-## 3. Async — await, then assert
+---
 
-`ResultAsync` is awaitable. Resolve it to a `Result` and assert as above; no
-timers, no done-callbacks. To drive the failure path, point the function at
-input that fails — the error is still just data.
+## 2. Testing Workflow Short-Circuiting
 
-```ts title="get-user.spec.ts"
+A core behavior of any railway pipeline is that it executes all steps on the happy path, but short-circuits on the very first error (the sad path). To test a workflow, you should verify both paths by feeding inputs that succeed or fail at specific boundaries.
+
+### Example Workflow
+Consider a `checkoutWorkflow` built with the fluent [Railway](file:///Users/alanrsoares/dev/onrails/.agents/skills/railway-do-notation/SKILL.md#layer-2--fluent-railway) builder:
+
+```ts title="checkout.ts"
+import { Railway } from "@onrails/result/railway";
+import { type ResultAsync, ok, err } from "@onrails/result";
+
+export type Cart = { items: Array<{ sku: string; qty: number }> };
+export type Inventory = { sku: string; stock: number };
+export type Order = { id: string; total: number };
+
+export interface CheckoutDeps {
+  findStock(sku: string): Promise<Inventory | null>;
+  chargeCard(cart: Cart): Promise<Order>;
+}
+
+export const checkoutWorkflow = (
+  deps: CheckoutDeps,
+  cart: Cart
+): ResultAsync<Order, Error> => {
+  const item = cart.items[0];
+  if (!item) {
+    return ResultAsync.err(new Error("CartIsEmpty"));
+  }
+
+  return Railway.context({ cart, item })
+    .fromPromise(
+      "stockRow",
+      ({ item }) => deps.findStock(item.sku),
+      (e) => new Error(`Stock check failed: ${String(e)}`)
+    )
+    .require(
+      "inventory",
+      "stockRow",
+      () => new Error("ItemNotFound")
+    )
+    .fromResult(
+      "inStock",
+      ({ item, inventory }) =>
+        inventory.stock >= item.qty
+          ? ok(inventory)
+          : err(new Error("OutOfStock"))
+    )
+    .fromPromise(
+      "order",
+      ({ cart }) => deps.chargeCard(cart),
+      (e) => new Error(`Payment failed: ${String(e)}`)
+    )
+    .select(({ order }) => order);
+};
+```
+
+### Testing Happy & Sad Paths
+To test this, pass simple mock dependencies (using dependency injection) and verify that the error track is hit when stock is insufficient, skipping the payment step entirely.
+
+```ts title="checkout.spec.ts"
+import { describe, expect, it } from "bun:test";
+import { isErr, isOk } from "@onrails/result";
+import { checkoutWorkflow, type CheckoutDeps } from "./checkout";
+
+describe("checkoutWorkflow", () => {
+  it("executes fully on the happy path", async () => {
+    let paymentCalled = false;
+    const mockDeps: CheckoutDeps = {
+      findStock: async (sku) => ({ sku, stock: 10 }),
+      chargeCard: async (cart) => {
+        paymentCalled = true;
+        return { id: "ord_123", total: 4200 };
+      }
+    };
+
+    const result = await checkoutWorkflow(mockDeps, {
+      items: [{ sku: "item-1", qty: 2 }]
+    });
+
+    expect(isOk(result)).toBe(true);
+    expect(paymentCalled).toBe(true);
+  });
+
+  it("short-circuits and skips payment when inventory is insufficient", async () => {
+    let paymentCalled = false;
+    const mockDeps: CheckoutDeps = {
+      // Stock is less than the requested quantity (2)
+      findStock: async (sku) => ({ sku, stock: 1 }),
+      chargeCard: async (cart) => {
+        paymentCalled = true; // should never be reached
+        return { id: "ord_123", total: 4200 };
+      }
+    };
+
+    const result = await checkoutWorkflow(mockDeps, {
+      items: [{ sku: "item-1", qty: 2 }]
+    });
+
+    expect(isErr(result)).toBe(true);
+    expect(result.error.message).toBe("OutOfStock");
+    expect(paymentCalled).toBe(false); // verification of short-circuit
+  });
+});
+```
+
+---
+
+## 3. Testing Functional Steps in Isolation
+
+When you use the lowercase [railway(...)](file:///Users/alanrsoares/dev/onrails/.agents/skills/railway-do-notation/SKILL.md#layer-3--functional-railway) pipeline, your workflow steps are declared as standalone functions. A major benefit of this design is that **each step can be exported and tested in isolation** without running the entire pipeline or stubbing other async steps.
+
+### Defining Reusable Steps
+```ts title="profile-steps.ts"
+import { parseNamed, fromPromiseNamed } from "@onrails/result/railway";
+import { z } from "zod";
+
+const toError = (e: unknown) => e instanceof Error ? e : new Error(String(e));
+
+export const ProfileIdSchema = z.string().uuid();
+
+// 1. Exportable sync parsing step
+export const parseProfileId = parseNamed("profileId", ProfileIdSchema, toError);
+
+// 2. Exportable async loading step
+export const loadProfileRow = (fetchRow: (id: string) => Promise<unknown>) =>
+  fromPromiseNamed("row", (ctx: { profileId: string }) => fetchRow(ctx.profileId), toError);
+```
+
+### Testing Steps Individually
+You can test `parseProfileId` and `loadProfileRow` independently by passing direct input/context objects and asserting on the returned context addition:
+
+```ts title="profile-steps.spec.ts"
+import { describe, expect, it } from "bun:test";
+import { isErr, isOk } from "@onrails/result";
+import { parseProfileId, loadProfileRow } from "./profile-steps";
+
+describe("profile-steps", () => {
+  describe("parseProfileId", () => {
+    it("successfully parses valid UUID and adds it to context", () => {
+      const validUuid = "123e4567-e89b-12d3-a456-426614174000";
+      // A step is a function: (context/input) => Result/ResultAsync
+      const result = parseProfileId(validUuid);
+
+      expect(isOk(result)).toBe(true);
+      expect(result.value).toEqual({ profileId: validUuid });
+    });
+
+    it("returns error on invalid UUID", () => {
+      const result = parseProfileId("invalid-id");
+      expect(isErr(result)).toBe(true);
+    });
+  });
+
+  describe("loadProfileRow", () => {
+    it("successfully loads database row and appends to context", async () => {
+      const mockFetch = async (id: string) => ({ id, name: "Ada" });
+      const step = loadProfileRow(mockFetch);
+      
+      // Pass the context required by this step
+      const result = await step({ profileId: "usr_100" });
+
+      expect(isOk(result)).toBe(true);
+      expect(result.value).toEqual({ row: { id: "usr_100", name: "Ada" } });
+    });
+  });
+});
+```
+
+---
+
+## 4. Testing Parallel Execution Steps
+
+Workflows often trigger parallel database queries or API requests. When using `.parallel` or `parallelNamed`, you should test both success merges and failure combinations.
+
+```ts title="parallel-enrichment.spec.ts"
+import { describe, expect, it } from "bun:test";
+import { Railway } from "@onrails/result/railway";
+import { isErr, isOk } from "@onrails/result";
+
+it("merges parallel branch outputs on success", async () => {
+  const result = await Railway.context({ userId: "usr_1" })
+    .parallel({
+      profile: ({ userId }) => Promise.resolve({ id: userId, name: "Alice" }),
+      preferences: () => Promise.resolve({ theme: "dark" }),
+    })
+    .select(({ profile, preferences }) => ({ profile, preferences }));
+
+  expect(isOk(result)).toBe(true);
+  expect(result.value).toEqual({
+    profile: { id: "usr_1", name: "Alice" },
+    preferences: { theme: "dark" },
+  });
+});
+
+it("bubbles up the first failure in parallel execution", async () => {
+  const result = await Railway.context({ userId: "usr_1" })
+    .parallel({
+      profile: () => Promise.reject(new Error("Database Down")),
+      preferences: () => Promise.resolve({ theme: "dark" }),
+    })
+    .done();
+
+  expect(isErr(result)).toBe(true);
+  expect(result.error.message).toBe("Database Down");
+});
+```
+
+---
+
+## 5. Dependency Injection & Stubbing I/O (No Mocks Philosophy)
+
+Instead of relying on global monkey-patching libraries (e.g. `jest.mock`), design your workflows around dependency injection. This keeps your workflows pure and makes stubbing boundaries as simple as passing a mock object that returns pre-settled `ResultAsync` objects.
+
+```ts title="user-service.ts"
+import { ResultAsync } from "@onrails/result";
+
+export type User = { id: string; email: string };
+
+// The I/O Port
+export interface UserRepository {
+  getByEmail(email: string): ResultAsync<User, "not_found" | "db_error">;
+}
+
+// The Workflow / Service
+export const loginWorkflow = (repo: UserRepository, email: string) => {
+  return repo.getByEmail(email)
+    .map((user) => ({ status: "authenticated" as const, user }));
+};
+```
+
+You can test this service by passing inlined port implementations:
+
+```ts title="user-service.spec.ts"
+import { describe, expect, it } from "bun:test";
+import { ResultAsync } from "@onrails/result";
+import { loginWorkflow, type UserRepository } from "./user-service";
+
+describe("loginWorkflow", () => {
+  it("returns authentication success for valid users", async () => {
+    // Port Stub returning pre-settled Ok ResultAsync
+    const mockRepo: UserRepository = {
+      getByEmail: (email) => ResultAsync.fromOk({ id: "usr_1", email })
+    };
+
+    const result = await loginWorkflow(mockRepo, "test@test.com").value;
+    expect(result).toEqual({
+      _tag: "Ok",
+      value: { status: "authenticated", user: { id: "usr_1", email: "test@test.com" } }
+    });
+  });
+
+  it("bubbles up domain errors safely", async () => {
+    // Port Stub returning pre-settled Err ResultAsync
+    const mockRepo: UserRepository = {
+      getByEmail: () => ResultAsync.fromErr("not_found" as const)
+    };
+
+    const result = await loginWorkflow(mockRepo, "test@test.com").value;
+    expect(result).toEqual({ _tag: "Err", error: "not_found" });
+  });
+});
+```
+
+---
+
+## 6. Table-Style Outcome Mapping (`it.each`)
+
+Since ROP maps multiple failure states to a unified error union, testing HTTP or response mappings is clean when using table-style parameterization. Use `it.each` to check the translation of every error track.
+
+```ts title="http-mapping.spec.ts"
 import { expect, it } from "bun:test";
-import { isOk, match } from "@onrails/result";
-import { getUser } from "../src/get-user";
+import { match } from "@onrails/result";
 
-it("settles to a typed channel", async () => {
-  const result = await getUser("u1");
+type DomainError = 
+  | { kind: "invalid_input"; field: string }
+  | { kind: "unauthorized" }
+  | { kind: "not_found" }
+  | { kind: "fatal"; reason: string };
 
+const cases = [
+  { label: "maps invalid input to 400", err: { kind: "invalid_input" as const, field: "email" }, expected: 400 },
+  { label: "maps unauthorized to 401", err: { kind: "unauthorized" as const }, expected: 401 },
+  { label: "maps missing resource to 404", err: { kind: "not_found" as const }, expected: 404 },
+  { label: "maps fatal errors to 500", err: { kind: "fatal" as const, reason: "disk full" }, expected: 500 },
+] as const;
+
+it.each(cases)("$label", ({ err, expected }) => {
+  // Translate domain errors to HTTP statuses via exhaustive match
   const status = match(
-    result,
+    // We pass a mock Result containing our test error
+    { _tag: "Err" as const, error: err },
     () => 200,
-    (e) => (e.kind === "not_found" ? 404 : 502),
+    (e: DomainError) => {
+      switch (e.kind) {
+        case "invalid_input": return 400;
+        case "unauthorized": return 401;
+        case "not_found": return 404;
+        case "fatal": return 500;
+      }
+    }
   );
-  expect([200, 404, 502]).toContain(status);
+  expect(status).toBe(expected);
 });
 ```
 
-## 4. Type tests (the inference is part of the contract)
+---
 
-The error union and the inferred `Ok` type are part of the API, so pin them at
-compile time with [`ts-expect`](https://github.com/TypeStrong/ts-expect). `tsc`
-enforces these — they never run.
+## 7. Property-Based Pipeline Invariants (`fast-check`)
 
-```ts title="parse-id.types.spec.ts"
+When verifying algebraic laws, normalizations, or round-trip properties across a pipeline, property-based tests are much stronger than individual unit cases.
+
+```ts title="normalization.spec.ts"
+import { expect, it } from "bun:test";
+import * as fc from "fast-check";
+import { ok, err, map, type Result } from "@onrails/result";
+
+// 1. Build an Arbitrary that yields Result values
+const arbResult: fc.Arbitrary<Result<number, string>> = fc.oneof(
+  fc.integer().map((n) => ok<number, string>(n)),
+  fc.string().map((s) => err<number, string>(s))
+);
+
+// 2. Assert Functor Identity: map(x => x)(r) === r
+it("satisfies the Functor Identity law", () => {
+  fc.assert(
+    fc.property(arbResult, (r) => {
+      const identity = (x: number) => x;
+      expect(map(identity)(r)).toEqual(r);
+    })
+  );
+});
+```
+
+---
+
+## 8. Compile-Time Type Inference Verification (`ts-expect`)
+
+TypeScript's type-inference is a core part of the `@onrails` API contract. You should write compile-time assertions to verify these type boundaries.
+
+```ts title="types.spec.ts"
 import { expectType, type TypeEqual } from "ts-expect";
-import type { Result } from "@onrails/result";
-import { parseId } from "../src/parse-id";
+import { Railway } from "@onrails/result/railway";
+import { type Result } from "@onrails/result";
 
-// keep type-only assertions in an uncalled function — tsc checks it, the
-// runtime never executes the @ts-expect-error lines
-function _types() {
-  const r = parseId("42");
+function _typeChecks() {
+  const workflow = Railway
+    .fromSync("id", () => "usr_1", (e) => new Error(String(e)))
+    .derive("slug", ({ id }) => `${id}-slug`)
+    .select(({ id, slug }) => ({ id, slug }));
 
-  // the error channel is exactly the union you declared
-  expectType<TypeEqual<typeof r, Result<number, "Not a number">>>(true);
+  // 1. Assert the exact return type structure
+  expectType<TypeEqual<typeof workflow, Result<{ id: string; slug: string }, Error>>>(true);
 
-  // @ts-expect-error parseId takes a string, not a number
-  parseId(42);
+  // 2. Negative type checking: verify that context fields are readonly
+  // @ts-expect-error — Context fields are readonly
+  workflow.value.id = "new-id";
 }
 ```
 
 <Callout type="warn">
-  Make sure your `tsconfig` `include`s the test files, otherwise `tsc` never
-  checks these assertions.
+  Make sure your `tsconfig.json` `include` option references your test directory (e.g. `test/**/*.spec.ts`). If test files are excluded, `tsc --noEmit` will silently skip them during type-checking, and broken types may slip to production.
 </Callout>
 
-## What to test where
+---
 
-| Layer | Tooling | What |
-| --- | --- | --- |
-| Pure fallible functions | `bun:test` + `isOk` / `isErr` / `unwrapOk` | most of your logic |
-| Outcomes | `match` folded to a value | both tracks in one assertion |
-| Async boundaries | `await` the `ResultAsync`, then `match` | the settled channel |
-| Inference | `ts-expect` + `tsc` | the `Ok` type and the error union |
+## Testing Strategy Matrix
+
+| Dimension | Tooling | Recommended Target |
+| :--- | :--- | :--- |
+| **Logic & Short-Circuits** | `bun:test` / Vitest + `isOk`/`isErr` | Workflows with sync/async conditional boundaries. |
+| **Isolated Steps** | `bun:test` / Vitest step calls | Reusable functional steps from lowercase `railway(...)`. |
+| **Exhaustive Mapping** | `it.each` tables | Enumerable branches (translating error tracks to HTTP codes). |
+| **Algebraic Invariants** | `fast-check` properties | Idempotent normalizations, round-trips, encoders/decoders. |
+| **Type Contracts** | `ts-expect` + `tsc` | Inferred types, error union boundaries, context read-only invariants. |
