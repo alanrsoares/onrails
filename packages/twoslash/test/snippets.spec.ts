@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { buildSnippetsModule, extractSnippets } from "../src/index.js";
@@ -131,6 +131,7 @@ describe("buildSnippetsModule", () => {
   });
 });
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: test suite contains many test cases
 describe("extractSnippets (filesystem IO)", () => {
   const FIXTURES = resolve(import.meta.dir, "fixtures");
   const tmpRoots: string[] = [];
@@ -164,5 +165,42 @@ describe("extractSnippets (filesystem IO)", () => {
 
     expect(result.count).toBe(1);
     expect((await readFile(outFile, "utf8")).length).toBeGreaterThan(0);
+  });
+
+  it("scans .tsx snippet modules (JSX) alongside .ts", async () => {
+    const dir = await tmpRoot();
+    await writeFile(
+      join(dir, "fixtures.ts"),
+      "export const Wrap = (p: { children: unknown }) => p;\n",
+    );
+    await writeFile(
+      join(dir, "badge.tsx"),
+      [
+        'import { Wrap } from "./fixtures.js";',
+        "// #region snippet",
+        "export const Badge = () => <Wrap>{1}</Wrap>;",
+        "// #endregion",
+      ].join("\n"),
+    );
+    const outFile = join(dir, "snippets.generated.ts");
+
+    const result = await extractSnippets({ srcDir: dir, outFile });
+
+    expect(result.count).toBe(1); // badge.tsx in; fixtures.ts skipped
+    expect((await readFile(outFile, "utf8")).length).toBeGreaterThan(0);
+    expect(await readFile(outFile, "utf8")).toContain("<Wrap>{1}</Wrap>");
+  });
+
+  it("supports a .tsx fixtures module", async () => {
+    const dir = await tmpRoot();
+    await writeFile(join(dir, "fixtures.tsx"), "export const x = 1;\n");
+    await writeFile(
+      join(dir, "ex.ts"),
+      ["// #region snippet", "export const v = x;", "// #endregion"].join("\n"),
+    );
+
+    const result = await extractSnippets({ srcDir: dir, outFile: join(dir, "out.ts") });
+
+    expect(result.count).toBe(1);
   });
 });
