@@ -16,8 +16,8 @@
  * The engine is split into a pure core (`buildSnippetsModule`) and an IO wrapper
  * (`extractSnippets`) so the transform logic is unit-testable without a disk.
  */
-import { readdir, readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
 export interface SnippetForms {
   code: string;
@@ -229,6 +229,7 @@ export async function extractSnippets(opts: ExtractSnippetsOptions): Promise<Ext
     ...(opts.generatedBy !== undefined ? { generatedBy: opts.generatedBy } : {}),
   });
 
+  await mkdir(dirname(opts.outFile), { recursive: true });
   await writeFile(opts.outFile, module);
   return { count: ids.length, outFile: opts.outFile, skipped };
 }

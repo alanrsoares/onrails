@@ -12,6 +12,7 @@ module.exports = {
         "codemod",
         "eslint-plugin",
         "biome-plugin",
+        "twoslash",
         "repo",
         "deps",
         "ci",

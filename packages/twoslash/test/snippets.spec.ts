@@ -94,4 +94,14 @@ describe("extractSnippets (filesystem IO)", () => {
     expect(written).toContain('"example": { code: "const value = stub + 1;"');
     expect(written).toContain("// ---cut-start---");
   });
+
+  it("creates the outFile's parent directory when it does not exist", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "twoslash-"));
+    outFile = join(dir, "nested", "deep", "snippets.generated.ts");
+
+    const result = await extractSnippets({ srcDir: FIXTURES, outFile });
+
+    expect(result.count).toBe(1);
+    expect((await readFile(outFile, "utf8")).length).toBeGreaterThan(0);
+  });
 });
