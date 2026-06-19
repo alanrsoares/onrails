@@ -48,13 +48,20 @@ export interface ExtractSnippetsOptions {
 
 const identity = (l: string) => l;
 
+// Normalize line endings so CRLF checkouts parse identically to LF — otherwise
+// the `$`-anchored import matchers miss the trailing `\r` and `\r` leaks into
+// the emitted snippets.
+const toLF = (s: string): string => s.replace(/\r\n/g, "\n");
+
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const isImport = (l: string) => /^\s*import\b/.test(l);
 const stripExport = (l: string) => l.replace(/^(\s*)export /, "$1");
 
 const fixtureImportMatcher =
   (fixtureName: string) =>
   (l: string): boolean =>
-    new RegExp(`from\\s+["'][^"']*${fixtureName}[^"']*["']`).test(l);
+    new RegExp(`from\\s+["'][^"']*${escapeRegExp(fixtureName)}[^"']*["']`).test(l);
 
 const trim = (lines: string[]): string[] => {
   const out = [...lines];
@@ -170,17 +177,18 @@ export function buildSnippetsModule(
     rewriteImport: opts.rewriteImport ?? identity,
   };
 
+  const fixtures = toLF(fixturesSource);
   const entries: [string, SnippetForms][] = [];
   const skipped: string[] = [];
   for (const { name, source } of modules) {
-    const region = regionLines(source);
+    const region = regionLines(toLF(source));
     if (region === null) {
       skipped.push(name);
       continue;
     }
     entries.push([
       name,
-      { code: toDisplay(region, deps), twoslash: toTwoslash(region, fixturesSource, deps) },
+      { code: toDisplay(region, deps), twoslash: toTwoslash(region, fixtures, deps) },
     ]);
   }
 
