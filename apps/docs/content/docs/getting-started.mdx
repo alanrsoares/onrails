@@ -52,30 +52,51 @@ yarn add @onrails/result @onrails/maybe @onrails/pattern
 
 <Step>
 
-### Combine a flow with pattern matching
+### Return a Result instead of throwing
 
-A fallible calculation returns a `Result`; matching collapses both branches into
-one value — no thrown exceptions on the expected path.
+A fallible function returns a `Result<T, E>` — `ok` on the happy path, a typed
+`err` on the expected failure. The core is **data-first**: import the package as
+a namespace (`R`) and pass the result as the first argument. `map` transforms the
+`Ok` channel; `match` collapses both branches into one value — no thrown
+exceptions on the expected path.
 
-```typescript
-import { Result } from "@onrails/result";
-import { match } from "@onrails/pattern";
+```ts twoslash
+import * as R from "@onrails/result";
 
-// Fallible calculation
-function parseId(input: string): Result<number, string> {
-  const parsed = parseInt(input, 10);
-  return isNaN(parsed) ? Result.err("Not a number") : Result.ok(parsed);
+// Fallible calculation — Ok or a typed Err, never a throw.
+function parseId(input: string): R.Result<number, string> {
+  const n = Number.parseInt(input, 10);
+  return Number.isNaN(n) ? R.err("Not a number") : R.ok(n);
 }
 
-const outcome = parseId("42")
-  .map(num => num * 2)
-  .match(
-    (val) => `Success: ${val}`,
-    (err) => `Error: ${err}`
-  );
+const outcome = R.match(
+  R.map(parseId("42"), (n) => n * 2),
+  (val) => `Success: ${val}`,
+  (err) => `Error: ${err}`,
+);
 
-console.log(outcome); // "Success: 84"
+console.log(outcome);
+//          ^?
 ```
+
+<Callout title="Data-first, not fluent">
+  The sync core is data-first: `R.map(result, fn)`, not `result.map(fn)`. Reach
+  for [`pipe` / `flow`](/docs/recipes) to chain steps point-free. `ResultAsync`
+  *is* fluent (`.flatMap`, `.match`) — see below.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Real I/O: one typed error channel
+
+`ResultAsync` wraps async work and chains fluently. `tryAsync` turns a throwing
+promise into a typed channel; `match` settles it once and forces you to handle
+every variant. This snippet is extracted from a real, type-checked module in
+`@onrails/examples` — it can't drift from code that compiles.
+
+<Snippet id="result" />
 
 </Step>
 
@@ -87,6 +108,7 @@ console.log(outcome); // "Success: 84"
   `@onrails/biome-plugin` enforce this for consumers.
 </Callout>
 
-Next: [Recipes](/docs/recipes) for composition patterns, or the API reference
-for [`Result`](/docs/api/result), [`Maybe`](/docs/api/maybe), and
+Next: [Recipes](/docs/recipes) for composition patterns, [Testing](/docs/testing)
+to see why these primitives test cleanly, or the API reference for
+[`Result`](/docs/api/result), [`Maybe`](/docs/api/maybe), and
 [`match`](/docs/api/pattern).
