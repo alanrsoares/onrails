@@ -24,10 +24,7 @@ export async function TwoslashSnippet({ code }: { code: string }) {
     ],
     components: {
       pre: (props) => (
-        <CodeBlock
-          {...props}
-          className="border-none bg-transparent rounded-none my-0 shadow-none [&_pre]:bg-transparent"
-        >
+        <CodeBlock {...props}>
           <Pre>{props.children}</Pre>
         </CodeBlock>
       ),
