@@ -1,6 +1,6 @@
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { ArrowRight, Layers, ShieldCheck, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
+import { CodeTabs } from "@/components/code-tabs";
 import { TwoslashSnippet } from "@/components/twoslash-snippet";
 import { snippets } from "@/lib/snippets.generated";
 import { gitConfig } from "@/lib/shared";
@@ -32,12 +32,12 @@ const features = [
 // @onrails/examples (see lib/snippets.generated.ts), rendered through twoslash
 // so tokens carry hover types.
 const examples = [
-  { label: "Result", code: snippets.result.twoslash },
-  { label: "Pattern", code: snippets.pattern.twoslash },
-  { label: "Maybe", code: snippets.maybe.twoslash },
-  { label: "Railway", code: snippets.railway.twoslash },
-  { label: "Combined", code: snippets.combined.twoslash },
-];
+  { id: "result", filename: "result.ts" },
+  { id: "pattern", filename: "pattern.ts" },
+  { id: "maybe", filename: "maybe.ts" },
+  { id: "railway", filename: "railway.ts" },
+  { id: "combined", filename: "combined.ts" },
+] as const;
 
 export default function HomePage() {
   return (
@@ -76,15 +76,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* code sample — one tab per package, sourced from @onrails/examples */}
+      {/* code sample — file tabs live in the browser chrome bar; each panel is
+          sourced from a type-checked @onrails/examples module */}
       <section className="w-full max-w-3xl pb-20 text-left">
-        <Tabs items={examples.map((e) => e.label)}>
-          {examples.map(({ label, code }) => (
-            <Tab key={label} value={label}>
-              <TwoslashSnippet code={code} />
-            </Tab>
+        <CodeTabs
+          tabs={examples.map(({ id, filename }) => ({ label: id, filename }))}
+        >
+          {examples.map(({ id }) => (
+            <TwoslashSnippet key={id} code={snippets[id].twoslash} />
           ))}
-        </Tabs>
+        </CodeTabs>
       </section>
 
       {/* features */}
