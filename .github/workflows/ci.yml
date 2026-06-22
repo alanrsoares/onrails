@@ -35,5 +35,6 @@ jobs:
         run: |
           bun run --filter '@onrails/result' build
           bun run --filter '@onrails/maybe' --filter '@onrails/pattern' build
+          bun run --filter '@onrails/docgen' build
       - name: Check
         run: bun run check

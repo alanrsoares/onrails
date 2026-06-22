@@ -13,6 +13,7 @@ module.exports = {
         "eslint-plugin",
         "biome-plugin",
         "twoslash",
+        "docgen",
         "repo",
         "deps",
         "ci",

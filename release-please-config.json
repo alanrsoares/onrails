@@ -41,6 +41,11 @@
       "package-name": "@onrails/twoslash",
       "component": "twoslash",
       "changelog-path": "CHANGELOG.md"
+    },
+    "packages/docgen": {
+      "package-name": "@onrails/docgen",
+      "component": "docgen",
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": ["node-workspace"]
