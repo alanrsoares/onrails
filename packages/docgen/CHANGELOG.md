@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/alanrsoares/onrails/compare/docgen-v1.0.0...docgen-v1.0.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **docgen:** publish caret ranges for workspace deps ([#69](https://github.com/alanrsoares/onrails/issues/69)) ([7150297](https://github.com/alanrsoares/onrails/commit/715029765b660282e7d10abe84bf4ed43a978612))
+
 ## 1.0.0 (2026-06-22)
 
 

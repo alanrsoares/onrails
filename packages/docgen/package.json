@@ -1,6 +1,6 @@
 {
   "name": "@onrails/docgen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Generate MDX API-reference pages from TypeScript source + JSDoc/TSDoc, and compile-check @example blocks against the real API.",
   "license": "MIT",
   "author": "Alan R. Soares",
