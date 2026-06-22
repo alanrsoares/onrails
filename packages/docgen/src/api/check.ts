@@ -24,12 +24,6 @@ export interface CheckExamplesOptions {
    * examples; values are source paths relative to `baseUrl`.
    */
   readonly paths: ts.MapLike<string[]>;
-  /** Extra compiler options merged over the defaults. */
-  readonly compilerOptions?: ts.CompilerOptions;
-  /** Diagnostic codes treated as stubbing noise rather than API drift. */
-  readonly noiseCodes?: readonly number[];
-  /** Max stub-resolution rounds before giving up (default 8). */
-  readonly maxStubRounds?: number;
 }
 
 /** A single `@example` that no longer compiles against its API. */
@@ -58,8 +52,8 @@ const UNRESOLVED_CODES = new Set([2304, 2552, 2584]);
 // over an `any` argument collapses return types to `unknown`, so downstream
 // member access reports these; a callback whose param type came from a stub is
 // an implicit `any` (7006). Noise, not API drift.
-const DEFAULT_NOISE_CODES = [18046, 18047, 18048, 2571, 2531, 2532, 2533, 7006];
-const DEFAULT_MAX_STUB_ROUNDS = 8;
+const NOISE_CODES = new Set([18046, 18047, 18048, 2571, 2531, 2532, 2533, 7006]);
+const MAX_STUB_ROUNDS = 8;
 
 const stripFence = (raw: string): string =>
   raw
@@ -103,19 +97,6 @@ const buildModule = (
 type Example = { symbol: string; index: number; body: string; pkgName: string };
 type Built = { ex: Example; file: string; stubs: Set<string>; exports: readonly string[] };
 type Parsed = { examples: Example[]; exportsByPkg: Map<string, string[]> };
-
-const buildCompilerOptions = (opts: CheckExamplesOptions): ts.CompilerOptions => ({
-  target: ts.ScriptTarget.ESNext,
-  module: ts.ModuleKind.ESNext,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
-  lib: ["lib.esnext.d.ts"],
-  strict: true,
-  skipLibCheck: true,
-  noEmit: true,
-  baseUrl: opts.baseUrl,
-  paths: opts.paths,
-  ...opts.compilerOptions,
-});
 
 // Parse every package once: collect examples + base export names. Throws (caught
 // by the outer trySync) if a package fails to parse.
@@ -164,13 +145,14 @@ const compileBuilt = (
 };
 
 // Recompile, declaring each newly unresolved name as `any`, until stable.
+// Returns the final diagnostics, so the caller need not recompile.
 const resolveStubs = (
   built: readonly Built[],
   compilerOptions: ts.CompilerOptions,
   maxRounds: number,
-): void => {
+): Map<string, ts.Diagnostic[]> => {
+  let byFile = compileBuilt(built, compilerOptions);
   for (let round = 0; round < maxRounds; round++) {
-    const byFile = compileBuilt(built, compilerOptions);
     let added = false;
     for (const b of built) {
       for (const d of byFile.get(b.file) ?? []) {
@@ -182,7 +164,9 @@ const resolveStubs = (
       }
     }
     if (!added) break;
+    byFile = compileBuilt(built, compilerOptions);
   }
+  return byFile;
 };
 
 const collectFailures = (
@@ -238,8 +222,20 @@ export const checkExamples = (
   opts: CheckExamplesOptions,
 ): Result<CheckReport, Error> =>
   trySync((): CheckReport => {
-    const compilerOptions = buildCompilerOptions(opts);
-    const noiseCodes = new Set(opts.noiseCodes ?? DEFAULT_NOISE_CODES);
+    const compilerOptions: ts.CompilerOptions = {
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      // No DOM lib: these packages are runtime-agnostic, so an example naming a
+      // DOM global (e.g. a user type `Event`) stubs to `any` instead of
+      // resolving to lib.dom and producing false mismatches.
+      lib: ["lib.esnext.d.ts"],
+      strict: true,
+      skipLibCheck: true,
+      noEmit: true,
+      baseUrl: opts.baseUrl,
+      paths: opts.paths,
+    };
     const { examples, exportsByPkg } = parsePackages(packages);
 
     const tmp = mkdtempSync(join(tmpdir(), "docgen-examples-"));
@@ -251,8 +247,8 @@ export const checkExamples = (
         exports: exportsByPkg.get(ex.pkgName) ?? [],
       }));
 
-      resolveStubs(built, compilerOptions, opts.maxStubRounds ?? DEFAULT_MAX_STUB_ROUNDS);
-      const failures = collectFailures(built, compileBuilt(built, compilerOptions), noiseCodes);
+      const byFile = resolveStubs(built, compilerOptions, MAX_STUB_ROUNDS);
+      const failures = collectFailures(built, byFile, NOISE_CODES);
 
       return { total: examples.length, packages: packages.length, failures };
     } finally {
