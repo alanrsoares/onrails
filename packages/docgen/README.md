@@ -1,15 +1,18 @@
 # @onrails/docgen
 
-Internal API-reference generator for the onrails documentation site. **Private**
-— not published; consumed by the root `docs:generate` script.
+Generate MDX API-reference pages from TypeScript source + JSDoc/TSDoc, and
+compile-check `@example` blocks against the real API.
 
-> Snippet extraction moved to the published [`@onrails/twoslash`](../twoslash)
+> Snippet extraction lives in the companion [`@onrails/twoslash`](../twoslash)
 > package.
 
-Turns TypeScript source + JSDoc/TSDoc into MDX API-reference pages. The engine
-holds no onrails specifics — symbol categorization, category order, and
-cross-package linking are passed in as options. The onrails configuration lives
-in the runner (`scripts/generate-api-docs.ts`).
+The engine holds no onrails specifics — symbol categorization, category order,
+and cross-package linking are passed in as options. The onrails configuration
+lives in the runner (`scripts/generate-api-docs.ts`).
+
+```bash
+npm install -D @onrails/docgen   # peer: typescript >=6
+```
 
 ## Usage
 
@@ -45,12 +48,31 @@ generateApiDocs(
 
 The default renderer emits Fumadocs-flavored MDX with Tailwind-styled badges.
 
+### Compile-checking examples
+
+`checkExamples(packages, opts)` compiles every `@example` against the real
+source and returns a `Result<CheckReport, Error>` — export/signature drift in a
+doc example shows up as a build failure. Reporting and exit codes are the
+caller's (see `scripts/check-api-examples.ts`).
+
+```ts
+import { checkExamples } from "@onrails/docgen";
+
+const report = checkExamples(
+  [{ entry: "packages/result/src/index.ts", name: "@onrails/result" }],
+  {
+    baseUrl: process.cwd(),
+    paths: {
+      "@onrails/result": ["packages/result/src/index.ts"],
+      "@onrails/result/*": ["packages/result/src/*"],
+    },
+  },
+);
+```
+
 ## Develop
 
 ```bash
 bun run --filter @onrails/docgen check   # typecheck + test
+bun run --filter @onrails/docgen build   # tsup -> dist (esm + cjs + d.ts)
 ```
-
-The package runs from source via Bun (no build step). Output is verified by the
-consuming gate: the root `docs:generate` writes the API MDX, and `apps/docs`
-type-checks it on `predev`/`prebuild`.

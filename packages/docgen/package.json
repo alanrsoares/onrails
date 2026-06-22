@@ -1,27 +1,77 @@
 {
   "name": "@onrails/docgen",
   "version": "0.0.0",
-  "private": true,
-  "description": "Internal API-reference generator (TS AST → MDX) for the onrails docs site.",
+  "description": "Generate MDX API-reference pages from TypeScript source + JSDoc/TSDoc, and compile-check @example blocks against the real API.",
   "license": "MIT",
   "author": "Alan R. Soares",
+  "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/docgen#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanrsoares/onrails.git",
+    "directory": "packages/docgen"
+  },
+  "bugs": {
+    "url": "https://github.com/alanrsoares/onrails/issues"
+  },
+  "keywords": [
+    "docgen",
+    "api-reference",
+    "jsdoc",
+    "tsdoc",
+    "mdx",
+    "documentation",
+    "docs",
+    "typescript",
+    "ast",
+    "fumadocs"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
-    ".": "./src/index.ts",
-    "./api": "./src/api/generate.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./api": {
+      "types": "./dist/api/generate.d.ts",
+      "import": "./dist/api/generate.js",
+      "require": "./dist/api/generate.cjs"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check": "bun typecheck && bun test"
+    "check": "bun typecheck && bun test",
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@onrails/pattern": "workspace:*",
     "@onrails/result": "workspace:*"
   },
+  "peerDependencies": {
+    "typescript": ">=6"
+  },
   "devDependencies": {
     "@types/bun": "latest",
+    "tsup": "^8.5.1",
     "typescript": "^6.0.3"
   }
 }

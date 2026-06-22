@@ -77,14 +77,18 @@
     },
     "packages/docgen": {
       "name": "@onrails/docgen",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "dependencies": {
         "@onrails/pattern": "workspace:*",
         "@onrails/result": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "tsup": "^8.5.1",
         "typescript": "^6.0.3",
+      },
+      "peerDependencies": {
+        "typescript": ">=6",
       },
     },
     "packages/eslint-plugin": {
@@ -142,7 +146,7 @@
     },
     "packages/twoslash": {
       "name": "@onrails/twoslash",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "devDependencies": {
         "@types/bun": "latest",
         "tsup": "^8.5.1",
