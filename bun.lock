@@ -77,7 +77,7 @@
     },
     "packages/docgen": {
       "name": "@onrails/docgen",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "dependencies": {
         "@onrails/pattern": "workspace:*",
         "@onrails/result": "workspace:*",

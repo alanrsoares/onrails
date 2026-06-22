@@ -63,8 +63,8 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@onrails/pattern": "workspace:*",
-    "@onrails/result": "workspace:*"
+    "@onrails/pattern": "workspace:^",
+    "@onrails/result": "workspace:^"
   },
   "peerDependencies": {
     "typescript": ">=6"
