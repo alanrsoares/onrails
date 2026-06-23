@@ -12,44 +12,11 @@ html > body[data-scroll-locked] {
   --removed-body-scroll-bar-size: 0px !important;
 }
 
-/* Twoslash hover popup — give the signature / description / tsdoc tags clear
-   vertical stacking instead of running together. */
-.twoslash-popup-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.twoslash-popup-docs {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-fd-border);
-  line-height: 1.5;
-}
-
-.twoslash-popup-docs-tags {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-fd-border);
-}
-
-/* Stack each tag's label above its value — @example's value is a code block
-   that must sit below the "@example" heading, not inline with it. */
+/* Twoslash hover popup: fumadocs' default lays each tsdoc tag out as a row
+   (label beside value), which works for @param/@returns but cramps @example —
+   its value is a code block that needs the full popup width. Stack tag label
+   above value so the example renders below its heading. */
 .twoslash-popup-docs-tag {
-  display: flex;
   flex-direction: column;
-  gap: 0.25rem;
   align-items: stretch;
-}
-
-.twoslash-popup-docs-tag-name {
-  font-weight: 600;
-  color: var(--color-fd-primary);
-}
-
-.twoslash-popup-docs-tag-value {
-  display: block;
-  width: 100%;
 }

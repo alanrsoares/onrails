@@ -8,6 +8,34 @@ import ts from "typescript";
 // `new URL(import.meta.url)` here — the bundler treats it as an asset import.)
 const repoRoot = resolve(process.cwd(), "../..");
 
+/**
+ * Repairs the JSDoc markdown twoslash hands to the hover renderer.
+ *
+ * TypeScript splits an inline `{@link X}` tag into three separate
+ * `SymbolDisplayPart`s (`"{@link "`, `"X"`, `"}"`); twoslash core joins doc
+ * parts with `"\n"`, so the tag arrives as `"{@link \nX\n}"` — and the source
+ * line break that often precedes a link adds a second `"\n"`. fumadocs then
+ * strips the braces, leaving `"\n\nX\n\n"`: a blank line markdown turns into a
+ * paragraph break. The result is one `<p>` per fragment, so a sentence like
+ * "...call {@link resolve} / {@link match} to settle it." renders as a column
+ * of single words instead of flowing prose, blowing out the popup layout.
+ *
+ * Collapse each link (and the newline artifacts hugging it) back into an inline
+ * `code` reference before fumadocs' renderer sees it. Wired in via
+ * `rendererRich.processHoverDocs`, so fumadocs' own markdown/code rendering
+ * stays intact — it just runs on the cleaned-up string.
+ */
+export function processHoverDocs(docs: string): string {
+  return docs
+    .replace(
+      /[ \t]*\n*[ \t]*\{@link\s+([^}]*?)\s*\}[ \t]*\n*[ \t]*/g,
+      (_match, name: string) => ` \`${name.trim()}\` `,
+    )
+    .replace(/[ \t]+([,.;:)])/g, "$1")
+    .replace(/(\()[ \t]+/g, "$1")
+    .trim();
+}
+
 export const twoslashCompilerOptions = {
   baseUrl: repoRoot,
   moduleResolution: ts.ModuleResolutionKind.Bundler,

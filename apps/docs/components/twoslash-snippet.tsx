@@ -2,7 +2,7 @@ import { highlight } from "fumadocs-core/highlight";
 import { transformerTwoslash } from "fumadocs-twoslash";
 import { Popup, PopupContent, PopupTrigger } from "fumadocs-twoslash/ui";
 import { CodeBlock, Pre } from "fumadocs-ui/components/codeblock";
-import { twoslashCompilerOptions } from "@/lib/twoslash";
+import { processHoverDocs, twoslashCompilerOptions } from "@/lib/twoslash";
 
 /**
  * Server-renders a twoslash snippet (compiled against the real @onrails/* source)
@@ -20,6 +20,7 @@ export async function TwoslashSnippet({ code }: { code: string }) {
       transformerTwoslash({
         explicitTrigger: false,
         twoslashOptions: { compilerOptions: twoslashCompilerOptions },
+        rendererRich: { processHoverDocs },
       }),
     ],
     components: {
