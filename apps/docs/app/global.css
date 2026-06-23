@@ -11,3 +11,12 @@ html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;
 }
+
+/* Twoslash hover popup: fumadocs' default lays each tsdoc tag out as a row
+   (label beside value), which works for @param/@returns but cramps @example —
+   its value is a code block that needs the full popup width. Stack tag label
+   above value so the example renders below its heading. */
+.twoslash-popup-docs-tag {
+  flex-direction: column;
+  align-items: stretch;
+}
