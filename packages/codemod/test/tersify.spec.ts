@@ -472,5 +472,29 @@ function handle(name: string, node: any) {
       // jsx=false: `<T>xs[0]` is a valid cast and must survive.
       expect(tersify(src, false)).toBe("const head = <T,>(xs: T[]): T => <T>xs[0];");
     });
+
+    it("unwraps a single-child fragment whose sole child is an expression in a ternary", () => {
+      const src = [
+        "function FooterKeyCell({ item }: Props) {",
+        "  if (!hasArrows(item.key)) {",
+        "    return item.key;",
+        "  }",
+        "  return (",
+        "    <>",
+        "      {item.key.split(SEP).map((part, j) => (",
+        "        part",
+        "      ))}",
+        "    </>",
+        "  );",
+        "}",
+      ].join("\n");
+      const out = tersify(src, true);
+      const expected = [
+        "const FooterKeyCell = ({ item }: Props) => !hasArrows(item.key) ? item.key : (item.key.split(SEP).map((part, j) => (",
+        "        part",
+        "      )));",
+      ].join("\n");
+      expect(out).toBe(expected);
+    });
   });
 });

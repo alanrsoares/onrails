@@ -3,117 +3,17 @@ import ts from "typescript";
 import { edit, spanEdit, walkSource } from "./ast.js";
 import { applyEditStep, byStartDesc } from "./chains.js";
 import { scanIfToSwitchSequences } from "./switch.js";
+import {
+  containsConditional,
+  getSingleReturnExpression,
+  getTernaryBranchText,
+  getTypeParametersText,
+  isIdentifierReferencedBefore,
+  isSimpleExpression,
+  startsWithObjectLiteral,
+  usesThisOrArguments,
+} from "./tersify-utils.js";
 import type { Edit } from "./types.js";
-
-// Helper to check for single statement return
-function getSingleReturnExpression(statement: ts.Statement): ts.Expression | undefined {
-  if (ts.isReturnStatement(statement)) {
-    return statement.expression;
-  }
-  if (ts.isBlock(statement)) {
-    if (statement.statements.length === 1) {
-      const single = statement.statements[0];
-      if (single && ts.isReturnStatement(single)) {
-        return single.expression;
-      }
-    }
-  }
-  return undefined;
-}
-
-// Helper to check if body uses 'this' or 'arguments'
-function usesThisOrArguments(body: ts.Node): boolean {
-  let found = false;
-  const visit = (n: ts.Node) => {
-    if (found) return;
-    if (n.kind === ts.SyntaxKind.ThisKeyword) {
-      found = true;
-      return;
-    }
-    if (ts.isIdentifier(n) && n.text === "arguments") {
-      found = true;
-      return;
-    }
-    if (
-      ts.isFunctionDeclaration(n) ||
-      ts.isFunctionExpression(n) ||
-      ts.isArrowFunction(n) ||
-      ts.isMethodDeclaration(n) ||
-      ts.isGetAccessorDeclaration(n) ||
-      ts.isSetAccessorDeclaration(n)
-    ) {
-      return; // Stop recursion for nested scopes
-    }
-    ts.forEachChild(n, visit);
-  };
-  ts.forEachChild(body, visit);
-  return found;
-}
-
-// Helper to check if identifier referenced before pos
-function isIdentifierReferencedBefore(name: string, pos: number, sf: ts.SourceFile): boolean {
-  let referenced = false;
-  const visit = (n: ts.Node) => {
-    if (referenced) return;
-    if (n.getStart(sf) >= pos) return;
-    if (ts.isIdentifier(n) && n.text === name) {
-      const parent = n.parent;
-      if (parent) {
-        if (ts.isPropertyAccessExpression(parent) && parent.name === n) {
-          return;
-        }
-        if (ts.isPropertyAssignment(parent) && parent.name === n) {
-          return;
-        }
-        if (ts.isMethodDeclaration(parent) && parent.name === n) {
-          return;
-        }
-        if (ts.isPropertyDeclaration(parent) && parent.name === n) {
-          return;
-        }
-        if (ts.isBindingElement(parent) && parent.propertyName === n) {
-          return;
-        }
-      }
-      referenced = true;
-      return;
-    }
-    ts.forEachChild(n, visit);
-  };
-  ts.forEachChild(sf, visit);
-  return referenced;
-}
-
-function getTypeParametersText(
-  node: ts.FunctionDeclaration | ts.FunctionExpression,
-  sf: ts.SourceFile,
-): string {
-  if (node.typeParameters && node.typeParameters.length > 0) {
-    const params = node.typeParameters.map((p) => p.getText(sf));
-    return params.length === 1 ? `<${params[0]},>` : `<${params.join(", ")}>`;
-  }
-  return "";
-}
-
-const isSimpleExpression = (expr: ts.Expression): boolean =>
-  ts.isIdentifier(expr) ||
-  ts.isPropertyAccessExpression(expr) ||
-  ts.isElementAccessExpression(expr) ||
-  ts.isCallExpression(expr);
-
-function containsConditional(node: ts.Node): boolean {
-  if (ts.isConditionalExpression(node)) {
-    return true;
-  }
-  let found = false;
-  ts.forEachChild(node, (child) => {
-    if (found) return;
-    if (containsConditional(child)) {
-      found = true;
-    }
-  });
-  return found;
-}
 
 function tryTersifyIfElse(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
   if (ts.isIfStatement(node) && node.elseStatement) {
@@ -138,22 +38,12 @@ function tryTersifyIfElse(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
         return some(spanEdit(node, sf, edit(text)));
       }
 
-      const xText = x.getText(sf);
-      const yText = y.getText(sf);
+      const xText = getTernaryBranchText(x, sf);
+      const yText = getTernaryBranchText(y, sf);
       return some(spanEdit(node, sf, edit(`return ${condText} ? ${xText} : ${yText};`)));
     }
   }
   return none();
-}
-
-// A concise arrow body that is — or unwraps through `as` / `satisfies` to — an
-// object literal must be parenthesized, else `{ … }` parses as a block body.
-function startsWithObjectLiteral(expr: ts.Expression): boolean {
-  let e: ts.Expression = expr;
-  while (ts.isAsExpression(e) || ts.isSatisfiesExpression(e)) {
-    e = e.expression;
-  }
-  return ts.isObjectLiteralExpression(e);
 }
 
 function tryTersifyArrowBlock(node: ts.Node, sf: ts.SourceFile): Maybe<Edit> {
@@ -353,8 +243,8 @@ function tryTersifyTernaryOrBooleanSequence(
       const needsParens = !isSimpleExpression(stmt.expression);
       text = needsParens ? `return !(${condText});` : `return !${condText};`;
     } else {
-      const xText = x.getText(sf);
-      const yText = y.getText(sf);
+      const xText = getTernaryBranchText(x, sf);
+      const yText = getTernaryBranchText(y, sf);
       text = `return ${condText} ? ${xText} : ${yText};`;
     }
 
