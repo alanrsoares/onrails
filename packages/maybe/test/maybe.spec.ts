@@ -58,6 +58,8 @@ describe("Maybe", () => {
 
   it("unwrapOr / unwrap", () => {
     expect(unwrapOr(none<number>(), 0)).toBe(0);
+    expect(unwrapOr(0)(none<number>())).toBe(0);
+    expect(unwrapOr(0)(some(5))).toBe(5);
     expect(unwrap(some("ok"))).toBe("ok");
     expect(() => unwrap(none())).toThrow("Called unwrap on None");
   });

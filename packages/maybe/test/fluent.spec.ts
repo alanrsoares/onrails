@@ -3,6 +3,11 @@ import { fluent } from "../src/fluent.js";
 import { none, some } from "../src/maybe.js";
 
 describe("fluent Maybe", () => {
+  it("exposes the underlying Maybe on the maybe property", () => {
+    const wrapped = fluent(some(2));
+    expect(wrapped.maybe).toEqual(some(2));
+  });
+
   it("chains map, andThen, and match", () => {
     const out = fluent(some(2))
       .map((n) => n * 2)

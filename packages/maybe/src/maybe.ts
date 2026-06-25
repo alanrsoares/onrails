@@ -159,16 +159,16 @@ export function match(
   return (maybe: Maybe<unknown>) => matchImpl(maybe, onSome, onNone);
 }
 
-/**
- * Returns the `Some` value, or `defaultValue` when the value is `None`.
- *
- * @example
- * ```ts
- * unwrapOr(fromNullable(user), { name: "guest" });
- * ```
- */
-export const unwrapOr = <T>(maybe: Maybe<T>, defaultValue: T): T =>
-  isSome(maybe) ? maybe.value : defaultValue;
+export function unwrapOr<T>(maybe: Maybe<T>, defaultValue: T): T;
+export function unwrapOr<T>(defaultValue: T): (maybe: Maybe<T>) => T;
+export function unwrapOr(...args: [Maybe<unknown>, unknown] | [unknown]): unknown {
+  if (args.length === 2) {
+    const [maybe, defaultValue] = args;
+    return isSome(maybe) ? maybe.value : defaultValue;
+  }
+  const defaultValue = args[0];
+  return (maybe: Maybe<unknown>) => (isSome(maybe) ? maybe.value : defaultValue);
+}
 
 /**
  * Unwraps the `Some` value or throws if the value is `None`.
