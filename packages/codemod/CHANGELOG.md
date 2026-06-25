@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.2](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.1...codemod-v0.2.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* **codemod:** unwrap single-child JSX fragment ([#74](https://github.com/alanrsoares/onrails/issues/74)) ([0217862](https://github.com/alanrsoares/onrails/commit/021786294d2df26f0186250f77ed95380ef4e287))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/maybe bumped to 0.2.1
+    * @onrails/pattern bumped to 0.2.1
+    * @onrails/result bumped to 0.2.1
+
 ## [0.2.1](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.0...codemod-v0.2.1) (2026-06-18)
 
 

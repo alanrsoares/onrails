@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.1](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.0...maybe-v0.2.1) (2026-06-25)
+
+
+### Features
+
+* **maybe:** currying and fluent alignment ([62c12bf](https://github.com/alanrsoares/onrails/commit/62c12bf8ad1223cf5fa9441d777481f1485eb53f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.2.1
+  * peerDependencies
+    * @onrails/result bumped to 0.2.1
+
 ## [0.2.0](https://github.com/alanrsoares/onrails/compare/maybe-v0.1.4...maybe-v0.2.0) (2026-06-18)
 
 

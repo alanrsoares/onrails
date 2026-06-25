@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/alanrsoares/onrails/compare/docgen-v1.0.1...docgen-v1.1.0) (2026-06-25)
+
+
+### Features
+
+* **docgen:** add in-memory compiler host seam ([9b3946c](https://github.com/alanrsoares/onrails/commit/9b3946c028c20eb71db5641f7b731c75681eca5b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/pattern bumped to 0.2.1
+    * @onrails/result bumped to 0.2.1
+
 ## [1.0.1](https://github.com/alanrsoares/onrails/compare/docgen-v1.0.0...docgen-v1.0.1) (2026-06-22)
 
 

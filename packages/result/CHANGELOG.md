@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/alanrsoares/onrails/compare/result-v0.2.0...result-v0.2.1) (2026-06-25)
+
+
+### Features
+
+* **result:** add dual-form unwrapOr and unwrap ([f923a3a](https://github.com/alanrsoares/onrails/commit/f923a3ad003aba470f3d6d29b37d29ae10a9e6e0))
+
 ## [0.2.0](https://github.com/alanrsoares/onrails/compare/result-v0.1.4...result-v0.2.0) (2026-06-18)
 
 
