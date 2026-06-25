@@ -37,6 +37,16 @@ export interface ApiPackage {
 /** Maps each package name to the set of symbol names it exports. */
 export type ExportsByPackage = ReadonlyMap<string, ReadonlyMap<string, SymbolKind>>;
 
+export interface ApiCompilerHost {
+  fileExists(path: string): boolean;
+  readFile(path: string): string | undefined;
+  writeFile(path: string, content: string): void;
+  mkdir(path: string): void;
+  mkdtemp(prefix: string): string;
+  rm(path: string): void;
+  createProgram(rootNames: readonly string[], options: ts.CompilerOptions): ts.Program;
+}
+
 export interface ApiDocsOptions {
   /**
    * Resolve a symbol's category. Receives the JSDoc tags so a custom strategy
@@ -56,4 +66,6 @@ export interface ApiDocsOptions {
    * local anchor.
    */
   resolveLink?: (symbol: string, currentPackage: string, exports: ExportsByPackage) => string;
+  /** Optional compiler/filesystem host abstraction. Defaults to the real system/filesystem. */
+  host?: ApiCompilerHost;
 }

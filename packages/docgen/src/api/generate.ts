@@ -1,7 +1,7 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { isErr, ok, type Result, trySync } from "@onrails/result";
 import { type Categorize, defaultCategorize, extractExports } from "./extract.js";
+import { defaultCompilerHost } from "./host.js";
 import { renderPackageMdx } from "./render.js";
 import { toError } from "./to-error.js";
 import type {
@@ -11,12 +11,6 @@ import type {
   ExportsByPackage,
   SymbolKind,
 } from "./types.js";
-
-// fs writes are a boundary — a safe, Result-returning writer.
-const writeMdx = trySync((out: string, mdx: string) => {
-  mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, mdx, "utf-8");
-}, toError);
 
 /**
  * Generate API-reference MDX for each package from its TypeScript source +
@@ -29,12 +23,13 @@ export const generateApiDocs = (
   packages: readonly ApiPackage[],
   opts: ApiDocsOptions = {},
 ): Result<readonly string[], Error> => {
+  const host = opts.host ?? defaultCompilerHost;
   const categorize: Categorize = (name, pkg, tags) =>
     opts.categorize?.(name, pkg, tags) ?? defaultCategorize(name, pkg, tags);
 
   const parsed: { pkg: ApiPackage; symbols: DocSymbol[] }[] = [];
   for (const pkg of packages) {
-    const extracted = extractExports(pkg.entry, pkg.name, categorize);
+    const extracted = extractExports(pkg.entry, pkg.name, categorize, host);
     if (isErr(extracted)) return extracted;
     parsed.push({ pkg, symbols: extracted.value });
   }
@@ -55,6 +50,11 @@ export const generateApiDocs = (
       return [pkg.name, map];
     }),
   );
+
+  const writeMdx = trySync((out: string, mdx: string) => {
+    host.mkdir(dirname(out));
+    host.writeFile(out, mdx);
+  }, toError);
 
   const written: string[] = [];
   for (const { pkg, symbols } of parsed) {

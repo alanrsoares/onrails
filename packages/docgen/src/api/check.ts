@@ -1,10 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isErr, type Result, trySync } from "@onrails/result";
 import ts from "typescript";
 import { extractExports } from "./extract.js";
+import { defaultCompilerHost } from "./host.js";
 import { toError } from "./to-error.js";
+import type { ApiCompilerHost } from "./types.js";
 
 /** A package whose public-API `@example` blocks should be compile-checked. */
 export interface ExamplePackage {
@@ -24,6 +25,8 @@ export interface CheckExamplesOptions {
    * examples; values are source paths relative to `baseUrl`.
    */
   readonly paths: ts.MapLike<string[]>;
+  /** Optional compiler/filesystem host abstraction. Defaults to the real system/filesystem. */
+  readonly host?: ApiCompilerHost;
 }
 
 /** A single `@example` that no longer compiles against its API. */
@@ -100,11 +103,11 @@ type Parsed = { examples: Example[]; exportsByPkg: Map<string, string[]> };
 
 // Parse every package once: collect examples + base export names. Throws (caught
 // by the outer trySync) if a package fails to parse.
-const parsePackages = (packages: readonly ExamplePackage[]): Parsed => {
+const parsePackages = (packages: readonly ExamplePackage[], host: ApiCompilerHost): Parsed => {
   const examples: Example[] = [];
   const exportsByPkg = new Map<string, string[]>();
   for (const pkg of packages) {
-    const extracted = extractExports(pkg.entry, pkg.name, () => "Core");
+    const extracted = extractExports(pkg.entry, pkg.name, () => "Core", host);
     if (isErr(extracted)) {
       throw new Error(`failed to parse ${pkg.name}: ${extracted.error.message}`);
     }
@@ -125,11 +128,12 @@ const parsePackages = (packages: readonly ExamplePackage[]): Parsed => {
 const compileBuilt = (
   built: readonly Built[],
   compilerOptions: ts.CompilerOptions,
+  host: ApiCompilerHost,
 ): Map<string, ts.Diagnostic[]> => {
   for (const b of built) {
-    writeFileSync(b.file, buildModule(b.ex.body, b.ex.pkgName, b.exports, b.stubs));
+    host.writeFile(b.file, buildModule(b.ex.body, b.ex.pkgName, b.exports, b.stubs));
   }
-  const program = ts.createProgram(
+  const program = host.createProgram(
     built.map((b) => b.file),
     compilerOptions,
   );
@@ -150,8 +154,9 @@ const resolveStubs = (
   built: readonly Built[],
   compilerOptions: ts.CompilerOptions,
   maxRounds: number,
+  host: ApiCompilerHost,
 ): Map<string, ts.Diagnostic[]> => {
-  let byFile = compileBuilt(built, compilerOptions);
+  let byFile = compileBuilt(built, compilerOptions, host);
   for (let round = 0; round < maxRounds; round++) {
     let added = false;
     for (const b of built) {
@@ -164,7 +169,7 @@ const resolveStubs = (
       }
     }
     if (!added) break;
-    byFile = compileBuilt(built, compilerOptions);
+    byFile = compileBuilt(built, compilerOptions, host);
   }
   return byFile;
 };
@@ -222,6 +227,7 @@ export const checkExamples = (
   opts: CheckExamplesOptions,
 ): Result<CheckReport, Error> =>
   trySync((): CheckReport => {
+    const host = opts.host ?? defaultCompilerHost;
     const compilerOptions: ts.CompilerOptions = {
       target: ts.ScriptTarget.ESNext,
       module: ts.ModuleKind.ESNext,
@@ -236,9 +242,9 @@ export const checkExamples = (
       baseUrl: opts.baseUrl,
       paths: opts.paths,
     };
-    const { examples, exportsByPkg } = parsePackages(packages);
+    const { examples, exportsByPkg } = parsePackages(packages, host);
 
-    const tmp = mkdtempSync(join(tmpdir(), "docgen-examples-"));
+    const tmp = host.mkdtemp(join(tmpdir(), "docgen-examples-"));
     try {
       const built: Built[] = examples.map((ex, i) => ({
         ex,
@@ -247,11 +253,11 @@ export const checkExamples = (
         exports: exportsByPkg.get(ex.pkgName) ?? [],
       }));
 
-      const byFile = resolveStubs(built, compilerOptions, MAX_STUB_ROUNDS);
+      const byFile = resolveStubs(built, compilerOptions, MAX_STUB_ROUNDS, host);
       const failures = collectFailures(built, byFile, NOISE_CODES);
 
       return { total: examples.length, packages: packages.length, failures };
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      host.rm(tmp);
     }
   }, toError)();

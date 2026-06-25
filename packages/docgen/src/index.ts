@@ -10,8 +10,10 @@ export type {
 export { checkExamples } from "./api/check.js";
 export { defaultCategorize, extractExports } from "./api/extract.js";
 export { generateApiDocs } from "./api/generate.js";
+export { defaultCompilerHost } from "./api/host.js";
 export { defaultResolveLink, renderPackageMdx, slugify } from "./api/render.js";
 export type {
+  ApiCompilerHost,
   ApiDocsOptions,
   ApiPackage,
   DocParam,

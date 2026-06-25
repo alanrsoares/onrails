@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
 import { err, flatMap, ok, type Result, trySync } from "@onrails/result";
 import ts from "typescript";
+import { defaultCompilerHost } from "./host.js";
 import { toError } from "./to-error.js";
-import type { DocParam, DocSymbol } from "./types.js";
+import type { ApiCompilerHost, DocParam, DocSymbol } from "./types.js";
 
 /** Resolves a symbol's category from JSDoc tags + package context. */
 export type Categorize = (
@@ -222,11 +223,6 @@ const COMPILER_OPTIONS: ts.CompilerOptions = {
 // The TS compiler is a third-party boundary — both program creation and the
 // symbol walk can throw (e.g. synthesized signatures whose getDeclaration() is
 // typed non-null but is undefined at runtime). Wrap both as Result.
-const createProgram = trySync(
-  (entryPath: string) => ts.createProgram([entryPath], COMPILER_OPTIONS),
-  toError,
-);
-
 const walkExports = trySync(
   (checker: ts.TypeChecker, moduleSymbol: ts.Symbol, packageName: string, categorize: Categorize) =>
     moduleSymbols(checker, moduleSymbol, packageName, categorize),
@@ -237,9 +233,14 @@ export const extractExports = (
   entry: string,
   packageName: string,
   categorize: Categorize,
+  host: ApiCompilerHost = defaultCompilerHost,
 ): Result<DocSymbol[], Error> => {
   const absoluteEntry = resolve(entry);
-  return flatMap(createProgram(absoluteEntry), (prog) => {
+  const createProgram = trySync(
+    () => host.createProgram([absoluteEntry], COMPILER_OPTIONS),
+    toError,
+  );
+  return flatMap(createProgram(), (prog) => {
     const checker = prog.getTypeChecker();
     const sourceFile = prog.getSourceFile(absoluteEntry);
     if (!sourceFile) return err(new Error(`Could not find source file for ${entry}`));
