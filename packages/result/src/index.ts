@@ -51,6 +51,7 @@ export {
   tap,
   tapErr,
   trySync,
+  unwrap,
   unwrapErr,
   unwrapOk,
   unwrapOr,

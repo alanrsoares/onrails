@@ -314,8 +314,16 @@ export function match(
  * unwrapOr(parsedSetting, "default-value");
  * ```
  */
-export const unwrapOr = <T, E>(result: Result<T, E>, defaultValue: T): T =>
-  isOk(result) ? result.value : defaultValue;
+export function unwrapOr<T, E>(result: Result<T, E>, defaultValue: T): T;
+export function unwrapOr<T>(defaultValue: T): <E>(result: Result<T, E>) => T;
+export function unwrapOr(...args: [Result<unknown, unknown>, unknown] | [unknown]): unknown {
+  if (args.length === 2) {
+    const [result, defaultValue] = args;
+    return isOk(result) ? result.value : defaultValue;
+  }
+  const defaultValue = args[0];
+  return (result: Result<unknown, unknown>) => (isOk(result) ? result.value : defaultValue);
+}
 
 /**
  * Test/assert helper — returns the `Ok` value, or **throws the original `Err`
@@ -338,6 +346,9 @@ export function unwrapOk<T, E>(result: Result<T, E>): T {
   if (isErr(result)) throw result.error;
   return result.value;
 }
+
+/** Alias of {@link unwrapOk} for syntax cohesion with `@onrails/maybe`. */
+export const unwrap = unwrapOk;
 
 /**
  * Test/assert helper — returns the `Err` value, or **throws a `TypeError`**

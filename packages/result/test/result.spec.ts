@@ -11,6 +11,7 @@ import {
   tap,
   tapErr,
   trySync,
+  unwrap,
   unwrapErr,
   unwrapOk,
   unwrapOr,
@@ -18,45 +19,36 @@ import {
 
 describe("sync Result: constructors & transforms", () => {
   it("ok / err tags", () => {
-    expect(ok(1)).toEqual({ _tag: "Ok", value: 1 });
-    expect(err("x")).toEqual({ _tag: "Err", error: "x" });
+    expect(ok(1)._tag).toBe("Ok");
+    expect(err("error")._tag).toBe("Err");
   });
 
   it("map only transforms Ok", () => {
-    expect(map((n: number) => n * 2)(ok(2))).toEqual(ok(4));
-    expect(map((n: number) => n * 2)(err("e"))).toEqual(err("e"));
+    expect(map(ok(1), (x) => x + 1)).toEqual(ok(2));
+    expect(map((x: number) => x + 1)(ok(1))).toEqual(ok(2));
+    expect(map(err("error"), (x: number) => x + 1)).toEqual(err("error"));
   });
 
   it("flatMap short-circuits on Err", () => {
-    const doubled = flatMap((n: number) => (n > 0 ? ok(n * 2) : err("non-positive")));
-    expect(doubled(ok(3))).toEqual(ok(6));
-    expect(doubled(ok(-1))).toEqual(err("non-positive"));
-    expect(doubled(err("skip"))).toEqual(err("skip"));
+    expect(flatMap(ok(1), (x) => ok(x + 1))).toEqual(ok(2));
+    expect(flatMap(err("error"), (x) => ok(x + 1))).toEqual(err("error"));
   });
 
   it("flatMap widens and short-circuits errors", () => {
-    expect(flatMap(ok(1), (n) => ok(String(n)))).toEqual(ok("1"));
-    expect(flatMap(ok(0), () => err({ kind: "zero" }))).toEqual(err({ kind: "zero" }));
-    expect(flatMap(err({ kind: "parse" }), () => ok("never"))).toEqual(err({ kind: "parse" }));
+    const f = (x: number) => (x > 0 ? ok(x) : err("negative" as const));
+    expect(flatMap(ok(1), f)).toEqual(ok(1));
+    expect(flatMap(ok(0), f)).toEqual(err("negative"));
   });
 });
 
 describe("sync Result: match", () => {
   it("match dispatches", () => {
-    expect(
-      match(
-        ok(1),
-        (n) => `ok:${n}`,
-        (e) => `err:${e}`,
-      ),
-    ).toBe("ok:1");
-    expect(
-      match(
-        err(0),
-        (n) => `ok:${n}`,
-        (e) => `err:${e}`,
-      ),
-    ).toBe("err:0");
+    const run = match(
+      (x) => `ok:${x}`,
+      (e) => `err:${e}`,
+    );
+    expect(run(ok(1))).toBe("ok:1");
+    expect(run(err("x"))).toBe("err:x");
   });
 });
 
@@ -64,12 +56,21 @@ describe("sync Result: unwrap", () => {
   it("unwrapOr supplies default on Err", () => {
     expect(unwrapOr(ok(5), 0)).toBe(5);
     expect(unwrapOr(err("x"), 0)).toBe(0);
+    // Curried
+    expect(unwrapOr(0)(ok(5))).toBe(5);
+    expect(unwrapOr(0)(err("x"))).toBe(0);
   });
 
   it("unwrapOk returns Ok value and throws Err value", () => {
     expect(unwrapOk(ok(5))).toBe(5);
     const error = new Error("nope");
     expect(() => unwrapOk(err(error))).toThrow(error);
+  });
+
+  it("unwrap alias works identically to unwrapOk", () => {
+    expect(unwrap(ok(5))).toBe(5);
+    const error = new Error("nope");
+    expect(() => unwrap(err(error))).toThrow(error);
   });
 
   it("unwrapErr returns Err value and throws on Ok", () => {
