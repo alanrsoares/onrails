@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.1](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.0...maybe-v0.2.1) (2026-07-03)
+
+
+### Features
+
+* **maybe:** currying and fluent alignment ([62c12bf](https://github.com/alanrsoares/onrails/commit/62c12bf8ad1223cf5fa9441d777481f1485eb53f))
+* **maybe:** own dual-form dispatch in one combinator ([#77](https://github.com/alanrsoares/onrails/issues/77)) ([eb56fab](https://github.com/alanrsoares/onrails/commit/eb56fab1b398979b1e31f756a55776bcb069cf3f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.3.0
+  * peerDependencies
+    * @onrails/result bumped to 0.3.0
+
 ## [0.2.0](https://github.com/alanrsoares/onrails/compare/maybe-v0.1.4...maybe-v0.2.0) (2026-06-18)
 
 

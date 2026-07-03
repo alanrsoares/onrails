@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/alanrsoares/onrails/compare/result-v0.2.0...result-v0.3.0) (2026-07-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **result:** removed parallelTupleAsync (use ResultAsync.combineTupleParallel), validateAllArray/validateTupleArray (use validateAll/validateTuple), railway() and all *Named step factories (use the Railway class builder), subpaths /$ /interop /validation (import from the package index), compat-shape returns from core flatMap/andThen callbacks, and Ok<Result> auto-flattening in fromResultPromise/fromAsync.
+
+### Features
+
+* **result:** add dual-form unwrapOr and unwrap ([f923a3a](https://github.com/alanrsoares/onrails/commit/f923a3ad003aba470f3d6d29b37d29ae10a9e6e0))
+* **result:** one name per op across surfaces ([#79](https://github.com/alanrsoares/onrails/issues/79)) ([bf224d2](https://github.com/alanrsoares/onrails/commit/bf224d2a47e2c199a904c24113612a3b648f842c))
+
 ## [0.2.0](https://github.com/alanrsoares/onrails/compare/result-v0.1.4...result-v0.2.0) (2026-06-18)
 
 
