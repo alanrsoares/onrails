@@ -257,6 +257,29 @@ const html = match(parsed, (cfg) => render(cfg), (e) => renderError(e));
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
+### of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Fantasy Land `pure` — alias of [ok](#ok-ƒ). One lift name shared across the
+trio (`of` / `Maybe.of` / `ResultAsync.of`) for generic and FL-style code.
+
+```typescript
+function of<T, E = never>(value: T): Result<T, E>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `T` |  |
+
+#### Example
+
+```ts
+const r = of(42);   // Result<number, never> — identical to ok(42)
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
 ### ok <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts a value into the success track.
@@ -341,6 +364,31 @@ function recover<T, E, F>(fn: (error: E) => Result<T, F>): (result: Result<T, E>
 recover(networkResult, (e) =>
   e.kind === "rate_limit" ? ok(cachedBody) : err(e),
 );
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### show <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Debug printer — renders a result as `Ok(…)` / `Err(…)` for logs. Payloads
+print as JSON (values are plain data by design); non-JSON payloads fall
+back to `String(...)`.
+
+```typescript
+function show<T, E>(result: Result<T, E>): string
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `result` | `Result<T, E>` |  |
+
+#### Example
+
+```ts
+show(ok(1));               // 'Ok(1)'
+show(err({ kind: "e" })); // 'Err({"kind":"e"})'
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -853,6 +901,24 @@ static ok<T, E>(value: T): ResultAsync<T, E>
 ```ts
 const r = ResultAsync.ok(42);   // ResultAsync<number, never>
 ```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### ResultAsync.of <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Fantasy Land `pure` — alias of [ResultAsync.ok](#resultasyncok-ƒ). One lift name
+shared across the trio (`of` / `Maybe.of` / `ResultAsync.of`).
+
+```typescript
+static of<T>(value: T): ResultAsync<T, never>
+static of<T, E>(value: T): ResultAsync<T, E>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `T` |  |
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
