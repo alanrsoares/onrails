@@ -69,7 +69,7 @@ To keep codebases readable and consistent, follow the four-tier guideline when c
 | **1** | 1–2 steps, linear | direct data-first calls or method chains |
 | **2** | 3+ steps, linear | `pipe` or `flow` |
 | **3** | branchy, value reused | `tryGen` escape hatch |
-| **4** | 4+ named steps, mixed IO | `Railway` or `railway()` steps |
+| **4** | 4+ named steps, mixed IO | `Railway` builder |
 
 `/fluent` is documented as app-edge sugar only — never in library or service internals. For examples illustrating Tier 1-4 usage patterns, see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
 
@@ -78,7 +78,7 @@ To keep codebases readable and consistent, follow the four-tier guideline when c
 `@onrails/result` ships [Agent Skills](https://tanstack.com/intent) under `packages/result/skills/`, versioned with the package and auto-discovered via [`@tanstack/intent`](https://github.com/TanStack/intent):
 
 - **`result-composition`** — primitive composition, dual-form currying, pipe/flow.
-- **`railway-do-notation`** — named-context workflows, Railway builder, functional railway steps.
+- **`railway-do-notation`** — named-context workflows with the Railway builder.
 
 Once `@onrails/result` is a dependency, wire the skills into your agent config (`AGENTS.md` / `CLAUDE.md`) and load them on demand:
 

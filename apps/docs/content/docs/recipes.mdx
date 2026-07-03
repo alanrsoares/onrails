@@ -1,6 +1,6 @@
 ---
 title: Recipes
-description: Composition patterns — point-free pipelines, generator do-notation, the Railway builder, and reusable step factories.
+description: Composition patterns — point-free pipelines, generator do-notation, and the Railway builder.
 ---
 
 onrails gives you several ways to compose fallible steps. Reach for the simplest
@@ -11,7 +11,7 @@ one that fits; escalate only when the shape demands it.
 | **1** | 1–2 steps, linear | direct data-first calls |
 | **2** | 3+ steps, linear | `pipe` / `flow` (point-free) |
 | **3** | branchy, a value reused across steps | `tryGen` generator |
-| **4** | 4+ named steps, mixed sync/async IO | `Railway` / `railway()` builder |
+| **4** | 4+ named steps, mixed sync/async IO | `Railway` builder |
 
 <Callout title="Tip">
   Hover any token in the snippets below to see its inferred type — inference is
@@ -126,35 +126,6 @@ const summary = Railway.fromSync("id", () => IdSchema.parse(raw), toError)
 - `derive` adds a pure value computed from the context.
 - `select` collapses the final context into your result.
 
-## Reusable steps (`railway(...)`)
-
-The same workflow as a flat list of step factories — handy when you want to name,
-extract, and reuse individual steps across workflows.
-
-```ts
-import {
-  deriveNamed,
-  fromPromiseNamed,
-  parseWith,
-  railway,
-  requireNamed,
-  select,
-} from "@onrails/result/railway";
-
-const summary = railway(
-  rawId,
-  parseWith(IdSchema, toError).as("id"),
-  fromPromiseNamed("row", ({ id }) => db.profiles.find(id), toError),
-  requireNamed("profile", "row", ({ id }) => ({ kind: "not_found" as const, id })),
-  deriveNamed("greeting", ({ profile }) => `Hi ${profile.name}`),
-  select(({ greeting }) => greeting),
-);
-```
-
-Both builders produce the same `ResultAsync` and the same inferred error union —
-pick the fluent `Railway` for a single workflow, or the `railway()` step list when
-the steps are worth naming and sharing.
-
 > `@onrails/result/fluent` (`fluent(r)` / `fluentAsync(ra)`) is app-edge sugar for
 > dot-chaining — keep it out of library and service internals.
 
@@ -186,18 +157,19 @@ const decodeUser = (raw: unknown) => {
 };
 ```
 
-Because a Zod schema is just `{ parse }`, it drops straight into the Railway
-`parseWith` step factory — no adapter needed:
+Because a Zod schema's `.parse` is just a throwing function, it drops straight
+into a `Railway.fromSync` starter — no adapter needed:
 
 ```ts twoslash
-import { parseWith } from "@onrails/result/railway";
+import { Railway } from "@onrails/result/railway";
 
 // ---cut-start---
 type Invalid = { kind: "invalid"; issues: string[] };
 declare const UserInput: { parse: (raw: unknown) => { email: string; age: number } };
 declare const toInvalid: (e: unknown) => Invalid;
+declare const raw: unknown;
 // ---cut-end---
-parseWith(UserInput, toInvalid).as("input"); // the first step of a railway(...)
+Railway.fromSync("input", () => UserInput.parse(raw), toInvalid); // the first step of a workflow
 ```
 
 ## Querying with Drizzle
