@@ -22,6 +22,7 @@ type Result<T, E> =
 - `flatMap` is the canonical bind and widens error types (`E | F`).
 - `match` is the canonical terminal collapse — positional, dual-form.
 - For files that also import `match` from `ts-pattern`, dissolve the collision with a namespace import (`import * as R from "@onrails/result"` → `R.match`).
+- `of` is the Fantasy Land `pure` alias of `ok`, mirrored by `ResultAsync.of` (`Maybe.of` follows in RFC 0002); `show(r)` prints `Ok(…)` / `Err(…)` for logs (fluent's `toString` delegates to it).
 - `tap` / `tapErr` observe a track without changing the carried value.
 - `recover` binds the error track and may return a failed workflow back to success.
 - `pipe(value, ...fns)` is the variadic value-first pipe (up to 9 steps); `flow(...fns)` is the variadic point-free composition in `@onrails/result/pipe`.

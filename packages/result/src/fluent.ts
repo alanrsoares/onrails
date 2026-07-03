@@ -1,5 +1,16 @@
 import type { ResultAsync } from "./async.js";
-import { bimap, flatMap, map, mapErr, match, recover, tap, tapErr, unwrapOr } from "./result.js";
+import {
+  bimap,
+  flatMap,
+  map,
+  mapErr,
+  match,
+  recover,
+  show,
+  tap,
+  tapErr,
+  unwrapOr,
+} from "./result.js";
 import type { Result } from "./types.js";
 
 /** Opt-in dot chaining over a sync {@link Result} */
@@ -16,6 +27,10 @@ export type FluentResult<T, E> = {
 
   match: <U>(onOk: (value: T) => U, onErr: (error: E) => U) => U;
   unwrapOr: (defaultValue: T) => T;
+  /** Exit the wrapper — hand back the canonical plain-data result. */
+  toResult: () => Result<T, E>;
+  /** Debug terminal — `Ok(…)` / `Err(…)`, same output as {@link show}. */
+  toString: () => string;
 };
 
 /**
@@ -42,6 +57,8 @@ export const fluent = <T, E>(result: Result<T, E>): FluentResult<T, E> => ({
 
   match: (onOk, onErr) => match(result, onOk, onErr),
   unwrapOr: (defaultValue) => unwrapOr(result, defaultValue),
+  toResult: () => result,
+  toString: () => show(result),
 });
 
 /** Opt-in dot chaining over {@link ResultAsync} */

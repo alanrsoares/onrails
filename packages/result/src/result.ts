@@ -18,6 +18,17 @@ export const ok = <T, E = never>(value: T): Result<T, E> => ({
 });
 
 /**
+ * Fantasy Land `pure` — alias of {@link ok}. One lift name shared across the
+ * trio (`of` / `Maybe.of` / `ResultAsync.of`) for generic and FL-style code.
+ *
+ * @example
+ * ```ts
+ * const r = of(42);   // Result<number, never> — identical to ok(42)
+ * ```
+ */
+export const of = ok;
+
+/**
  * Lifts a value into the error track.
  *
  * @example
@@ -410,3 +421,26 @@ export function pipe(value: unknown, ...fns: ReadonlyArray<(x: unknown) => unkno
   }
   return acc;
 }
+
+const printPayload = (payload: unknown): string => {
+  try {
+    return JSON.stringify(payload) ?? String(payload);
+  } catch {
+    // cyclic or non-JSON payload — a debug printer must not throw
+    return String(payload);
+  }
+};
+
+/**
+ * Debug printer — renders a result as `Ok(…)` / `Err(…)` for logs. Payloads
+ * print as JSON (values are plain data by design); non-JSON payloads fall
+ * back to `String(...)`.
+ *
+ * @example
+ * ```ts
+ * show(ok(1));               // 'Ok(1)'
+ * show(err({ kind: "e" })); // 'Err({"kind":"e"})'
+ * ```
+ */
+export const show = <T, E>(result: Result<T, E>): string =>
+  isOk(result) ? `Ok(${printPayload(result.value)})` : `Err(${printPayload(result.error)})`;

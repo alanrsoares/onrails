@@ -136,6 +136,33 @@ const TABLE: readonly Row[] = [
     compatSync: [],
     compatAsync: ["resolve"],
   },
+  // FL pure — of aliases ok on every carrier; compat mirrors neverthrow, which has no of
+  {
+    label: "of",
+    core: "of",
+    fluent: [],
+    fluentAsync: [],
+    compatSync: [],
+    compatAsync: [],
+  },
+  // debug printer — free fn on core, terminal on the fluent wrapper
+  {
+    label: "show",
+    core: "show",
+    fluent: ["toString"],
+    fluentAsync: [],
+    compatSync: [],
+    compatAsync: [],
+  },
+  // exit the fluent bracket back to plain data
+  {
+    label: "toResult",
+    core: null,
+    fluent: ["toResult"],
+    fluentAsync: [],
+    compatSync: [],
+    compatAsync: [],
+  },
 ];
 
 // compat members that exist ONLY to mirror neverthrow or bridge to core —

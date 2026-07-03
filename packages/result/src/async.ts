@@ -134,6 +134,16 @@ export class ResultAsync<T, E> {
   }
 
   /**
+   * Fantasy Land `pure` — alias of {@link ResultAsync.ok}. One lift name
+   * shared across the trio (`of` / `Maybe.of` / `ResultAsync.of`).
+   */
+  static of<T>(value: T): ResultAsync<T, never>;
+  static of<T, E>(value: T): ResultAsync<T, E>;
+  static of<T, E = never>(value: T): ResultAsync<T, E> {
+    return ResultAsync.ok(value);
+  }
+
+  /**
    * Lifts an error into an `Err` async result.
    *
    * @example
