@@ -1,3 +1,5 @@
+import { UNSAFE_UNWRAP_MEMBER_CALL_RE, UNSAFE_UNWRAP_MEMBER_RENAMES } from "./boundary-spec.js";
+
 export const SKIP = new Set([
   "node_modules",
   "dist",
@@ -16,7 +18,7 @@ export const DEP_KEYS = ["dependencies", "devDependencies", "peerDependencies"] 
 export const TYPE_ONLY_NATIVE = new Set(["Result", "Ok", "Err", "UnexpectedError"]);
 export const COMPAT_ONLY_PATTERNS = [
   { pattern: /\bResult\.(combine|fromThrowable)\b/, label: "Result static helper" },
-  { pattern: /\._unsafeUnwrap(Err)?\s*\(/, label: "unsafe compat unwrap" },
+  { pattern: UNSAFE_UNWRAP_MEMBER_CALL_RE, label: "unsafe compat unwrap" },
 ] as const;
 export const RESULT_SPECIFIC_CHAIN_METHODS = new Set([
   "andThen",
@@ -57,8 +59,5 @@ export const TEE_METHODS = new Map([
   ["orTee", "tapErr"],
 ]);
 export const PREDICATE_METHODS = new Set(["isOk", "isErr"]);
-export const UNSAFE_UNWRAP_METHODS = new Map([
-  ["_unsafeUnwrap", "unwrapOk"],
-  ["_unsafeUnwrapErr", "unwrapErr"],
-]);
+export const UNSAFE_UNWRAP_METHODS = new Map(UNSAFE_UNWRAP_MEMBER_RENAMES);
 export const SAFE_BASE_PATTERNS = [/^(ok|err)\s*\(/, /^Result\./, /^[a-zA-Z_$][\w$]*$/] as const;
