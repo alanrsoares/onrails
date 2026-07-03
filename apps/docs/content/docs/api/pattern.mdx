@@ -507,23 +507,6 @@ export type IsExhaustive<T, Handled extends readonly unknown[]> = [
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
-### LockedMatchBuilder <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
-
-Result-locked variant of [MatchBuilder](#matchbuilder-class). Constructed via
-`match(...).returnType<R>()`. Now a thin type alias over `MatchBuilder`
-with the `Locked` phantom flag set — kept for backwards compatibility.
-
-```typescript
-export type LockedMatchBuilder<
-  T,
-  R,
-  HasInput extends boolean = false,
-  Handled extends readonly unknown[] = [],
-> = MatchBuilder<T, R, HasInput, Handled, true>;
-```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
 ### Narrow <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Narrows `input` when `pattern` is a shallow object, literal discriminant, or type predicate.

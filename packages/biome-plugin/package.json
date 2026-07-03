@@ -38,7 +38,8 @@
   ],
   "exports": {
     "./rules/no-promise-result.grit": "./rules/no-promise-result.grit",
-    "./rules/no-unsafe-unwrap.grit": "./rules/no-unsafe-unwrap.grit"
+    "./rules/no-unsafe-unwrap.grit": "./rules/no-unsafe-unwrap.grit",
+    "./rules/no-deprecated-synonyms.grit": "./rules/no-deprecated-synonyms.grit"
   },
   "scripts": {
     "typecheck": "echo 'noop (grit files only)'",

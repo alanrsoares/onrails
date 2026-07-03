@@ -114,4 +114,19 @@ describe("Maybe tap", () => {
     expect(onMiss(some(1))).toEqual(some(1));
     expect(misses).toBe(1);
   });
+
+  it("tapNone data-first runs effect on None only", () => {
+    let misses = 0;
+    const outNone = tapNone(none<number>(), () => {
+      misses += 1;
+    });
+    expect(outNone).toEqual(none());
+    expect(misses).toBe(1);
+
+    const outSome = tapNone(some(1), () => {
+      misses += 1;
+    });
+    expect(outSome).toEqual(some(1));
+    expect(misses).toBe(1);
+  });
 });

@@ -80,7 +80,7 @@ const show = <T, E>(r: Result<T, E>) =>
 
 | Path | Contents |
 |------|----------|
-| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder` |
+| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder` |
 | `@onrails/pattern/tag` | `matchTag` |
 
 See [DESIGN.md](./DESIGN.md).
