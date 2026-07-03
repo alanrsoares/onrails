@@ -130,7 +130,7 @@ if (isNone(fromNullable(user))) {
 Type-narrowing predicate: returns `true` when the value is `Some`.
 
 ```typescript
-function isSome<T>(maybe: Maybe<T>): maybe is Some<T>
+function isSome<T>(maybe: Maybe<T>): maybe is { readonly _tag: "Some"; readonly value: T; }
 ```
 
 #### Parameters
@@ -284,10 +284,9 @@ expect(unwrap(parseUser(raw))).toEqual(expected);
 
 ### unwrapOr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Returns the `Some` value, or `defaultValue` when the value is `None`.
-
 ```typescript
 function unwrapOr<T>(maybe: Maybe<T>, defaultValue: T): T
+function unwrapOr<T>(defaultValue: T): (maybe: Maybe<T>) => T
 ```
 
 #### Parameters
@@ -296,12 +295,6 @@ function unwrapOr<T>(maybe: Maybe<T>, defaultValue: T): T
 |---|---|---|
 | `maybe` | `Maybe<T>` |  |
 | `defaultValue` | `T` |  |
-
-#### Example
-
-```ts
-unwrapOr(fromNullable(user), { name: "guest" });
-```
 
 
 ## Collections

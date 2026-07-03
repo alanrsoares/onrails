@@ -377,18 +377,6 @@ export class MatchBuilder<
 }
 
 /**
- * Result-locked variant of {@link MatchBuilder}. Constructed via
- * `match(...).returnType<R>()`. Now a thin type alias over `MatchBuilder`
- * with the `Locked` phantom flag set — kept for backwards compatibility.
- */
-export type LockedMatchBuilder<
-  T,
-  R,
-  HasInput extends boolean = false,
-  Handled extends readonly unknown[] = [],
-> = MatchBuilder<T, R, HasInput, Handled, true>;
-
-/**
  * Start a pattern-matching expression. Two call shapes:
  *
  * - `match(value)` — data-first; subsequent `.exhaustive()` or

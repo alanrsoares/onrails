@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import * as fc from "fast-check";
+import type { Maybe } from "../src/maybe.js";
 import { flatMap, map, none, some } from "../src/maybe.js";
-import type { Maybe } from "../src/types.js";
 
 const arbMaybe: fc.Arbitrary<Maybe<number>> = fc.oneof(
   fc.integer().map((n) => some(n)),

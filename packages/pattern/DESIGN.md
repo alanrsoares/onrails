@@ -22,7 +22,7 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 
 ## Result-type seeding
 
-`match(x).returnType<R>()` flips the builder's `Locked` phantom flag — the returned `MatchBuilder` (aliased as `LockedMatchBuilder<T, R, …>` for backwards compatibility) constrains every subsequent `.with()` handler to return `R`. Use when branch return-type inference widens to a union narrower than the slot the match feeds into (`ReactNode`, an API DTO, etc.).
+`match(x).returnType<R>()` flips the builder's `Locked` phantom flag — the returned `MatchBuilder` constrains every subsequent `.with()` handler to return `R`. Use when branch return-type inference widens to a union narrower than the slot the match feeds into (`ReactNode`, an API DTO, etc.).
 
 ## Type tests
 
@@ -47,7 +47,7 @@ Runtime still throws if a value slips through (e.g. unsound cast on input).
 
 | Subpath | Purpose |
 |---------|---------|
-| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `LockedMatchBuilder`, `Pattern`, `Narrow`, `NarrowUnion`, `RemainingCases`, `IsExhaustive`, `NonExhaustiveError` |
+| `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder`, `Pattern`, `Narrow`, `NarrowUnion`, `RemainingCases`, `IsExhaustive`, `NonExhaustiveError` |
 | `@onrails/pattern/tag` | `matchTag` for `_tag` dispatch |
 
 ## Migration from ts-pattern
