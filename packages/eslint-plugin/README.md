@@ -20,6 +20,7 @@ export default [
     rules: {
       "@onrails/no-promise-result": "warn",
       "@onrails/no-unsafe-unwrap": "warn",
+      "@onrails/no-deprecated-synonyms": "warn",
     },
   },
 ];
@@ -46,6 +47,7 @@ export default [
 |---|---|
 | `@onrails/no-promise-result` | Flags `Promise<Result<…>>` in source — public APIs should return `ResultAsync` |
 | `@onrails/no-unsafe-unwrap` | Flags `_unsafeUnwrap*` outside test files |
+| `@onrails/no-deprecated-synonyms` | Flags deprecated synonyms (`chain`, `fold`, `getOrElse`, `of`, …) and suggests the canonical names |
 
 ## Caveats (v0)
 

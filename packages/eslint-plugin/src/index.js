@@ -131,6 +131,75 @@ const noUnsafeUnwrap = {
   },
 };
 
+/**
+ * Deprecated synonym → canonical rename tables. Hand-copied from
+ * `@onrails/codemod` `src/boundary-spec.ts` (cross-package imports are
+ * forbidden); `packages/codemod/test/boundary-conformance.spec.ts` keeps the
+ * copies in sync with the spec and the Biome `no-deprecated-synonyms.grit`.
+ */
+
+/** Flagged as `x.name(…)`. `isOk` / `isErr` map to the same-named free-function guards. */
+const DEPRECATED_METHOD_RENAMES = new Map([
+  ["chain", "flatMap"],
+  ["isOk", "isOk"],
+  ["isErr", "isErr"],
+]);
+
+/** Flagged as `name(…)`. */
+const DEPRECATED_CALL_RENAMES = new Map([
+  ["fold", "match"],
+  ["matchResult", "match"],
+  ["matchMaybe", "match"],
+  ["getOrElse", "unwrapOr"],
+  ["sequenceTupleAsync", "ResultAsync.combineTuple"],
+  ["collect", "combine"],
+  ["of", "ok"],
+]);
+
+/** @type {import('eslint').Rule.RuleModule} */
+const noDeprecatedSynonyms = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description:
+        "Flag deprecated railway/maybe synonyms (chain, fold, getOrElse, of, …) and suggest the canonical onrails names. Matching is name-based; same-named functions from other libraries are flagged too.",
+    },
+    schema: [],
+    messages: {
+      rename: "{{name}}() is a deprecated onrails synonym — use {{canonical}}() instead.",
+      narrowGuard:
+        "Deprecated .{{name}}() method — await the ResultAsync and narrow with the {{name}}() free function instead.",
+    },
+  },
+  create(context) {
+    return {
+      CallExpression(node) {
+        const callee = node.callee;
+        if (callee.type === "Identifier") {
+          const canonical = DEPRECATED_CALL_RENAMES.get(callee.name);
+          if (canonical) {
+            context.report({
+              node,
+              messageId: "rename",
+              data: { name: callee.name, canonical },
+            });
+          }
+          return;
+        }
+        if (callee.type !== "MemberExpression" || callee.property.type !== "Identifier") return;
+        const name = callee.property.name;
+        const canonical = DEPRECATED_METHOD_RENAMES.get(name);
+        if (!canonical) return;
+        context.report(
+          canonical === name
+            ? { node, messageId: "narrowGuard", data: { name } }
+            : { node, messageId: "rename", data: { name, canonical } },
+        );
+      },
+    };
+  },
+};
+
 /** @type {import('eslint').ESLint.Plugin} */
 const plugin = {
   meta: {
@@ -140,6 +209,7 @@ const plugin = {
   rules: {
     "no-promise-result": noPromiseResult,
     "no-unsafe-unwrap": noUnsafeUnwrap,
+    "no-deprecated-synonyms": noDeprecatedSynonyms,
   },
 };
 
@@ -153,6 +223,7 @@ export const configs = {
     rules: {
       "@onrails/result/no-promise-result": "warn",
       "@onrails/result/no-unsafe-unwrap": "warn",
+      "@onrails/result/no-deprecated-synonyms": "warn",
     },
   },
 };
