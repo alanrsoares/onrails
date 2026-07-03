@@ -1,3 +1,4 @@
+export type { Maybe, None, Some } from "./maybe.js";
 export {
   andThen,
   compact,
@@ -16,4 +17,3 @@ export {
   unwrap,
   unwrapOr,
 } from "./maybe.js";
-export type { Maybe, None, Some } from "./types.js";

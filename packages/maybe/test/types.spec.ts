@@ -1,5 +1,6 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
+import type { Maybe } from "../src/maybe.js";
 import {
   type andThen,
   flatMap,
@@ -11,7 +12,6 @@ import {
   tap,
   unwrapOr,
 } from "../src/maybe.js";
-import type { Maybe } from "../src/types.js";
 
 describe("Maybe types", () => {
   it("tags infer Maybe variants", () => {
