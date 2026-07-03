@@ -1,6 +1,25 @@
-import type { Maybe, None, Some } from "./types.js";
+import { dual } from "./internal/dual.js";
 
-export type { Maybe, None, Some } from "./types.js";
+/**
+ * Tagged optional value — a discriminated union over `_tag` where absence
+ * (`None`) is an expected outcome, not a failure. Construct with {@link some} /
+ * {@link none}, narrow with {@link isSome} / {@link isNone}, and collapse with
+ * {@link match}.
+ *
+ * @example
+ * ```ts
+ * function findUser(id: string): Maybe<User> {
+ *   return fromNullable(db.users.get(id));
+ * }
+ * ```
+ */
+export type Maybe<T> = { readonly _tag: "Some"; readonly value: T } | { readonly _tag: "None" };
+
+/** The `Some` branch of a {@link Maybe} — a present value tagged `"Some"`. */
+export type Some<T> = Extract<Maybe<T>, { _tag: "Some" }>;
+
+/** The `None` branch of a {@link Maybe} — expected absence, tagged `"None"`. */
+export type None = Extract<Maybe<never>, { _tag: "None" }>;
 
 /**
  * Lifts a value into the `Some` branch.
@@ -77,15 +96,10 @@ const mapImpl = <T, U>(maybe: Maybe<T>, fn: (value: T) => U): Maybe<U> =>
  * pipe(fromNullable(input), map((s) => s.trim())); // curried
  * ```
  */
-export function map<T, U>(maybe: Maybe<T>, fn: (value: T) => U): Maybe<U>;
-export function map<T, U>(fn: (value: T) => U): (maybe: Maybe<T>) => Maybe<U>;
-export function map(
-  ...args: [Maybe<unknown>, (value: unknown) => unknown] | [(value: unknown) => unknown]
-): unknown {
-  if (args.length === 2) return mapImpl(args[0], args[1]);
-  const fn = args[0];
-  return (maybe: Maybe<unknown>) => mapImpl(maybe, fn);
-}
+export const map: {
+  <T, U>(maybe: Maybe<T>, fn: (value: T) => U): Maybe<U>;
+  <T, U>(fn: (value: T) => U): (maybe: Maybe<T>) => Maybe<U>;
+} = dual(2, mapImpl);
 
 const flatMapImpl = <T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U> =>
   isSome(maybe) ? fn(maybe.value) : none<U>();
@@ -101,17 +115,10 @@ const flatMapImpl = <T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U
  * );
  * ```
  */
-export function flatMap<T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U>;
-export function flatMap<T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U>;
-export function flatMap(
-  ...args:
-    | [Maybe<unknown>, (value: unknown) => Maybe<unknown>]
-    | [(value: unknown) => Maybe<unknown>]
-): unknown {
-  if (args.length === 2) return flatMapImpl(args[0], args[1]);
-  const fn = args[0];
-  return (maybe: Maybe<unknown>) => flatMapImpl(maybe, fn);
-}
+export const flatMap: {
+  <T, U>(maybe: Maybe<T>, fn: (value: T) => Maybe<U>): Maybe<U>;
+  <T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U>;
+} = dual(2, flatMapImpl);
 
 /**
  * Neverthrow-compat alias of {@link flatMap} — same dual-form shape. Prefer
@@ -147,28 +154,18 @@ const matchImpl = <T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () =>
  * );
  * ```
  */
-export function match<T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U;
-export function match<T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U;
-export function match(
-  ...args:
-    | [Maybe<unknown>, (value: unknown) => unknown, () => unknown]
-    | [(value: unknown) => unknown, () => unknown]
-): unknown {
-  if (args.length === 3) return matchImpl(args[0], args[1], args[2]);
-  const [onSome, onNone] = args;
-  return (maybe: Maybe<unknown>) => matchImpl(maybe, onSome, onNone);
-}
+export const match: {
+  <T, U>(maybe: Maybe<T>, onSome: (value: T) => U, onNone: () => U): U;
+  <T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U;
+} = dual(3, matchImpl);
 
-export function unwrapOr<T>(maybe: Maybe<T>, defaultValue: T): T;
-export function unwrapOr<T>(defaultValue: T): (maybe: Maybe<T>) => T;
-export function unwrapOr(...args: [Maybe<unknown>, unknown] | [unknown]): unknown {
-  if (args.length === 2) {
-    const [maybe, defaultValue] = args;
-    return isSome(maybe) ? maybe.value : defaultValue;
-  }
-  const defaultValue = args[0];
-  return (maybe: Maybe<unknown>) => (isSome(maybe) ? maybe.value : defaultValue);
-}
+const unwrapOrImpl = <T>(maybe: Maybe<T>, defaultValue: T): T =>
+  isSome(maybe) ? maybe.value : defaultValue;
+
+export const unwrapOr: {
+  <T>(maybe: Maybe<T>, defaultValue: T): T;
+  <T>(defaultValue: T): (maybe: Maybe<T>) => T;
+} = dual(2, unwrapOrImpl);
 
 /**
  * Unwraps the `Some` value or throws if the value is `None`.
@@ -248,15 +245,10 @@ const tapImpl = <T>(maybe: Maybe<T>, fn: (value: T) => void): Maybe<T> => {
  * pipe(fromNullable(row), tap((r) => sink.push(r))); // curried — collect on Some
  * ```
  */
-export function tap<T>(maybe: Maybe<T>, fn: (value: T) => void): Maybe<T>;
-export function tap<T>(fn: (value: T) => void): (maybe: Maybe<T>) => Maybe<T>;
-export function tap(
-  ...args: [Maybe<unknown>, (value: unknown) => void] | [(value: unknown) => void]
-): unknown {
-  if (args.length === 2) return tapImpl(args[0], args[1]);
-  const fn = args[0];
-  return (maybe: Maybe<unknown>) => tapImpl(maybe, fn);
-}
+export const tap: {
+  <T>(maybe: Maybe<T>, fn: (value: T) => void): Maybe<T>;
+  <T>(fn: (value: T) => void): (maybe: Maybe<T>) => Maybe<T>;
+} = dual(2, tapImpl);
 
 const tapNoneImpl = <T>(maybe: Maybe<T>, fn: () => void): Maybe<T> => {
   if (isNone(maybe)) fn();
@@ -273,10 +265,7 @@ const tapNoneImpl = <T>(maybe: Maybe<T>, fn: () => void): Maybe<T> => {
  * pipe(fromNullable(hit), tapNone(() => metrics.miss())); // curried
  * ```
  */
-export function tapNone<T>(maybe: Maybe<T>, fn: () => void): Maybe<T>;
-export function tapNone<T>(fn: () => void): (maybe: Maybe<T>) => Maybe<T>;
-export function tapNone(...args: [Maybe<unknown>, () => void] | [() => void]): unknown {
-  if (args.length === 2) return tapNoneImpl(args[0], args[1]);
-  const fn = args[0];
-  return (maybe: Maybe<unknown>) => tapNoneImpl(maybe, fn);
-}
+export const tapNone: {
+  <T>(maybe: Maybe<T>, fn: () => void): Maybe<T>;
+  <T>(fn: () => void): (maybe: Maybe<T>) => Maybe<T>;
+} = dual(2, tapNoneImpl);
