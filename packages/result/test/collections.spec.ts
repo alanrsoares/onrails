@@ -1,11 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { validateAll, validateTuple } from "../src/collections.js";
 import { err, ok } from "../src/result.js";
-import {
-  validateAll,
-  validateAllArray,
-  validateTuple,
-  validateTupleArray,
-} from "../src/validation.js";
 
 describe("validation", () => {
   it("validateAll accumulates failures with a combiner", () => {
@@ -32,9 +27,9 @@ describe("validation", () => {
     expect(result).toEqual(err(["name", "email"]));
   });
 
-  it("array helpers collect every failure", () => {
-    expect(validateAllArray([ok(1), err("name"), err("email")])).toEqual(err(["name", "email"]));
-    expect(validateTupleArray([ok(1), err("name"), err("email")] as const)).toEqual(
+  it("without a combiner, collects every failure into an array", () => {
+    expect(validateAll([ok(1), err("name"), err("email")])).toEqual(err(["name", "email"]));
+    expect(validateTuple([ok(1), err("name"), err("email")] as const)).toEqual(
       err(["name", "email"]),
     );
   });

@@ -215,8 +215,6 @@ When one intermediate value is referenced multiple times in branchy logic, `flat
 
 ```ts
 import { tryGen, $ } from "@onrails/result/try-gen";
-// or the namesake subpath — same exports:
-import { tryGen, $ } from "@onrails/result/$";
 ```
 
 **a) Linear unwrap — same value reused downstream.** The point-free version would thread `user` through every closure; `$` names it once.
@@ -301,7 +299,7 @@ When you find yourself reaching for **any** of:
 - nullable Drizzle rows that must become required values
 - independent async branches that should run in parallel and merge by name
 
-…**stop and switch to the `railway-do-notation` skill**. `Railway.*` and `railway(...)` are designed for that territory and will read better than any amount of `pipe`/`flow` plumbing.
+…**stop and switch to the `railway-do-notation` skill**. `Railway.*` is designed for that territory and will read better than any amount of `pipe`/`flow` plumbing.
 
 ## When NOT to go point-free
 
@@ -321,5 +319,5 @@ The dual-form API lets you mix both styles freely: start point-free, drop to a n
 
 ## See also
 
-- [`packages/result/RECIPES.md`](../../RECIPES.md) — 13 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches, async pipelines, and functional railway pipelines.
+- [`packages/result/RECIPES.md`](../../RECIPES.md) — 13 worked recipes covering parser builders, ETL pipelines, strategy-parametrised flows, validator ladders, Maybe → Result crossings, parallel sub-workflows, `tryGen` escape hatches, async pipelines, and Railway workflow pipelines.
 - [`railway-do-notation`](../railway-do-notation/SKILL.md) — workflow-builder layer above this one. Use when named context wins over positional plumbing.

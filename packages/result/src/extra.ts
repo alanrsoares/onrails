@@ -3,14 +3,15 @@
  */
 
 import type { ResultAsync } from "./async.js";
+import type { InferErr, InferOk } from "./internal/infer.js";
 import { isErr, isOk } from "./result.js";
 import type { Result } from "./types.js";
 
-/** Extract error type from a {@link Result} */
-export type ErrOf<R> = R extends { _tag: "Err"; readonly error: infer E } ? E : never;
+/** Extract error type from a {@link Result} — alias of {@link InferErr} */
+export type ErrOf<R> = InferErr<R>;
 
-/** Extract success type from a {@link Result} */
-export type OkOf<R> = R extends { _tag: "Ok"; readonly value: infer T } ? T : never;
+/** Extract success type from a {@link Result} — alias of {@link InferOk} */
+export type OkOf<R> = InferOk<R>;
 
 /** Union of error types from a tuple/readonly array of results */
 export type UnionErrors<R extends readonly Result<unknown, unknown>[]> = {

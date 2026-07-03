@@ -77,6 +77,18 @@ describe("neverthrow compat — async", () => {
       ),
     ).toBe("net");
   });
+
+  it("andThen coerces a sync CompatResult return at the compat boundary", async () => {
+    const ra = ResultAsync.fromSafePromise(Promise.resolve(2)).andThen((n) => ok(n + 1));
+    const r = await ra;
+    expect(r._unsafeUnwrap()).toBe(3);
+  });
+
+  it("orElse coerces a compat recovery value at the compat boundary", async () => {
+    const ra = ResultAsync.err<number, string>("boom").orElse(() => ok(0));
+    const r = await ra;
+    expect(r._unsafeUnwrap()).toBe(0);
+  });
 });
 
 describe("neverthrow compat — tees", () => {

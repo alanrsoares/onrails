@@ -20,7 +20,7 @@ To keep codebases readable and consistent, follow the four-tier decision guideli
 | **1** | 1–2 steps, linear | direct data-first calls or method chains |
 | **2** | 3+ steps, linear | `pipe` or `flow` |
 | **3** | branchy, value reused | `tryGen` escape hatch |
-| **4** | 4+ named steps, mixed IO | `Railway` or `railway()` steps |
+| **4** | 4+ named steps, mixed IO | `Railway` builder |
 
 `/fluent` is documented as app-edge sugar only — never in library or service internals.
 
@@ -197,14 +197,14 @@ const requireOrder = requireRow(orderCache.get);
 Three independent async loads overlap in wall-clock time; downstream `.map` reshapes the tuple.
 
 ```ts
-import { pipe, parallelTupleAsync } from "@onrails/result";
+import { pipe, ResultAsync } from "@onrails/result";
 
 type ProfileError = { kind: "profile"; cause: unknown };
 type MetricsError = { kind: "metrics"; cause: unknown };
 
 const buildSummary = (userId: string) =>
   pipe(
-    parallelTupleAsync([
+    ResultAsync.combineTupleParallel([
       loadProfile(userId),                                                // ResultAsync<Profile, ProfileError>
       loadRecentMetrics(userId),                                          // ResultAsync<Metrics, MetricsError>
       loadFeatureFlags(userId),                                           // ResultAsync<Flags,   never>
@@ -220,7 +220,7 @@ const buildSummary = (userId: string) =>
 // ResultAsync<Summary, ProfileError | MetricsError>
 ```
 
-`parallelTupleAsync` preserves tuple positions, so destructuring stays type-safe. Use static `ResultAsync.combineTuple` if branches must run left-to-right.
+`ResultAsync.combineTupleParallel` preserves tuple positions, so destructuring stays type-safe. Use static `ResultAsync.combineTuple` if branches must run left-to-right.
 
 ---
 
@@ -435,41 +435,28 @@ The middle step can't go point-free: `profile` is reused across both the `flatMa
 
 ---
 
-## 13. Functional Railway pipelines (`railway` + named steps)
+## 13. Railway workflow pipelines (named-context builder)
 
-Use `railway(input, ...steps)` from `@onrails/result/railway` to build a multi-step async pipeline using point-free reusable step wrappers. If any step is async, the entire pipeline resolves to a `ResultAsync`.
+Use the `Railway` builder from `@onrails/result/railway` to build a multi-step async pipeline with named context fields. If any step is async, the entire pipeline resolves to a `ResultAsync`.
 
 ```ts
-import { railway, parseNamed, fromPromiseNamed, deriveNamed, select } from "@onrails/result/railway";
+import { Railway } from "@onrails/result/railway";
 import { type ResultAsync } from "@onrails/result";
 
 type Dashboard = { title: string };
-
-type IdContext = { readonly id: string };
-type ProfileContext = { readonly profile: Profile };
-type TitleContext = { readonly title: string };
 
 declare const IdSchema: { parse: (x: unknown) => string };
 declare const fetchProfile: (id: string) => Promise<Profile>;
 declare const toError: (e: unknown) => Error;
 
 const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
-  railway(
-    rawId,
-    parseNamed("id", IdSchema, toError),
-    fromPromiseNamed(
-      "profile",
-      ({ id }: IdContext) => fetchProfile(id),
-      toError,
-    ),
-    deriveNamed("title", ({ profile }: ProfileContext) =>
-      profile.name.toUpperCase(),
-    ),
-    select(({ title }: TitleContext) => ({ title })),
-  );
+  Railway.fromSync("id", () => IdSchema.parse(rawId), toError)
+    .fromPromise("profile", ({ id }) => fetchProfile(id), toError)
+    .derive("title", ({ profile }) => profile.name.toUpperCase())
+    .select(({ title }) => ({ title }));
 ```
 
-Every step now reads name-first (`parseNamed("id", …)`, `fromPromiseNamed("profile", …)`, `deriveNamed("title", …)`) so the field names line up at the left edge. `parseWith(schema).as("id")` remains for the fluent trailing-name style.
+Every step reads name-first (`fromSync("id", …)`, `fromPromise("profile", …)`, `derive("title", …)`) so the field names line up at the left edge, and each step's callback sees the fully-typed context accumulated so far — no manual context annotations needed.
 
 ---
 

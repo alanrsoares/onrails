@@ -1,3 +1,4 @@
+import { dual } from "./internal/dual.js";
 import type { Err, Ok, Result } from "./types.js";
 
 export type { Err, Ok, Result } from "./types.js";
@@ -58,11 +59,9 @@ export const isErr = <T, E>(result: Result<T, E>): result is Err<T, E> => result
 // Dual-form helpers — each export accepts either shape:
 //   data-first: `map(result, fn)`
 //   curried:    `map(fn)(result)`
-// Arity at the call site selects the overload.
+// Arity dispatch is derived from the internal `dual` combinator
+// (src/internal/dual.ts); the const annotation carries the public overloads.
 // ─────────────────────────────────────────────────────────────────────────────
-
-const mapImpl = <T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> =>
-  isOk(result) ? ok(fn(result.value)) : err(result.error);
 
 /**
  * Transform the `Ok` value, passing `Err` through unchanged. Dual-form:
@@ -74,18 +73,14 @@ const mapImpl = <T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, 
  * pipe(ok("x"), map((s) => s.length));// Ok 1 — curried
  * ```
  */
-export function map<T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E>;
-export function map<T, U>(fn: (value: T) => U): <E>(result: Result<T, E>) => Result<U, E>;
-export function map(
-  ...args: [Result<unknown, unknown>, (value: unknown) => unknown] | [(value: unknown) => unknown]
-): unknown {
-  if (args.length === 2) return mapImpl(args[0], args[1]);
-  const fn = args[0];
-  return (result: Result<unknown, unknown>) => mapImpl(result, fn);
-}
-
-const mapErrImpl = <T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F> =>
-  isErr(result) ? err(fn(result.error)) : ok(result.value);
+export const map: {
+  <T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E>;
+  <T, U>(fn: (value: T) => U): <E>(result: Result<T, E>) => Result<U, E>;
+} = dual(
+  2,
+  <T, U, E>(result: Result<T, E>, fn: (value: T) => U): Result<U, E> =>
+    isOk(result) ? ok(fn(result.value)) : err(result.error),
+);
 
 /**
  * Transform the `Err` value, passing `Ok` through unchanged. Useful for
@@ -100,21 +95,14 @@ const mapErrImpl = <T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<
  * );
  * ```
  */
-export function mapErr<T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F>;
-export function mapErr<E, F>(fn: (error: E) => F): <T>(result: Result<T, E>) => Result<T, F>;
-export function mapErr(
-  ...args: [Result<unknown, unknown>, (error: unknown) => unknown] | [(error: unknown) => unknown]
-): unknown {
-  if (args.length === 2) return mapErrImpl(args[0], args[1]);
-  const fn = args[0];
-  return (result: Result<unknown, unknown>) => mapErrImpl(result, fn);
-}
-
-const bimapImpl = <T, U, E, F>(
-  result: Result<T, E>,
-  onOk: (value: T) => U,
-  onErr: (error: E) => F,
-): Result<U, F> => (isOk(result) ? ok(onOk(result.value)) : err(onErr(result.error)));
+export const mapErr: {
+  <T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F>;
+  <E, F>(fn: (error: E) => F): <T>(result: Result<T, E>) => Result<T, F>;
+} = dual(
+  2,
+  <T, E, F>(result: Result<T, E>, fn: (error: E) => F): Result<T, F> =>
+    isErr(result) ? err(fn(result.error)) : ok(result.value),
+);
 
 /**
  * Transform both tracks at once — `Ok` via `onOk`, `Err` via `onErr`.
@@ -125,29 +113,20 @@ const bimapImpl = <T, U, E, F>(
  * bimap(parsed, (cfg) => cfg.name, (e) => ({ kind: "input", cause: e }));
  * ```
  */
-export function bimap<T, U, E, F>(
-  result: Result<T, E>,
-  onOk: (value: T) => U,
-  onErr: (error: E) => F,
-): Result<U, F>;
-export function bimap<T, U, E, F>(
-  onOk: (value: T) => U,
-  onErr: (error: E) => F,
-): (result: Result<T, E>) => Result<U, F>;
-export function bimap(
-  ...args:
-    | [Result<unknown, unknown>, (value: unknown) => unknown, (error: unknown) => unknown]
-    | [(value: unknown) => unknown, (error: unknown) => unknown]
-): unknown {
-  if (args.length === 3) return bimapImpl(args[0], args[1], args[2]);
-  const [onOk, onErr] = args;
-  return (result: Result<unknown, unknown>) => bimapImpl(result, onOk, onErr);
-}
-
-const flatMapImpl = <T, U, E, F>(
-  result: Result<T, E>,
-  fn: (value: T) => Result<U, F>,
-): Result<U, E | F> => (isOk(result) ? fn(result.value) : err(result.error));
+export const bimap: {
+  <T, U, E, F>(result: Result<T, E>, onOk: (value: T) => U, onErr: (error: E) => F): Result<U, F>;
+  <T, U, E, F>(
+    onOk: (value: T) => U,
+    onErr: (error: E) => F,
+  ): (result: Result<T, E>) => Result<U, F>;
+} = dual(
+  3,
+  <T, U, E, F>(
+    result: Result<T, E>,
+    onOk: (value: T) => U,
+    onErr: (error: E) => F,
+  ): Result<U, F> => (isOk(result) ? ok(onOk(result.value)) : err(onErr(result.error))),
+);
 
 /**
  * Canonical bind (Fantasy Land `chain`). Chains a Result-returning step,
@@ -161,27 +140,14 @@ const flatMapImpl = <T, U, E, F>(
  * // Result<Data, ParseError | { kind: "missing_id" }>
  * ```
  */
-export function flatMap<T, U, E, F>(
-  result: Result<T, E>,
-  fn: (value: T) => Result<U, F>,
-): Result<U, E | F>;
-export function flatMap<T, U, F>(
-  fn: (value: T) => Result<U, F>,
-): <E>(result: Result<T, E>) => Result<U, E | F>;
-export function flatMap(
-  ...args:
-    | [Result<unknown, unknown>, (value: unknown) => Result<unknown, unknown>]
-    | [(value: unknown) => Result<unknown, unknown>]
-): unknown {
-  if (args.length === 2) return flatMapImpl(args[0], args[1]);
-  const fn = args[0];
-  return (result: Result<unknown, unknown>) => flatMapImpl(result, fn);
-}
-
-const recoverImpl = <T, E, F>(
-  result: Result<T, E>,
-  fn: (error: E) => Result<T, F>,
-): Result<T, F> => (isErr(result) ? fn(result.error) : ok(result.value));
+export const flatMap: {
+  <T, U, E, F>(result: Result<T, E>, fn: (value: T) => Result<U, F>): Result<U, E | F>;
+  <T, U, F>(fn: (value: T) => Result<U, F>): <E>(result: Result<T, E>) => Result<U, E | F>;
+} = dual(
+  2,
+  <T, U, E, F>(result: Result<T, E>, fn: (value: T) => Result<U, F>): Result<U, E | F> =>
+    isOk(result) ? fn(result.value) : err(result.error),
+);
 
 /**
  * Error-track bind — runs `fn` only when the result is `Err`, allowing
@@ -195,27 +161,14 @@ const recoverImpl = <T, E, F>(
  * );
  * ```
  */
-export function recover<T, E, F>(
-  result: Result<T, E>,
-  fn: (error: E) => Result<T, F>,
-): Result<T, F>;
-export function recover<T, E, F>(
-  fn: (error: E) => Result<T, F>,
-): (result: Result<T, E>) => Result<T, F>;
-export function recover(
-  ...args:
-    | [Result<unknown, unknown>, (error: unknown) => Result<unknown, unknown>]
-    | [(error: unknown) => Result<unknown, unknown>]
-): unknown {
-  if (args.length === 2) return recoverImpl(args[0], args[1]);
-  const fn = args[0];
-  return (result: Result<unknown, unknown>) => recoverImpl(result, fn);
-}
-
-const tapImpl = <T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E> => {
-  if (isOk(result)) fn(result.value);
-  return result;
-};
+export const recover: {
+  <T, E, F>(result: Result<T, E>, fn: (error: E) => Result<T, F>): Result<T, F>;
+  <T, E, F>(fn: (error: E) => Result<T, F>): (result: Result<T, E>) => Result<T, F>;
+} = dual(
+  2,
+  <T, E, F>(result: Result<T, E>, fn: (error: E) => Result<T, F>): Result<T, F> =>
+    isErr(result) ? fn(result.error) : ok(result.value),
+);
 
 /**
  * Observe the `Ok` value for side effects (logging, metrics) without
@@ -230,20 +183,13 @@ const tapImpl = <T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, 
  * );
  * ```
  */
-export function tap<T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E>;
-export function tap<T>(fn: (value: T) => void): <E>(result: Result<T, E>) => Result<T, E>;
-export function tap(
-  ...args: [Result<unknown, unknown>, (value: unknown) => void] | [(value: unknown) => void]
-): unknown {
-  if (args.length === 2) return tapImpl(args[0], args[1]);
-  const fn = args[0];
-  return (result: Result<unknown, unknown>) => tapImpl(result, fn);
-}
-
-const tapErrImpl = <T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E> => {
-  if (isErr(result)) fn(result.error);
+export const tap: {
+  <T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E>;
+  <T>(fn: (value: T) => void): <E>(result: Result<T, E>) => Result<T, E>;
+} = dual(2, <T, E>(result: Result<T, E>, fn: (value: T) => void): Result<T, E> => {
+  if (isOk(result)) fn(result.value);
   return result;
-};
+});
 
 /**
  * Observe the `Err` value for side effects (logging, metrics) without
@@ -257,21 +203,13 @@ const tapErrImpl = <T, E>(result: Result<T, E>, fn: (error: E) => void): Result<
  * );
  * ```
  */
-export function tapErr<T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E>;
-export function tapErr<E>(fn: (error: E) => void): <T>(result: Result<T, E>) => Result<T, E>;
-export function tapErr(
-  ...args: [Result<unknown, unknown>, (error: unknown) => void] | [(error: unknown) => void]
-): unknown {
-  if (args.length === 2) return tapErrImpl(args[0], args[1]);
-  const fn = args[0];
-  return (result: Result<unknown, unknown>) => tapErrImpl(result, fn);
-}
-
-const matchImpl = <T, E, U>(
-  result: Result<T, E>,
-  onOk: (value: T) => U,
-  onErr: (error: E) => U,
-): U => (isOk(result) ? onOk(result.value) : onErr(result.error));
+export const tapErr: {
+  <T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E>;
+  <E>(fn: (error: E) => void): <T>(result: Result<T, E>) => Result<T, E>;
+} = dual(2, <T, E>(result: Result<T, E>, fn: (error: E) => void): Result<T, E> => {
+  if (isErr(result)) fn(result.error);
+  return result;
+});
 
 /**
  * Terminal collapse — fold both tracks into a single value. Dual-form:
@@ -287,24 +225,14 @@ const matchImpl = <T, E, U>(
  * const html = match(parsed, (cfg) => render(cfg), (e) => renderError(e));
  * ```
  */
-export function match<T, E, U>(
-  result: Result<T, E>,
-  onOk: (value: T) => U,
-  onErr: (error: E) => U,
-): U;
-export function match<T, E, U>(
-  onOk: (value: T) => U,
-  onErr: (error: E) => U,
-): (result: Result<T, E>) => U;
-export function match(
-  ...args:
-    | [Result<unknown, unknown>, (value: unknown) => unknown, (error: unknown) => unknown]
-    | [(value: unknown) => unknown, (error: unknown) => unknown]
-): unknown {
-  if (args.length === 3) return matchImpl(args[0], args[1], args[2]);
-  const [onOk, onErr] = args;
-  return (result: Result<unknown, unknown>) => matchImpl(result, onOk, onErr);
-}
+export const match: {
+  <T, E, U>(result: Result<T, E>, onOk: (value: T) => U, onErr: (error: E) => U): U;
+  <T, E, U>(onOk: (value: T) => U, onErr: (error: E) => U): (result: Result<T, E>) => U;
+} = dual(
+  3,
+  <T, E, U>(result: Result<T, E>, onOk: (value: T) => U, onErr: (error: E) => U): U =>
+    isOk(result) ? onOk(result.value) : onErr(result.error),
+);
 
 /**
  * Returns the `Ok` value, or `defaultValue` when the result is `Err`.
@@ -314,16 +242,13 @@ export function match(
  * unwrapOr(parsedSetting, "default-value");
  * ```
  */
-export function unwrapOr<T, E>(result: Result<T, E>, defaultValue: T): T;
-export function unwrapOr<T>(defaultValue: T): <E>(result: Result<T, E>) => T;
-export function unwrapOr(...args: [Result<unknown, unknown>, unknown] | [unknown]): unknown {
-  if (args.length === 2) {
-    const [result, defaultValue] = args;
-    return isOk(result) ? result.value : defaultValue;
-  }
-  const defaultValue = args[0];
-  return (result: Result<unknown, unknown>) => (isOk(result) ? result.value : defaultValue);
-}
+export const unwrapOr: {
+  <T, E>(result: Result<T, E>, defaultValue: T): T;
+  <T>(defaultValue: T): <E>(result: Result<T, E>) => T;
+} = dual(
+  2,
+  <T, E>(result: Result<T, E>, defaultValue: T): T => (isOk(result) ? result.value : defaultValue),
+);
 
 /**
  * Test/assert helper — returns the `Ok` value, or **throws the original `Err`

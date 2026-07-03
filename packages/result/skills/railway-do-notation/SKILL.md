@@ -1,6 +1,6 @@
 ---
 name: railway-do-notation
-description: "Ergonomic railway composition for `@onrails/result`: when to use low-level Result/ResultAsync helpers, fluent `Railway.*` workflows, functional `railway(...)` reusable steps, or sync `tryGen`. Use when writing or refactoring Result-heavy TypeScript, Drizzle/Zod ETL workflows, nested `flatMapResult` chains, mixed sync/async railway code, or when a user asks about 'Railway', 'railway', 'do-notation', 'safe workflow', or 'expressive Result code'. Do NOT use workflow builders for tiny repository methods where `asyncAfter` or `.flatMap` is clearer."
+description: "Ergonomic railway composition for `@onrails/result`: when to use low-level Result/ResultAsync helpers, fluent `Railway.*` workflows, or sync `tryGen`. Use when writing or refactoring Result-heavy TypeScript, Drizzle/Zod ETL workflows, nested `flatMapResult` chains, mixed sync/async railway code, or when a user asks about 'Railway', 'railway', 'do-notation', 'safe workflow', or 'expressive Result code'. Do NOT use workflow builders for tiny repository methods where `asyncAfter` or `.flatMap` is clearer."
 ---
 
 # Railway ergonomics in `@onrails/result`
@@ -19,15 +19,12 @@ Use the smallest layer that makes the code clear:
    - Use `trySync`, `tryAsync`, `fromResult`, `asyncAfter`, `flatMapResult`, `.flatMap`, `.andThen`.
    - Best for one or two steps, repository helpers, and package internals.
 
-2. **Fluent `Railway.*`** for one-off service workflows.
+2. **Fluent `Railway.*`** for service workflows.
    - Use when code is ETL-shaped: validate input, query Drizzle, require nullable rows, derive values, run parallel enrichment, return DTO.
    - Best when there are 4+ named steps or mixed sync/async boundaries.
+   - For steps shared across workflows, extract plain context functions and plug them in via `.fromResult` / `.fromAsync`.
 
-3. **Functional `railway(...)`** for reusable step composition.
-   - Use when steps are shared across multiple workflows.
-   - Best for date-fns-style reusable transforms.
-
-4. **Sync `tryGen`** for dense synchronous `Result` chains only.
+3. **Sync `tryGen`** for dense synchronous `Result` chains only.
    - Use sparingly when no workflow builder is warranted and nested sync `flatMapResult` is hard to read.
    - Never use for `ResultAsync` or anything with `await`.
 
@@ -178,73 +175,37 @@ Use fluent `Railway.*` when it removes manual bridges like:
 
 Do not use fluent `Railway.*` when `asyncAfter(...)` is already clearer.
 
-## Layer 3 — Functional `railway(...)`
+### Reusable Steps
 
-Use lowercase `railway(...)` when the steps themselves should be reusable values.
+When the same parse/query/require/derive steps appear in multiple workflows, or tests should exercise individual steps, extract plain functions of the accumulated context and plug them in by name:
 
 ```ts
-const parseProfileId =
-  // Parse raw input and name the output. Name-first, like every other step
-  // below — `parseWith(ProfileIdSchema, toError).as("profileId")` is the
-  // equivalent fluent trailing-name form if you prefer it.
-  parseNamed("profileId", ProfileIdSchema, toError);
-
-const loadProfileRow = fromPromiseNamed(
-  "row",
-  // This reusable step depends on prior named context.
-  ({ profileId }) =>
+// Reusable steps are plain context functions returning Result / ResultAsync.
+const loadProfileRow = ({ profileId }: { profileId: ProfileId }) =>
+  tryAsync(
     db.query.profiles.findFirst({
       where: eq(profiles.id, profileId),
       with: { artifacts: true, jobs: true },
     }),
-  toError,
-);
+    toError,
+  );
 
-const requireProfile = requireNamed(
-  "profile",
-  "row",
-  // Error factories can read accumulated context.
-  ({ profileId }) => new Error(`Profile not found: ${profileId}`),
-);
-
-const normalize = deriveNamed("normalized", ({ profile }) =>
-  normalizeProfile(profile),
-);
-
-const loadSummaryInputs = parallelNamed({
-  recentArtifacts: ({ normalized }) => loadRecentArtifacts(normalized.id),
-  jobMetrics: ({ normalized }) => loadJobMetrics(normalized.id),
-});
-
-const toSummary = select(
-  ({ normalized, recentArtifacts, jobMetrics }) =>
-    toProfileSummary({
-      profile: normalized,
-      recentArtifacts,
-      jobMetrics,
-    }),
-);
-
-const summary = railway(
-  id,
-  parseProfileId,
-  loadProfileRow,
-  requireProfile,
-  normalize,
-  loadSummaryInputs,
-  toSummary,
-);
+const summary = Railway.fromSync("profileId", () => ProfileIdSchema.parse(id), toError)
+  .fromAsync("row", loadProfileRow)
+  .require("profile", "row", ({ profileId }) => new Error(`Profile not found: ${profileId}`))
+  .derive("normalized", ({ profile }) => normalizeProfile(profile))
+  .parallel({
+    recentArtifacts: ({ normalized }) => loadRecentArtifacts(normalized.id),
+    jobMetrics: ({ normalized }) => loadJobMetrics(normalized.id),
+  })
+  .select(({ normalized, recentArtifacts, jobMetrics }) =>
+    toProfileSummary({ profile: normalized, recentArtifacts, jobMetrics }),
+  );
 ```
 
-Use functional `railway(...)` when:
+Each step function is independently testable — call it with a hand-built context object and assert on the returned `Result` / `ResultAsync`.
 
-- the same parse/query/require/derive steps appear in multiple workflows
-- tests should exercise individual steps
-- method chaining would hide the fact that the steps are shared building blocks
-
-Prefer fluent `Railway.*` for one-off service functions.
-
-## Layer 4 — Sync `tryGen`
+## Layer 3 — Sync `tryGen`
 
 `tryGen` is a synchronous do-notation escape hatch. It is not the primary service-workflow API.
 
@@ -292,7 +253,7 @@ const applyMigrations = (db: Db, steps: readonly Migration[]) =>
   });
 ```
 
-Use `yieldResult as $` for do-notation snippets in this repo. The exports are also re-published from the namesake subpath — `import { tryGen, $ } from "@onrails/result/$"` — when `$` reads better as the module's name. The alias is intentionally local to `tryGen` blocks and mirrors Rust's `?` ergonomics without changing the rest of the railway API.
+Use `yieldResult as $` for do-notation snippets in this repo. Both names are exported from the package index and `@onrails/result/try-gen`. The alias is intentionally local to `tryGen` blocks and mirrors Rust's `?` ergonomics without changing the rest of the railway API.
 
 Never use `tryGen` with `await` or `ResultAsync`.
 
@@ -357,7 +318,7 @@ Recommended semantics:
 
 ## When Not To Use Workflow Syntax
 
-Do not use `Railway.*` or `railway(...)` for:
+Do not use `Railway.*` for:
 
 - a single parse
 - a single DB call
@@ -405,7 +366,7 @@ Consider fluent `Railway.*` when at least two are true:
 - comments explain dataflow because the code shape does not
 - prior values must be carried forward through nested closures
 
-Consider functional `railway(...)` when:
+Consider extracting reusable step functions when:
 
 - two or more workflows share steps
 - step-level tests would be useful
@@ -428,7 +389,7 @@ Stay low-level when:
 Each case study should come from a real downstream PR.
 
 1. Identify the pain point: nested sync chain, mixed sync/async ETL, or reusable workflow steps.
-2. Write the low-level current version and the proposed `Railway.*` or `railway(...)` version.
+2. Write the low-level current version and the proposed `Railway.*` version.
 3. Add line comments explaining what each new step does.
 4. Confirm the proposed style removes plumbing without hiding important failure behavior.
 5. Add the before/after pair to this skill or to package docs.

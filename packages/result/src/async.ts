@@ -1,30 +1,13 @@
+import type { InferErr, InferOk } from "./internal/infer.js";
 import { err, isErr, map, mapErr, ok } from "./result.js";
 import type { Result } from "./types.js";
 import { UnexpectedError } from "./types.js";
 
 type PromiseFactory<T, E> = () => Promise<Result<T, E>>;
-type AsyncOk<R> = R extends ResultAsync<infer T, unknown> ? T : never;
-type AsyncErr<R> = R extends ResultAsync<unknown, infer E> ? E : never;
 type CombineTupleAsync<R extends readonly ResultAsync<unknown, unknown>[]> = ResultAsync<
-  { [K in keyof R]: AsyncOk<R[K]> },
-  { [K in keyof R]: AsyncErr<R[K]> }[number]
+  { [K in keyof R]: InferOk<R[K]> },
+  { [K in keyof R]: InferErr<R[K]> }[number]
 >;
-
-const liftPromiseResult = async <T, E>(
-  promise: Promise<Result<T, E>>,
-  onDefect: (error: unknown) => E | UnexpectedError,
-): Promise<Result<T, E | UnexpectedError>> => {
-  try {
-    const result = await promise;
-    if (isErr(result)) {
-      return result;
-    }
-    // Auto-flatten one level: Ok<Result<…>> from double-wrapped interop.
-    return isResultLike<T, E | UnexpectedError>(result.value) ? result.value : result;
-  } catch (error) {
-    return err(onDefect(error));
-  }
-};
 
 /** Collapses settled results left-to-right, short-circuiting on the first `Err`. */
 const sequenceSettled = (
@@ -164,12 +147,13 @@ export class ResultAsync<T, E> {
 
   /**
    * Lifts an existing `Promise<Result<T, E>>` (e.g. from interop code) into a
-   * {@link ResultAsync}, auto-flattening one level of double-wrapping. A thrown
-   * defect is routed through `onDefect`, defaulting to {@link UnexpectedError}.
+   * {@link ResultAsync}. A thrown defect is routed through `onDefect`,
+   * defaulting to {@link UnexpectedError}. The `Ok` value passes through
+   * verbatim — even when it happens to be Result-shaped.
    *
    * @param promise - a promise that already yields a `Result`
    * @param onDefect - maps an unexpected throw to the `Err` channel
-   * @see {@link fromAsync} from `@onrails/result/interop`
+   * @see {@link fromAsync} from `@onrails/result`
    */
   static fromResultPromise<T, E>(
     promise: Promise<Result<T, E>>,
@@ -177,7 +161,13 @@ export class ResultAsync<T, E> {
   ): ResultAsync<T, E | UnexpectedError> {
     const mapDefect =
       onDefect ?? ((error: unknown) => new UnexpectedError("Unexpected async defect", error));
-    return new ResultAsync(() => liftPromiseResult(promise, mapDefect));
+    return new ResultAsync<T, E | UnexpectedError>(async () => {
+      try {
+        return await promise;
+      } catch (error) {
+        return err(mapDefect(error));
+      }
+    });
   }
 
   /**
@@ -290,22 +280,14 @@ export class ResultAsync<T, E> {
    *   .flatMap((p) => validate(p));              // sync Result also accepted
    * ```
    */
-  flatMap<U, F = E>(
-    fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
-  ): ResultAsync<U, E | F> {
+  flatMap<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F>): ResultAsync<U, E | F> {
     return new ResultAsync<U, E | F>(async () => {
       const first = await this.resolve();
       if (isErr(first)) {
         return first;
       }
       const next = fn(first.value);
-      if (next instanceof ResultAsync) {
-        return next.resolve();
-      }
-      if (isResultLike<U, F>(next)) {
-        return next;
-      }
-      return isCompatLike<U, F>(next) ? next.inner : next;
+      return next instanceof ResultAsync ? next.resolve() : next;
     });
   }
 
@@ -318,9 +300,7 @@ export class ResultAsync<T, E> {
    * authenticate(req).andThen((user) => loadProfile(user.id));
    * ```
    */
-  andThen<U, F = E>(
-    fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F> },
-  ): ResultAsync<U, E | F> {
+  andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F>): ResultAsync<U, E | F> {
     return this.flatMap(fn);
   }
 
@@ -465,26 +445,8 @@ export class ResultAsync<T, E> {
   }
 }
 
-function isResultLike<U, F>(v: unknown): v is Result<U, F> {
-  return (
-    typeof v === "object" &&
-    v !== null &&
-    "_tag" in v &&
-    ((v as { _tag: unknown })._tag === "Ok" || (v as { _tag: unknown })._tag === "Err")
-  );
-}
-
-function isCompatLike<U, F>(v: unknown): v is { inner: Result<U, F> } {
-  return (
-    typeof v === "object" &&
-    v !== null &&
-    "inner" in v &&
-    isResultLike((v as { inner: unknown }).inner)
-  );
-}
-
 /**
  * The free-function lift helpers (`okAsync`, `errAsync`, `fromPromise`,
- * `fromSafePromise`, `parallelTupleAsync`, `tryAsync`) live in `./async-lift.ts`
- * and are re-exported from the package index.
+ * `fromSafePromise`, `fromResult`, `fromAsync`, `asyncAfter`, `tryAsync`)
+ * live in `./async-lift.ts` and are re-exported from the package index.
  */

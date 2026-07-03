@@ -1,6 +1,7 @@
 /** @deprecated Migration shim — prefer `@onrails/result` and `@onrails/result/fluent`. */
 import { ResultAsync as CoreResultAsync } from "../async.js";
 import { combineTuple } from "../collections.js";
+import type { InferErr, InferOk } from "../internal/infer.js";
 import {
   err as coreErr,
   ok as coreOk,
@@ -276,27 +277,21 @@ type AnyAsyncOrSyncResult =
   | CompatResult<unknown, unknown>
   | ResultType<unknown, unknown>;
 
+// Compat wrappers first (they hide the payload behind `inner`), then the
+// shared extractor handles core Result / ResultAsync.
 type UnwrapOk<R> =
   R extends CompatResultAsync<infer U, unknown>
     ? U
-    : R extends CoreResultAsync<infer U, unknown>
+    : R extends CompatResult<infer U, unknown>
       ? U
-      : R extends CompatResult<infer U, unknown>
-        ? U
-        : R extends ResultType<infer U, unknown>
-          ? U
-          : never;
+      : InferOk<R>;
 
 type UnwrapErr<R> =
   R extends CompatResultAsync<unknown, infer F>
     ? F
-    : R extends CoreResultAsync<unknown, infer F>
+    : R extends CompatResult<unknown, infer F>
       ? F
-      : R extends CompatResult<unknown, infer F>
-        ? F
-        : R extends ResultType<unknown, infer F>
-          ? F
-          : never;
+      : InferErr<R>;
 
 function coerceToCore<R extends AnyAsyncOrSyncResult>(
   next: R,

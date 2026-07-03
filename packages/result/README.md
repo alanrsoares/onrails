@@ -11,26 +11,17 @@ bun add @onrails/result
 ## Quick start (value-first — best inference)
 
 ```ts
-import {
-  asyncAfter,
-  err,
-  flatMapResult,
-  fromAsync,
-  mapResult,
-  match,
-  ok,
-  trySync,
-} from "@onrails/result";
+import { err, flatMap, match, ok, trySync } from "@onrails/result";
 
 const parse = trySync(
   (raw: string) => JSON.parse(raw),
   (e) => ({ kind: "parse" as const, message: String(e) }),
 );
 
-const pipeline = flatMapResult(parse('{"v":1}'), (data) => ok(data.v));
+const pipeline = flatMap(parse('{"v":1}'), (data) => ok(data.v));
 ```
 
-Long chains: `fluent()` from `@onrails/result/fluent` or `flatMapResult` (not curried `flatMap`) for TS inference.
+Every transform is dual-form: data-first `flatMap(r, fn)` (best inference) or curried `flatMap(fn)(r)` for `pipe`/`flow`. Long chains: `fluent()` from `@onrails/result/fluent`.
 
 For worked examples of multi-step pipelines, parser builders, validator ladders, and parallel sub-workflows see [RECIPES.md](./RECIPES.md).
 
@@ -43,9 +34,9 @@ For worked examples of multi-step pipelines, parser builders, validator ladders,
 | Long sync chain, value-first        | `pipe(r, map(...), flatMap(...), ...)`                              |
 | Long sync chain, dot-style preferred | `fluent(r)` from `@onrails/result/fluent`                          |
 | Reusable composed function          | `flow(...)` from `@onrails/result/pipe`                             |
-| Several named sync/async steps     | `Railway.*` (fluent) or `railway(...)` (functional, reusable steps)  |
+| Several named sync/async steps     | `Railway.*` builder from `@onrails/result/railway`                   |
 | Linear sync with early-return feel | `tryGen` + `$` from `@onrails/result/try-gen`                        |
-| Independent validations, accumulated failures | `validateAll` / `validateTuple` from `@onrails/result/validation` |
+| Independent validations, accumulated failures | `validateAll` / `validateTuple` from `@onrails/result` |
 | Sync → async lift, keep error type | `fromResult`, `asyncAfter` (do **not** use `fromAsync` here)         |
 | `Promise<Result<…>>` boundary lift | `fromAsync` / `tryAsync`                                             |
 
@@ -164,7 +155,7 @@ const out = tryGen(() => {
 });
 ```
 
-Use `ResultAsync.combineTuple` (or `parallelTupleAsync` when branches should overlap) when combining heterogeneous async results and destructuring the result:
+Use `ResultAsync.combineTuple` (or `ResultAsync.combineTupleParallel` when branches should overlap) when combining heterogeneous async results and destructuring the result:
 
 ```ts
 import { ResultAsync } from "@onrails/result";
@@ -206,52 +197,17 @@ Sync-only workflows return `Result<T, E>`. The first `fromPromise`, `fromAsync`,
 
 Use lower-level helpers (`asyncAfter`, `fromResult`, `flatMapResult`) for one or two steps where a builder would add ceremony.
 
-## `railway(...)` — reusable workflow steps
-
-Use lowercase `railway(...)` when the steps should be named once and reused across workflows:
+To share steps across workflows, extract plain functions of the context and plug them in via `.fromResult` / `.fromAsync`:
 
 ```ts
-import {
-  deriveNamed,
-  fromPromiseNamed,
-  parallelNamed,
-  parseWith,
-  railway,
-  requireNamed,
-  select,
-} from "@onrails/result/railway";
+const loadProfileRow = ({ profileId }: { profileId: string }) =>
+  tryAsync(loadProfileRowById(profileId), toError);
 
-const parseProfileId = parseWith(ProfileIdSchema, toError).as("profileId");
-
-const loadProfileRow = fromPromiseNamed(
-  "row",
-  ({ profileId }) => loadProfileRowById(profileId),
-  toError,
-);
-
-const requireProfile = requireNamed("profile", "row", ({ profileId }) =>
-  new Error(`Profile not found: ${profileId}`),
-);
-
-const loadSummaryInputs = parallelNamed({
-  recentArtifacts: ({ profile }) => loadRecentArtifacts(profile.id),
-  jobMetrics: ({ profile }) => loadJobMetrics(profile.id),
-});
-
-const summary = railway(
-  id,
-  parseProfileId,
-  loadProfileRow,
-  requireProfile,
-  deriveNamed("normalized", ({ profile }) => normalizeProfile(profile)),
-  loadSummaryInputs,
-  select(({ normalized, recentArtifacts, jobMetrics }) =>
-    toProfileSummary({ normalized, recentArtifacts, jobMetrics }),
-  ),
-);
+const summary = Railway.fromSync("profileId", () => ProfileIdSchema.parse(id), toError)
+  .fromAsync("row", loadProfileRow)
+  .require("profile", "row", ({ profileId }) => new Error(`Profile not found: ${profileId}`))
+  .select(({ profile }) => toProfileSummary(profile));
 ```
-
-`railway(input, ...steps)` starts from `{ input }`. `parseWith(...).as(key)` is the usual first step for raw input. The final output is still mode-aware: sync-only steps return `Result`, while async steps return `ResultAsync`.
 
 ## Pipe
 
@@ -304,9 +260,8 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result` | Core + interop exports |
 | `@onrails/result/fluent` | `fluent()`, `fluentAsync()` |
 | `@onrails/result/extra` | Error-type utilities |
-| `@onrails/result/interop` | `fromAsync`, `fromResult`, `asyncAfter` |
 | `@onrails/result/pipe` | `flow` (variadic point-free composition) |
-| `@onrails/result/railway` | `Railway`, `railway`, named workflow helpers |
+| `@onrails/result/railway` | `Railway` named-context workflow builder |
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |
 | `@onrails/result/compat/neverthrow` | Migration shim |
 
