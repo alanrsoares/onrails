@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.2...eslint-plugin-v0.1.3) (2026-07-03)
+
+
+### Features
+
+* **codemod:** boundary spec owns enforced idiom names ([#78](https://github.com/alanrsoares/onrails/issues/78)) ([b00335e](https://github.com/alanrsoares/onrails/commit/b00335ec37248843b37bdcc45cb2cd74313b5d7a))
+
 ## [0.1.2](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.1...eslint-plugin-v0.1.2) (2026-06-13)
 
 

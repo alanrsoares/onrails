@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/alanrsoares/onrails/compare/pattern-v0.2.0...pattern-v0.3.0) (2026-07-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **pattern:** LockedMatchBuilder is no longer exported; use MatchBuilder<T, R, HasInput, Handled, true> directly.
+
+### Features
+
+* **pattern:** remove LockedMatchBuilder alias ([#76](https://github.com/alanrsoares/onrails/issues/76)) ([64f4fde](https://github.com/alanrsoares/onrails/commit/64f4fde9da9b762b80483c26a51af6460decd8cf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.3.0
+
 ## [0.2.0](https://github.com/alanrsoares/onrails/compare/pattern-v0.1.4...pattern-v0.2.0) (2026-06-18)
 
 
