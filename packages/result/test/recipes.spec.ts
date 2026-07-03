@@ -362,16 +362,12 @@ describe("recipe 12 — async pipelines via ResultAsync composition", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Recipe 13 — Functional Railway pipelines (railway + named steps)
+// Recipe 13 — Railway workflow pipelines (named-context builder)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { deriveNamed, fromPromiseNamed, parseNamed, railway, select } from "../src/railway.js";
+import { Railway } from "../src/railway.js";
 
 type Dashboard = { title: string };
-
-type IdContext = { readonly id: string };
-type ProfileContext = { readonly profile: Profile };
-type TitleContext = { readonly title: string };
 
 const IdSchema = {
   parse: (x: unknown): string => {
@@ -387,30 +383,24 @@ const fetchProfileMock = async (id: string): Promise<Profile> => ({
 
 const toError = (e: unknown): Error => (e instanceof Error ? e : new Error(String(e)));
 
-describe("recipe 13 — functional railway pipelines", () => {
-  it("builds and executes an async pipeline using railway steps", async () => {
+describe("recipe 13 — Railway workflow pipelines", () => {
+  it("builds and executes an async pipeline using Railway steps", async () => {
     const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
-      railway(
-        rawId,
-        parseNamed("id", IdSchema, toError),
-        fromPromiseNamed("profile", ({ id }: IdContext) => fetchProfileMock(id), toError),
-        deriveNamed("title", ({ profile }: ProfileContext) => profile.name.toUpperCase()),
-        select(({ title }: TitleContext) => ({ title })),
-      );
+      Railway.fromSync("id", () => IdSchema.parse(rawId), toError)
+        .fromPromise("profile", ({ id }) => fetchProfileMock(id), toError)
+        .derive("title", ({ profile }) => profile.name.toUpperCase())
+        .select(({ title }) => ({ title }));
 
     const result = await loadDashboard("123");
     expect(result).toEqual(ok({ title: "ALICE" }));
   });
 
-  it("preserves functional railway output and error types", () => {
+  it("preserves Railway workflow output and error types", () => {
     const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
-      railway(
-        rawId,
-        parseNamed("id", IdSchema, toError),
-        fromPromiseNamed("profile", ({ id }: IdContext) => fetchProfileMock(id), toError),
-        deriveNamed("title", ({ profile }: ProfileContext) => profile.name.toUpperCase()),
-        select(({ title }: TitleContext) => ({ title })),
-      );
+      Railway.fromSync("id", () => IdSchema.parse(rawId), toError)
+        .fromPromise("profile", ({ id }) => fetchProfileMock(id), toError)
+        .derive("title", ({ profile }) => profile.name.toUpperCase())
+        .select(({ title }) => ({ title }));
     type LoadDashboardFn = typeof loadDashboard;
     expectType<TypeEqual<ReturnType<LoadDashboardFn>, ResultAsync<Dashboard, Error>>>(true);
   });

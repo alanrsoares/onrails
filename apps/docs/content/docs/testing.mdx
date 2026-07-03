@@ -185,13 +185,13 @@ describe("checkoutWorkflow", () => {
 
 ---
 
-## 3. Testing Functional Steps in Isolation
+## 3. Testing Workflow Steps in Isolation
 
-When you use the lowercase [railway(...)](file:///Users/alanrsoares/dev/onrails/.agents/skills/railway-do-notation/SKILL.md#layer-3--functional-railway) pipeline, your workflow steps are declared as standalone functions. A major benefit of this design is that **each step can be exported and tested in isolation** without running the entire pipeline or stubbing other async steps.
+`Railway` steps are just functions of the accumulated context that return a value, `Result`, or `ResultAsync`. Declare them as standalone functions instead of inline lambdas and **each step can be exported and tested in isolation** without running the entire workflow or stubbing other async steps.
 
 ### Defining Reusable Steps
 ```ts title="profile-steps.ts"
-import { parseNamed, fromPromiseNamed } from "@onrails/result/railway";
+import { trySync, tryAsync, type Result, type ResultAsync } from "@onrails/result";
 import { z } from "zod";
 
 const toError = (e: unknown) => e instanceof Error ? e : new Error(String(e));
@@ -199,15 +199,29 @@ const toError = (e: unknown) => e instanceof Error ? e : new Error(String(e));
 export const ProfileIdSchema = z.string().uuid();
 
 // 1. Exportable sync parsing step
-export const parseProfileId = parseNamed("profileId", ProfileIdSchema, toError);
+export const parseProfileId = (raw: unknown): Result<string, Error> =>
+  trySync(() => ProfileIdSchema.parse(raw), toError)();
 
 // 2. Exportable async loading step
-export const loadProfileRow = (fetchRow: (id: string) => Promise<unknown>) =>
-  fromPromiseNamed("row", (ctx: { profileId: string }) => fetchRow(ctx.profileId), toError);
+export const loadProfileRow =
+  (fetchRow: (id: string) => Promise<unknown>) =>
+  (ctx: { profileId: string }): ResultAsync<unknown, Error> =>
+    tryAsync(fetchRow(ctx.profileId), toError);
+```
+
+The workflow plugs them in by name:
+
+```ts title="load-profile.ts"
+import { Railway } from "@onrails/result/railway";
+
+const loadProfile = (raw: unknown, fetchRow: (id: string) => Promise<unknown>) =>
+  Railway.fromResult("profileId", () => parseProfileId(raw))
+    .fromAsync("row", loadProfileRow(fetchRow))
+    .done();
 ```
 
 ### Testing Steps Individually
-You can test `parseProfileId` and `loadProfileRow` independently by passing direct input/context objects and asserting on the returned context addition:
+You can test `parseProfileId` and `loadProfileRow` independently by passing direct input/context objects and asserting on the returned `Result`:
 
 ```ts title="profile-steps.spec.ts"
 import { describe, expect, it } from "bun:test";
@@ -216,13 +230,12 @@ import { parseProfileId, loadProfileRow } from "./profile-steps";
 
 describe("profile-steps", () => {
   describe("parseProfileId", () => {
-    it("successfully parses valid UUID and adds it to context", () => {
+    it("successfully parses a valid UUID", () => {
       const validUuid = "123e4567-e89b-12d3-a456-426614174000";
-      // A step is a function: (context/input) => Result/ResultAsync
       const result = parseProfileId(validUuid);
 
       expect(isOk(result)).toBe(true);
-      expect(result.value).toEqual({ profileId: validUuid });
+      expect(result.value).toBe(validUuid);
     });
 
     it("returns error on invalid UUID", () => {
@@ -232,15 +245,15 @@ describe("profile-steps", () => {
   });
 
   describe("loadProfileRow", () => {
-    it("successfully loads database row and appends to context", async () => {
+    it("successfully loads a database row", async () => {
       const mockFetch = async (id: string) => ({ id, name: "Ada" });
       const step = loadProfileRow(mockFetch);
-      
+
       // Pass the context required by this step
-      const result = await step({ profileId: "usr_100" });
+      const result = await step({ profileId: "usr_100" }).resolve();
 
       expect(isOk(result)).toBe(true);
-      expect(result.value).toEqual({ row: { id: "usr_100", name: "Ada" } });
+      expect(result.value).toEqual({ id: "usr_100", name: "Ada" });
     });
   });
 });
@@ -250,7 +263,7 @@ describe("profile-steps", () => {
 
 ## 4. Testing Parallel Execution Steps
 
-Workflows often trigger parallel database queries or API requests. When using `.parallel` or `parallelNamed`, you should test both success merges and failure combinations.
+Workflows often trigger parallel database queries or API requests. When using `.parallel`, you should test both success merges and failure combinations.
 
 ```ts title="parallel-enrichment.spec.ts"
 import { describe, expect, it } from "bun:test";
@@ -448,7 +461,7 @@ function _typeChecks() {
 | Dimension | Tooling | Recommended Target |
 | :--- | :--- | :--- |
 | **Logic & Short-Circuits** | `bun:test` / Vitest + `isOk`/`isErr` | Workflows with sync/async conditional boundaries. |
-| **Isolated Steps** | `bun:test` / Vitest step calls | Reusable functional steps from lowercase `railway(...)`. |
+| **Isolated Steps** | `bun:test` / Vitest step calls | Reusable step functions plugged into `Railway` workflows. |
 | **Exhaustive Mapping** | `it.each` tables | Enumerable branches (translating error tracks to HTTP codes). |
 | **Algebraic Invariants** | `fast-check` properties | Idempotent normalizations, round-trips, encoders/decoders. |
 | **Type Contracts** | `ts-expect` + `tsc` | Inferred types, error union boundaries, context read-only invariants. |

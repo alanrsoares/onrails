@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { asyncAfter, fromAsync, fromResult, type InferErr, type InferOk } from "../src/interop.js";
+import { asyncAfter, fromAsync, fromResult } from "../src/async-lift.js";
+import type { InferErr, InferOk } from "../src/internal/infer.js";
 import { err, ok } from "../src/result.js";
 import type { Result } from "../src/types.js";
 

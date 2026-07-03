@@ -54,11 +54,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./$": {
-      "types": "./dist/_.d.ts",
-      "import": "./dist/$.js",
-      "require": "./dist/$.cjs"
-    },
     "./fluent": {
       "types": "./dist/fluent.d.ts",
       "import": "./dist/fluent.js",
@@ -68,11 +63,6 @@
       "types": "./dist/extra.d.ts",
       "import": "./dist/extra.js",
       "require": "./dist/extra.cjs"
-    },
-    "./interop": {
-      "types": "./dist/interop.d.ts",
-      "import": "./dist/interop.js",
-      "require": "./dist/interop.cjs"
     },
     "./pipe": {
       "types": "./dist/pipe.d.ts",
@@ -88,11 +78,6 @@
       "types": "./dist/try-gen.d.ts",
       "import": "./dist/try-gen.js",
       "require": "./dist/try-gen.cjs"
-    },
-    "./validation": {
-      "types": "./dist/validation.d.ts",
-      "import": "./dist/validation.js",
-      "require": "./dist/validation.cjs"
     },
     "./compat/neverthrow": {
       "types": "./dist/compat/neverthrow.d.ts",

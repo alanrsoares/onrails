@@ -1,20 +1,11 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
 import { ResultAsync } from "../src/async.js";
-import { parallelTupleAsync, tryAsync } from "../src/async-lift.js";
-import { combine, combineTuple } from "../src/collections.js";
+import { asyncAfter, fromAsync, fromResult, tryAsync } from "../src/async-lift.js";
+import { combine, combineTuple, validateAll, validateTuple } from "../src/collections.js";
 import type { ErrOf, OkOf, UnionErrors } from "../src/extra.js";
-import { asyncAfter, fromAsync, fromResult, type InferErr, type InferOk } from "../src/interop.js";
-import {
-  deriveNamed,
-  fromPromiseNamed,
-  parallelNamed,
-  parseWith,
-  Railway,
-  railway,
-  requireNamed,
-  select,
-} from "../src/railway.js";
+import type { InferErr, InferOk } from "../src/internal/infer.js";
+import { Railway } from "../src/railway.js";
 import {
   bimap,
   err,
@@ -35,7 +26,6 @@ import {
 } from "../src/result.js";
 import { $, tryGen, yieldResult } from "../src/try-gen.js";
 import type { Err, Ok, Result, UnexpectedError } from "../src/types.js";
-import { validateAllArray, validateTupleArray } from "../src/validation.js";
 
 describe("Result sync types: core", () => {
   it("ok and err preserve type params", () => {
@@ -195,11 +185,11 @@ describe("ResultAsync types", () => {
     expectType<TypeEqual<typeof rb, ResultAsync<number, string>>>(true);
   });
 
-  it("combineTuple and parallelTupleAsync preserve tuple shape and union errors", () => {
+  it("combineTuple and combineTupleParallel preserve tuple shape and union errors", () => {
     const a = ResultAsync.ok<number, "a">(1);
     const b = ResultAsync.ok<string, "b">("x");
     const combined = ResultAsync.combineTuple([a, b] as const);
-    const paralleled = parallelTupleAsync([a, b] as const);
+    const paralleled = ResultAsync.combineTupleParallel([a, b] as const);
 
     expectType<TypeEqual<typeof combined, ResultAsync<readonly [number, string], "a" | "b">>>(true);
     expectType<TypeEqual<typeof paralleled, ResultAsync<readonly [number, string], "a" | "b">>>(
@@ -275,7 +265,7 @@ describe("Result extra types", () => {
 
 describe("Result validation types", () => {
   it("array validation accumulates errors", () => {
-    const r = validateAllArray([ok(1), err("a" as const), err("b" as const)]);
+    const r = validateAll([ok(1), err("a" as const), err("b" as const)]);
     expectType<TypeEqual<typeof r, Result<number[], readonly ("a" | "b")[]>>>(true);
   });
 
@@ -283,7 +273,7 @@ describe("Result validation types", () => {
     const a = ok(1);
     const b = ok("x");
     const c = err("bad" as const);
-    const r = validateTupleArray([a, b, c] as const);
+    const r = validateTuple([a, b, c] as const);
     expectType<TypeEqual<typeof r, Result<readonly [number, string, never], readonly "bad"[]>>>(
       true,
     );
@@ -338,46 +328,29 @@ describe("Railway types: fluent", () => {
   });
 });
 
-describe("Railway types: functional", () => {
-  it("functional railway composes reusable steps", () => {
-    const parseProfileId = parseWith(
-      (input: string) => input.trim() as "profile-1",
+describe("Railway types: end-to-end", () => {
+  it("full workflow chains unions errors and merges parallel outputs", () => {
+    const out = Railway.fromSync(
+      "profileId",
+      () => " profile-1 ".trim() as "profile-1",
       () => "parse" as const,
-    ).as("profileId");
-
-    const loadProfileRow = fromPromiseNamed(
-      "row",
-      ({ profileId }: { readonly profileId: "profile-1" }) =>
-        Promise.resolve<{ id: "profile-1"; name: "Ada" } | null>({
-          id: profileId,
-          name: "Ada",
-        }),
-      () => "db" as const,
-    );
-
-    const requireProfile = requireNamed("profile", "row", () => "missing" as const);
-
-    const normalize = deriveNamed(
-      "normalized",
-      ({ profile }: { readonly profile: { readonly id: "profile-1"; readonly name: string } }) =>
-        profile.id,
-    );
-
-    const loadSummaryInputs = parallelNamed({
-      recent: ({ normalized }: { readonly normalized: "profile-1" }) =>
-        ResultAsync.ok([normalized]),
-      metrics: () => ResultAsync.ok({ jobs: 2 }),
-    });
-
-    const out = railway(
-      " profile-1 ",
-      parseProfileId,
-      loadProfileRow,
-      requireProfile,
-      normalize,
-      loadSummaryInputs,
-      select(({ normalized, recent, metrics }) => ({ normalized, recent, metrics })),
-    );
+    )
+      .fromPromise(
+        "row",
+        ({ profileId }) =>
+          Promise.resolve<{ id: "profile-1"; name: "Ada" } | null>({
+            id: profileId,
+            name: "Ada",
+          }),
+        () => "db" as const,
+      )
+      .require("profile", "row", () => "missing" as const)
+      .derive("normalized", ({ profile }) => profile.id)
+      .parallel({
+        recent: ({ normalized }) => ResultAsync.ok([normalized]),
+        metrics: () => ResultAsync.ok({ jobs: 2 }),
+      })
+      .select(({ normalized, recent, metrics }) => ({ normalized, recent, metrics }));
 
     expectType<
       ResultAsync<

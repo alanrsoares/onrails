@@ -13,7 +13,7 @@ Per-package design notes: [result](packages/result/DESIGN.md) · [maybe](package
 This repository defines local agent skills under `skills/` for AI coders to load and use:
 
 - **`result-composition`** — primitive composition, dual-form currying, pipe/flow.
-- **`railway-do-notation`** — named-context workflows, Railway builder, functional railway steps.
+- **`railway-do-notation`** — named-context workflows with the Railway builder.
 
 To add these skills to your environment:
 

@@ -1,16 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { ResultAsync } from "../src/async.js";
 import { errAsync, okAsync } from "../src/async-lift.js";
-import {
-  deriveNamed,
-  fromPromiseNamed,
-  parallelNamed,
-  parseWith,
-  Railway,
-  railway,
-  requireNamed,
-  select,
-} from "../src/railway.js";
+import { Railway } from "../src/railway.js";
 import { err, ok } from "../src/result.js";
 
 const toError = (error: unknown): Error =>
@@ -170,49 +161,27 @@ describe("Railway: parallel", () => {
 type ProfileRow = { readonly id: string; readonly name: string };
 type NormalizedProfile = { readonly id: string; readonly label: string };
 
-type ProfileIdContext = { readonly profileId: string };
-type ProfileRowContext = { readonly profile: ProfileRow };
-type NormalizedContext = { readonly normalized: NormalizedProfile };
-
-describe("functional railway", () => {
-  const parseProfileId = parseWith((input: string) => input.trim(), toError).as("profileId");
-
-  const loadProfileRow = fromPromiseNamed(
-    "row",
-    ({ profileId }: ProfileIdContext) =>
-      Promise.resolve<ProfileRow | null>({ id: profileId, name: "Ada" }),
-    toError,
-  );
-
-  const requireProfile = requireNamed(
-    "profile",
-    "row",
-    ({ profileId }: ProfileIdContext) => new Error(`missing ${profileId}`),
-  );
-
-  const normalize = deriveNamed(
-    "normalized",
-    ({ profile }: ProfileRowContext): NormalizedProfile => ({
-      id: profile.id,
-      label: profile.name.toUpperCase(),
-    }),
-  );
-
-  const loadSummaryInputs = parallelNamed({
-    recent: ({ normalized }: NormalizedContext) => okAsync([normalized.id]),
-    metrics: () => okAsync({ jobs: 2 }),
-  });
-
-  it("composes reusable steps", async () => {
-    const result = railway(
-      " profile-1 ",
-      parseProfileId,
-      loadProfileRow,
-      requireProfile,
-      normalize,
-      loadSummaryInputs,
-      select(({ normalized, recent, metrics }) => ({ normalized, recent, metrics })),
-    );
+describe("Railway: end-to-end workflow", () => {
+  it("chains parse, load, require, derive, parallel, and select", async () => {
+    const result = Railway.fromSync("profileId", () => " profile-1 ".trim(), toError)
+      .fromPromise(
+        "row",
+        ({ profileId }) => Promise.resolve<ProfileRow | null>({ id: profileId, name: "Ada" }),
+        toError,
+      )
+      .require("profile", "row", ({ profileId }) => new Error(`missing ${profileId}`))
+      .derive(
+        "normalized",
+        ({ profile }): NormalizedProfile => ({
+          id: profile.id,
+          label: profile.name.toUpperCase(),
+        }),
+      )
+      .parallel({
+        recent: ({ normalized }) => okAsync([normalized.id]),
+        metrics: () => okAsync({ jobs: 2 }),
+      })
+      .select(({ normalized, recent, metrics }) => ({ normalized, recent, metrics }));
 
     expect(await result.resolve()).toEqual(
       ok({

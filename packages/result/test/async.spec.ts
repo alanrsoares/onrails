@@ -1,13 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { ResultAsync } from "../src/async.js";
-import {
-  errAsync,
-  fromPromise,
-  fromSafePromise,
-  okAsync,
-  parallelTupleAsync,
-  tryAsync,
-} from "../src/async-lift.js";
+import { errAsync, fromPromise, fromSafePromise, okAsync, tryAsync } from "../src/async-lift.js";
 import { err, ok } from "../src/result.js";
 
 describe("ResultAsync: construction", () => {
@@ -38,6 +31,12 @@ describe("ResultAsync: construction", () => {
     expect(result).toEqual(err("boom"));
   });
 
+  it("fromResultPromise passes a Result-shaped Ok value through verbatim", async () => {
+    const inner = ok(1);
+    const result = await ResultAsync.fromResultPromise(Promise.resolve(ok(inner))).resolve();
+    expect(result).toEqual(ok(inner));
+  });
+
   it("await ra resolves to bare tagged-union Result (thenable)", async () => {
     const r = await okAsync<number, Error>(7);
     expect(r).toEqual(ok(7));
@@ -56,6 +55,16 @@ describe("ResultAsync: chaining and combine", () => {
   it("stops on Err in chain", async () => {
     const ra = okAsync(1).flatMap(() => errAsync("stop"));
     expect(await ra.resolve()).toEqual(err("stop"));
+  });
+
+  it("flatMap accepts a sync Result", async () => {
+    const ra = okAsync(2).flatMap((n) => ok(n * 10));
+    expect(await ra.resolve()).toEqual(ok(20));
+  });
+
+  it("flatMap no longer admits compat-shaped { inner } returns", () => {
+    // @ts-expect-error core flatMap accepts only Result | ResultAsync; compat coerces at its own boundary
+    void okAsync(1).flatMap((n) => ({ inner: ok(n) }));
   });
 
   it("combine aggregates async results", async () => {
@@ -79,8 +88,8 @@ describe("ResultAsync: chaining and combine", () => {
 });
 
 describe("ResultAsync: tuple concurrency", () => {
-  it("parallelTupleAsync returns first Err in input order", async () => {
-    const combined = parallelTupleAsync([
+  it("combineTupleParallel returns first Err in input order", async () => {
+    const combined = ResultAsync.combineTupleParallel([
       okAsync(1),
       errAsync("first"),
       errAsync("second"),
@@ -88,16 +97,7 @@ describe("ResultAsync: tuple concurrency", () => {
     expect(await combined.resolve()).toEqual(err("first"));
   });
 
-  it("parallelTupleAsync aliases parallel tuple combine", async () => {
-    const combined = parallelTupleAsync([
-      okAsync(1),
-      errAsync("first"),
-      errAsync("second"),
-    ] as const);
-    expect(await combined.resolve()).toEqual(err("first"));
-  });
-
-  it("parallelTupleAsync overlaps lazy branch work", async () => {
+  it("combineTupleParallel overlaps lazy branch work", async () => {
     let inFlight = 0;
     let maxInFlight = 0;
 
@@ -110,7 +110,7 @@ describe("ResultAsync: tuple concurrency", () => {
         return ok(value);
       });
 
-    const result = await parallelTupleAsync([lazy(1), lazy(2)] as const).resolve();
+    const result = await ResultAsync.combineTupleParallel([lazy(1), lazy(2)] as const).resolve();
     expect(result).toEqual(ok([1, 2]));
     expect(maxInFlight).toBe(2);
   });

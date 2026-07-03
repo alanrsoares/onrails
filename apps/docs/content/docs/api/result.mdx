@@ -439,6 +439,22 @@ parse("nope");    // Err({ kind: "parse", … })
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
+### unwrap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Alias of [unwrapOk](#unwrapok-ƒ) for syntax cohesion with `@onrails/maybe`.
+
+```typescript
+function unwrap<T, E>(result: Result<T, E>): T
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `result` | `Result<T, E>` |  |
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
 ### unwrapErr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Test/assert helper — returns the `Err` value, or **throws a `TypeError`**
@@ -509,6 +525,7 @@ Returns the `Ok` value, or `defaultValue` when the result is `Err`.
 
 ```typescript
 function unwrapOr<T, E>(result: Result<T, E>, defaultValue: T): T
+function unwrapOr<T>(defaultValue: T): <E>(result: Result<T, E>) => T
 ```
 
 #### Parameters
@@ -522,6 +539,73 @@ function unwrapOr<T, E>(result: Result<T, E>, defaultValue: T): T
 
 ```ts
 unwrapOr(parsedSetting, "default-value");
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### validateAll <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Accumulate independent validation failures. Returns `Ok<T[]>` only when
+every input is `Ok`. Without a combiner, failures are collected into a
+readonly array; with `combineErrors` they are folded into a single `E`.
+
+Unlike [combine](#combine-ƒ), this does **not** short-circuit on first failure —
+use for independent checks where you want to report all problems at once.
+
+```typescript
+function validateAll<T, E>(results: readonly Result<T, E>[]): Result<T[], readonly E[]>
+function validateAll<T, E>(results: readonly Result<T, E>[], combineErrors: (left: E, right: E) => E): Result<T[], E>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `results` | `readonly Result<T, E>[]` |  |
+
+#### Example
+
+```ts
+const checks: Result<string, string[]>[] = [ok("Ada"), err(["age required"])];
+
+validateAll(checks);
+// Result<string[], readonly string[][]>
+
+validateAll(checks, (left, right) => [...left, ...right]);
+// Result<string[], string[]>
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### validateTuple <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Tuple-preserving variant of [validateAll](#validateall-ƒ). Heterogeneous input tuple
+→ preserved `Ok` tuple shape. Without a combiner, the error union is
+collected into a readonly array; with `combineErrors`, all inputs must
+share the error type `E` and failures fold into a single `E`.
+
+```typescript
+function validateTuple<const R extends readonly Result<unknown, unknown>[]>(results: R): Result<{ [K in keyof R]: InferOk<R[K]>; }, readonly InferErr<R[number]>[]>
+function validateTuple<const R extends readonly Result<unknown, unknown>[], E = InferErr<R[number]>>(results: R & readonly Result<unknown, E>[], combineErrors: (left: E, right: E) => E): Result<{ [K in keyof R]: InferOk<...>; }, E>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `results` | `R` |  |
+
+#### Example
+
+```ts
+const name: Result<string, string[]> = ok("Ada");
+const age: Result<number, string[]> = ok(36);
+
+validateTuple([name, age] as const);
+// Result<readonly [string, number], readonly string[][]>
+
+validateTuple([name, age] as const, (l, r) => [...l, ...r]);
+// Result<readonly [string, number], string[]>
 ```
 
 
@@ -612,34 +696,6 @@ function okAsync<T, E>(value: T): ResultAsync<T, E>
 
 ```ts
 const r = okAsync(42);                  // ResultAsync<number, never>
-```
-
-<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
-
-### parallelTupleAsync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
-
-Heterogeneous async tuple combine — branches overlap in wall-clock time.
-Returns the first `Err` in **input** order (not completion order).
-
-```typescript
-function parallelTupleAsync<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
-```
-
-#### Parameters
-
-| Parameter | Type | Description |
-|---|---|---|
-| `results` | `R` |  |
-
-#### Example
-
-```ts
-const combined = parallelTupleAsync([
-  loadProfile(id),
-  loadMetrics(id),
-  loadFlags(id),
-] as const);
-// ResultAsync<readonly [Profile, Metrics, Flags], …>
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -825,8 +881,9 @@ const r = ResultAsync.err({ kind: "not_found" as const });
 ### ResultAsync.fromResultPromise <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Lifts an existing `Promise<Result<T, E>>` (e.g. from interop code) into a
-[ResultAsync](#resultasync-class), auto-flattening one level of double-wrapping. A thrown
-defect is routed through `onDefect`, defaulting to [UnexpectedError](#unexpectederror-class).
+[ResultAsync](#resultasync-class). A thrown defect is routed through `onDefect`,
+defaulting to [UnexpectedError](#unexpectederror-class). The `Ok` value passes through
+verbatim — even when it happens to be Result-shaped.
 
 ```typescript
 static fromResultPromise<T, E>(promise: Promise<Result<T, E>>, onDefect?: ((error: unknown) => E | UnexpectedError) | undefined): ResultAsync<T, E | UnexpectedError>
@@ -976,14 +1033,14 @@ Canonical bind — chains a step that itself returns a `ResultAsync` or sync
 `Result`, short-circuiting on `Err`. Error types accumulate (`E | F`).
 
 ```typescript
-flatMap<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
+flatMap<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F>): ResultAsync<U, E | F>
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `fn` | `(value: T) => ResultAsync<U, F> \| Result<U, F> \| { inner: Result<U, F>; }` |  |
+| `fn` | `(value: T) => ResultAsync<U, F> \| Result<U, F>` |  |
 
 #### Example
 
@@ -1001,14 +1058,14 @@ neverthrow-compat alias of [flatMap](#flatmap-ƒ). Kept as the documented compat
 tier; prefer [flatMap](#flatmap-ƒ) in new code.
 
 ```typescript
-andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F> | { inner: Result<U, F>; }): ResultAsync<U, E | F>
+andThen<U, F = E>(fn: (value: T) => ResultAsync<U, F> | Result<U, F>): ResultAsync<U, E | F>
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `fn` | `(value: T) => ResultAsync<U, F> \| Result<U, F> \| { inner: Result<U, F>; }` |  |
+| `fn` | `(value: T) => ResultAsync<U, F> \| Result<U, F>` |  |
 
 #### Example
 

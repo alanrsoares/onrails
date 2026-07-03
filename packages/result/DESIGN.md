@@ -10,7 +10,7 @@ type Result<T, E> =
   | { readonly _tag: "Err"; readonly error: E };
 ```
 
-- Default API: dual-form module functions — every transform accepts either shape:
+- Default API: dual-form module functions — every transform accepts either shape. The arity dispatch is owned by one internal combinator (`src/internal/dual.ts`, twin in `@onrails/maybe`); `test/dual.spec.ts` property-tests `f(r, x) ≡ f(x)(r)` for every transform:
 
   ```ts
   map(result, fn);    // data-first
@@ -25,7 +25,7 @@ type Result<T, E> =
 - `tap` / `tapErr` observe a track without changing the carried value.
 - `recover` binds the error track and may return a failed workflow back to success.
 - `pipe(value, ...fns)` is the variadic value-first pipe (up to 9 steps); `flow(...fns)` is the variadic point-free composition in `@onrails/result/pipe`.
-- Optional dot-chaining via `fluent(r)` / `fluentAsync(ra)` in `@onrails/result/fluent`.
+- Optional dot-chaining via `fluent(r)` / `fluentAsync(ra)` in `@onrails/result/fluent`. Mirrors every instance-appropriate core transform; `test/parity.spec.ts` enforces the mirror (both directions) across core, fluent, and the neverthrow compat shim.
 
 ## Sync / async interop
 
@@ -62,24 +62,18 @@ type RailwayOutput<T, E, M extends RailwayMode> =
   M extends "async" ? ResultAsync<T, E> : Result<T, E>;
 ```
 
-Use `Railway` when named context removes nesting or positional tuple plumbing. Prefer `asyncAfter`, `fromResult`, or direct `flatMap` for one- or two-step flows.
+Use `Railway` when named context removes nesting or positional tuple plumbing. Prefer `asyncAfter`, `fromResult`, or direct `flatMap` for one- or two-step flows. Reusable steps are plain functions of the context (`(ctx) => Result` / `(ctx) => ResultAsync`) plugged in via `.fromResult` / `.fromAsync`.
 
-`railway(input, ...steps)` is the functional companion for reusable workflow steps. Step factories: `parseWith(parser, onThrow).as(key)`, `fromSyncNamed`, `fromResultNamed`, `fromPromiseNamed`, `fromAsyncNamed`, `deriveNamed`, `requireNamed`, `parallelNamed`, `select`.
+Internally the runtime state tag (`"sync" | "async"`) mirrors the phantom `M`; the private `step`/`out` helpers are the only places that re-link the two.
 
 ## Combining results
 
+One module (`collections.ts`), one naming matrix — short-circuit vs accumulate × array vs tuple:
+
 - `combine` / `combineTuple` — sync, first-Err wins.
-- `ResultAsync.combineTuple` — async, sequential, first-Err in input order.
-- `parallelTupleAsync` — async, concurrent (branches overlap), first-Err in input order.
-- `ResultAsync.combine` — homogeneous async collection.
-
-## Validation
-
-`@onrails/result/validation` is a separate surface for accumulated independent failures (vs. railway short-circuit).
-
-- `validateAll(results, join)` — combine errors via a join function.
-- `validateAllArray(results)` — collect all errors into a readonly array.
-- `validateTupleArray(results)` — same for heterogeneous tuple shapes.
+- `validateAll` / `validateTuple` — accumulate independent failures; optional `combineErrors` fold, default collects a `readonly E[]`.
+- `ResultAsync.combine` / `ResultAsync.combineTuple` — async, sequential, first-Err in input order.
+- `ResultAsync.combineTupleParallel` — async, concurrent (branches overlap), first-Err in input order.
 
 Use `flatMap` for dependent checks where later checks need earlier successful values.
 
@@ -95,11 +89,9 @@ Use `flatMap` for dependent checks where later checks need earlier successful va
 | `@onrails/result` | Core: dual-form map/flatMap/match, variadic `pipe`, sync collection, async surface, lift helpers, generator sugar |
 | `@onrails/result/fluent` | Dot-style chains |
 | `@onrails/result/extra` | Error-type utilities |
-| `@onrails/result/interop` | Promise/ResultAsync boundary helpers |
 | `@onrails/result/pipe` | Variadic `flow` for point-free composition |
-| `@onrails/result/railway` | Named workflow builder and reusable step factories |
+| `@onrails/result/railway` | Named workflow builder |
 | `@onrails/result/try-gen` | Sync generator-style `Result` sugar |
-| `@onrails/result/validation` | Independent validation with accumulated failures |
 | `@onrails/result/compat/neverthrow` | Migration shim — class-shaped surface for incremental migration off neverthrow |
 
 ## Type tests
