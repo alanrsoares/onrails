@@ -84,6 +84,56 @@ const checked = validate(ok(41));
 because awaiting a half-built pipeline reads better than nesting. (For
 neverthrow muscle memory, `.andThen` is an alias of `.flatMap`.)
 
+## House style: `import * as R`
+
+The namespace import is the documented house style, not a stylistic option:
+
+```ts twoslash
+import * as R from "@onrails/result";
+import * as Maybe from "@onrails/maybe";
+import * as P from "@onrails/pattern";
+
+R.map(R.ok(1), (n) => n + 1);
+Maybe.map(Maybe.some(1), (n) => n + 1);
+```
+
+Two reasons: `R.` autocompletes the whole module surface — the one ergonomic
+debit data-first has versus methods — and a namespace import sidesteps name
+collisions, most commonly `match` from `ts-pattern` or `@onrails/pattern`
+itself (`R.match` next to `P.matchTag`, no rename gymnastics). Named imports
+(`import { map } from "@onrails/result"`) still work and read fine in small
+files; reach for the namespace import once a file pulls in more than a
+handful of names, or mixes carriers.
+
+## The fluent bracket: open, chain, close
+
+`/fluent` (`@onrails/result/fluent`, `@onrails/maybe/fluent`) wraps data in
+closures so a chain can read as `.map().flatMap().match()` instead of nested
+calls. It's sugar for the app edge — never for library or service internals —
+and it comes with one rule: **the wrapper stays local.**
+
+```ts twoslash
+import { fluent } from "@onrails/result/fluent";
+declare const parse: (raw: string) => import("@onrails/result").Result<{ v: number }, string>;
+// ---cut---
+// opens with fluent(...), closes with a terminal in the same expression
+const greeting = fluent(parse('{"v":1}'))
+  .map((data) => data.v + 1)
+  .match(
+    (n) => `ok: ${n}`,
+    (e) => `err: ${e}`,
+  );
+```
+
+Think of `fluent(...)` and a terminal (`.toResult()`, `.toMaybe()`,
+`.toString()`, `.match()`, `.unwrapOr()`) as a matched bracket pair — the
+wrapper must open and close within one expression. It's a closure over plain
+data, not plain data itself, so it can never be returned, exported, stored on
+a field, or handed to `postMessage()` / `structuredClone()` /
+`JSON.stringify()` — none of that would serialize correctly. `@onrails/eslint-plugin`
+and `@onrails/biome-plugin` both ship a `fluent-stays-local` rule that flags
+exactly those four escape points.
+
 ## The one hard constraint: serializable data
 
 A `Result` is a plain tagged union — `{ _tag: "Ok"; value }` or

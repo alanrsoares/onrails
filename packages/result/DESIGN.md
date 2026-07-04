@@ -21,12 +21,13 @@ type Result<T, E> =
 
 - `flatMap` is the canonical bind and widens error types (`E | F`).
 - `match` is the canonical terminal collapse — positional, dual-form.
-- For files that also import `match` from `ts-pattern`, dissolve the collision with a namespace import (`import * as R from "@onrails/result"` → `R.match`).
+- House style: `import * as R from "@onrails/result"`. `R.` autocompletes the full surface (data-first's one ergonomic debit) and sidesteps name collisions — most commonly `match` from `ts-pattern` or `@onrails/pattern` (`R.match` next to `P.matchTag`).
 - `of` is the Fantasy Land `pure` alias of `ok`, mirrored by `ResultAsync.of` (`Maybe.of` follows in RFC 0002); `show(r)` prints `Ok(…)` / `Err(…)` for logs (fluent's `toString` delegates to it).
 - `tap` / `tapErr` observe a track without changing the carried value.
 - `recover` binds the error track and may return a failed workflow back to success.
 - `pipe(value, ...fns)` is the variadic value-first pipe (up to 9 steps); `flow(...fns)` is the variadic point-free composition in `@onrails/result/pipe`.
 - Optional dot-chaining via `fluent(r)` in `@onrails/result/fluent`. Mirrors every instance-appropriate core transform; `test/parity.spec.ts` enforces the mirror (both directions) across core, fluent, and the neverthrow compat shim. `ResultAsync` is already fluent (its methods return `ResultAsync`) — no `fluentAsync` wrapper; wrapping it would just be a one-line delegate to itself.
+- The fluent wrapper stays local: `fluent(r)` opens and a terminal (`toResult`/`toString`/`match`/`unwrapOr`) closes within one expression — it's a closure over data, not data, so it must never be a return type, an exported binding, a stored field, or an argument to a serialize/`postMessage`/cache call. `@onrails/eslint-plugin` and `@onrails/biome-plugin` enforce this via `fluent-stays-local` (RFC 0002 §9).
 
 ## Sync / async interop
 
