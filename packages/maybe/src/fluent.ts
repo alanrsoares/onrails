@@ -1,4 +1,4 @@
-import { andThen, flatMap, type Maybe, map, match, tap, tapNone, unwrapOr } from "./maybe.js";
+import { andThen, flatMap, type Maybe, map, match, show, tap, tapNone, unwrapOr } from "./maybe.js";
 
 /** Opt-in dot chaining over a {@link Maybe}. */
 export type FluentMaybe<T> = {
@@ -11,6 +11,10 @@ export type FluentMaybe<T> = {
   match<U>(onSome: (value: T) => U, onNone: () => U): U;
 
   unwrapOr(defaultValue: T): T;
+  /** Exit the wrapper — hand back the canonical plain-data maybe. */
+  toMaybe(): Maybe<T>;
+  /** Debug terminal — `Some(…)` / `None`, same output as {@link show}. */
+  toString(): string;
 };
 
 /**
@@ -32,4 +36,6 @@ export const fluent = <T>(maybe: Maybe<T>): FluentMaybe<T> => ({
   match: (onSome, onNone) => match(maybe, onSome, onNone),
 
   unwrapOr: (defaultValue) => unwrapOr(maybe, defaultValue),
+  toMaybe: () => maybe,
+  toString: () => show(maybe),
 });

@@ -17,13 +17,21 @@ const TABLE = [
   { label: "tapNone", core: "tapNone", fluent: ["tapNone"] },
   { label: "match", core: "match", fluent: ["match"] },
   { label: "unwrapOr", core: "unwrapOr", fluent: ["unwrapOr"] },
+  // FL pure — of aliases some; core-only (constructors don't chain)
+  { label: "of", core: "of", fluent: [] },
+  // debug printer — free fn on core, terminal on the fluent wrapper
+  { label: "show", core: "show", fluent: ["toString"] },
+  // exit the fluent bracket back to plain data
+  { label: "toMaybe", core: null, fluent: ["toMaybe"] },
 ] as const;
 
 const sample = fluent(core.some(1));
 
 describe("parity: every declared op exists on both surfaces", () => {
   it.each(TABLE.map((row) => [row.label, row] as const))("%s", (_label, row) => {
-    expect(typeof (core as Record<string, unknown>)[row.core]).toBe("function");
+    if (row.core !== null) {
+      expect(typeof (core as Record<string, unknown>)[row.core]).toBe("function");
+    }
     for (const name of row.fluent)
       expect(typeof (sample as unknown as Record<string, unknown>)[name]).toBe("function");
   });
