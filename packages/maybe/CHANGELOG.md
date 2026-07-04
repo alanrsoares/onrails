@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.2](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.1...maybe-v0.2.2) (2026-07-04)
+
+
+### Features
+
+* **maybe:** add of, show, fluent terminals, symmetry spec ([#83](https://github.com/alanrsoares/onrails/issues/83)) ([63e0080](https://github.com/alanrsoares/onrails/commit/63e008089a8495422e0c5f58ede9cd35c7971dbb))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.3.1
+  * peerDependencies
+    * @onrails/result bumped to 0.3.1
+
 ## [0.2.1](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.0...maybe-v0.2.1) (2026-07-03)
 
 
