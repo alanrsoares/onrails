@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/alanrsoares/onrails/compare/result-v0.3.1...result-v0.4.0) (2026-07-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **result:** remove fluentAsync ([#84](https://github.com/alanrsoares/onrails/issues/84))
+
+### Features
+
+* **result:** remove fluentAsync ([#84](https://github.com/alanrsoares/onrails/issues/84)) ([1f5e564](https://github.com/alanrsoares/onrails/commit/1f5e5641f20844fda9d3bb8eaca364a230ef1e15))
+
 ## [0.3.1](https://github.com/alanrsoares/onrails/compare/result-v0.3.0...result-v0.3.1) (2026-07-04)
 
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.4](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.3...codemod-v0.2.4) (2026-07-04)
+
+
+### Features
+
+* **codemod:** fluent-stays-local rule across engines ([#86](https://github.com/alanrsoares/onrails/issues/86)) ([f7b1f5d](https://github.com/alanrsoares/onrails/commit/f7b1f5dcb9cd82a4a4df713304168292c13ab649))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/maybe bumped to 0.2.3
+    * @onrails/pattern bumped to 0.3.2
+    * @onrails/result bumped to 0.4.0
+
 ## [0.2.3](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.2...codemod-v0.2.3) (2026-07-04)
 
 
