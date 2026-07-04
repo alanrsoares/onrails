@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.3](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.2...codemod-v0.2.3) (2026-07-04)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/maybe bumped to 0.2.2
+    * @onrails/pattern bumped to 0.3.1
+    * @onrails/result bumped to 0.3.1
+
 ## [0.2.2](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.1...codemod-v0.2.2) (2026-07-03)
 
 

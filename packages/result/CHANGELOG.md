@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/alanrsoares/onrails/compare/result-v0.3.0...result-v0.3.1) (2026-07-04)
+
+
+### Features
+
+* **result:** add of, show, and fluent exit terminals ([#81](https://github.com/alanrsoares/onrails/issues/81)) ([3d6bffb](https://github.com/alanrsoares/onrails/commit/3d6bffbd6f2eb0041a53f854f213f5ccf63cb867))
+
 ## [0.3.0](https://github.com/alanrsoares/onrails/compare/result-v0.2.0...result-v0.3.0) (2026-07-03)
 
 
