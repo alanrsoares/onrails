@@ -32,6 +32,18 @@ export type None = Extract<Maybe<never>, { _tag: "None" }>;
 export const some = <T>(value: T): Maybe<T> => ({ _tag: "Some", value });
 
 /**
+ * Fantasy Land `pure` — alias of {@link some}. One lift name shared across
+ * the trio (`of` / `Result.of` / `ResultAsync.of`) for generic and FL-style
+ * code.
+ *
+ * @example
+ * ```ts
+ * const m = of(1);   // Maybe<number> — identical to some(1)
+ * ```
+ */
+export const of = some;
+
+/**
  * The `None` value — represents expected absence. Not a failure.
  *
  * @example
@@ -269,3 +281,26 @@ export const tapNone: {
   <T>(maybe: Maybe<T>, fn: () => void): Maybe<T>;
   <T>(fn: () => void): (maybe: Maybe<T>) => Maybe<T>;
 } = dual(2, tapNoneImpl);
+
+const printPayload = (payload: unknown): string => {
+  try {
+    return JSON.stringify(payload) ?? String(payload);
+  } catch {
+    // cyclic or non-JSON payload — a debug printer must not throw
+    return String(payload);
+  }
+};
+
+/**
+ * Debug printer — renders a maybe as `Some(…)` / `None` for logs. Payloads
+ * print as JSON (values are plain data by design); non-JSON payloads fall
+ * back to `String(...)`. Mirror of the result package's `show`.
+ *
+ * @example
+ * ```ts
+ * show(some(1));   // 'Some(1)'
+ * show(none());    // 'None'
+ * ```
+ */
+export const show = <T>(maybe: Maybe<T>): string =>
+  isSome(maybe) ? `Some(${printPayload(maybe.value)})` : "None";
