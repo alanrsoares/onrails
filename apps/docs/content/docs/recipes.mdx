@@ -128,7 +128,9 @@ const summary = Railway.fromSync("id", () => IdSchema.parse(raw), toError)
 
 > `@onrails/result/fluent` (`fluent(r)`) is app-edge sugar for dot-chaining —
 > keep it out of library and service internals. `ResultAsync` is already
-> fluent, so there's no `fluentAsync` wrapper.
+> fluent, so there's no `fluentAsync` wrapper. The wrapper is a bracket, not a
+> value: open with `fluent(...)`, close with a terminal (`toResult`/`match`/
+> `unwrapOr`/…) in the same expression — see [Core concepts](/docs/core-concepts#the-fluent-bracket-open-chain-close).
 
 ## Validating with Zod
 

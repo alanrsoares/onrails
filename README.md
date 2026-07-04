@@ -60,6 +60,10 @@ if (isOk(r)) console.log(r.value);
 
 For composition patterns (`pipe`, `flow`, dual-form transforms, point-free pipelines) see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
 
+## House style
+
+`import * as R from "@onrails/result"` (and `Maybe`, `P` for `@onrails/pattern`) is the documented house style once a file pulls in more than a handful of names or mixes carriers — `R.` autocompletes the whole module surface and sidesteps collisions like `match` from `ts-pattern`. Named imports (`import { map } from "@onrails/result"`) are fine for small, single-carrier files.
+
 ## Composition guidelines
 
 To keep codebases readable and consistent, follow the four-tier guideline when choosing how to compose operations:
@@ -71,7 +75,7 @@ To keep codebases readable and consistent, follow the four-tier guideline when c
 | **3** | branchy, value reused | `tryGen` escape hatch |
 | **4** | 4+ named steps, mixed IO | `Railway` builder |
 
-`/fluent` is documented as app-edge sugar only — never in library or service internals. For examples illustrating Tier 1-4 usage patterns, see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
+`/fluent` is app-edge sugar only — never in library or service internals — and it's a bracket, not a value: `fluent(data)` opens, a terminal (`toResult`/`toMaybe`/`toString`/`match`/`unwrapOr`) closes it within the same expression. The wrapper is a closure over data, not data itself, so it can never be returned, exported, stored on a field, or passed to a serialize/`postMessage`/cache call — `@onrails/eslint-plugin` and `@onrails/biome-plugin` both flag those escapes via `fluent-stays-local`. For examples illustrating Tier 1-4 usage patterns, see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
 
 ## Agent skills
 
