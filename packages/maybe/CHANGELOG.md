@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.3](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.2...maybe-v0.2.3) (2026-07-04)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.4.0
+  * peerDependencies
+    * @onrails/result bumped to 0.4.0
+
 ## [0.2.2](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.1...maybe-v0.2.2) (2026-07-04)
 
 

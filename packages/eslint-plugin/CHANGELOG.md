@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.3...eslint-plugin-v0.1.4) (2026-07-04)
+
+
+### Features
+
+* **codemod:** fluent-stays-local rule across engines ([#86](https://github.com/alanrsoares/onrails/issues/86)) ([f7b1f5d](https://github.com/alanrsoares/onrails/commit/f7b1f5dcb9cd82a4a4df713304168292c13ab649))
+
 ## [0.1.3](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.2...eslint-plugin-v0.1.3) (2026-07-03)
 
 

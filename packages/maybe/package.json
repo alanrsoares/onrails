@@ -1,6 +1,6 @@
 {
   "name": "@onrails/maybe",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Tagged Maybe for expected absence — pure tagged unions, Result interop, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
