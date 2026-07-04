@@ -258,7 +258,7 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | Path | Contents |
 |------|----------|
 | `@onrails/result` | Core + interop exports |
-| `@onrails/result/fluent` | `fluent()`, `fluentAsync()` |
+| `@onrails/result/fluent` | `fluent()` |
 | `@onrails/result/extra` | Error-type utilities |
 | `@onrails/result/pipe` | `flow` (variadic point-free composition) |
 | `@onrails/result/railway` | `Railway` named-context workflow builder |

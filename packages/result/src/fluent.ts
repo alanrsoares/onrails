@@ -1,4 +1,3 @@
-import type { ResultAsync } from "./async.js";
 import {
   bimap,
   flatMap,
@@ -59,51 +58,4 @@ export const fluent = <T, E>(result: Result<T, E>): FluentResult<T, E> => ({
   unwrapOr: (defaultValue) => unwrapOr(result, defaultValue),
   toResult: () => result,
   toString: () => show(result),
-});
-
-/** Opt-in dot chaining over {@link ResultAsync} */
-export type FluentResultAsync<T, E> = {
-  readonly resultAsync: ResultAsync<T, E>;
-  map: <U>(fn: (value: T) => U) => FluentResultAsync<U, E>;
-  mapErr: <F>(fn: (error: E) => F) => FluentResultAsync<T, F>;
-  flatMap: <U, F = E>(
-    fn: (value: T) => ResultAsync<U, F> | Result<U, F>,
-  ) => FluentResultAsync<U, E | F>;
-  andThen: <U, F = E>(
-    fn: (value: T) => ResultAsync<U, F> | Result<U, F>,
-  ) => FluentResultAsync<U, E | F>;
-  recover: <F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>) => FluentResultAsync<T, F>;
-  orElse: <F>(fn: (error: E) => ResultAsync<T, F> | Result<T, F>) => FluentResultAsync<T, F>;
-  tap: (fn: (value: T) => void) => FluentResultAsync<T, E>;
-  tapErr: (fn: (error: E) => void) => FluentResultAsync<T, E>;
-
-  match: <U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2) => Promise<U1 | U2>;
-  unwrapOr: <U>(defaultValue: U) => Promise<T | U>;
-  resolve: () => Promise<Result<T, E>>;
-};
-
-/**
- * Wrap a {@link ResultAsync} for opt-in dot chaining — the async counterpart of
- * {@link fluent}. App-edge sugar; await a terminal (`match`, `unwrapOr`,
- * `resolve`) to leave the fluent world.
- *
- * @example
- * ```ts
- * fluentAsync(okAsync(2)).map((n) => n * 3); // FluentResultAsync<number, never>
- * ```
- */
-export const fluentAsync = <T, E>(resultAsync: ResultAsync<T, E>): FluentResultAsync<T, E> => ({
-  resultAsync,
-  map: (fn) => fluentAsync(resultAsync.map(fn)),
-  mapErr: (fn) => fluentAsync(resultAsync.mapErr(fn)),
-  flatMap: (fn) => fluentAsync(resultAsync.flatMap(fn)),
-  andThen: (fn) => fluentAsync(resultAsync.andThen(fn)),
-  recover: (fn) => fluentAsync(resultAsync.recover(fn)),
-  orElse: (fn) => fluentAsync(resultAsync.orElse(fn)),
-  tap: (fn) => fluentAsync(resultAsync.tap(fn)),
-  tapErr: (fn) => fluentAsync(resultAsync.tapErr(fn)),
-
-  match: (onOk, onErr) => resultAsync.match(onOk, onErr),
-  unwrapOr: (defaultValue) => resultAsync.unwrapOr(defaultValue),
-  resolve: () => resultAsync.resolve(),
 });

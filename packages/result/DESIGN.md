@@ -26,7 +26,7 @@ type Result<T, E> =
 - `tap` / `tapErr` observe a track without changing the carried value.
 - `recover` binds the error track and may return a failed workflow back to success.
 - `pipe(value, ...fns)` is the variadic value-first pipe (up to 9 steps); `flow(...fns)` is the variadic point-free composition in `@onrails/result/pipe`.
-- Optional dot-chaining via `fluent(r)` / `fluentAsync(ra)` in `@onrails/result/fluent`. Mirrors every instance-appropriate core transform; `test/parity.spec.ts` enforces the mirror (both directions) across core, fluent, and the neverthrow compat shim.
+- Optional dot-chaining via `fluent(r)` in `@onrails/result/fluent`. Mirrors every instance-appropriate core transform; `test/parity.spec.ts` enforces the mirror (both directions) across core, fluent, and the neverthrow compat shim. `ResultAsync` is already fluent (its methods return `ResultAsync`) — no `fluentAsync` wrapper; wrapping it would just be a one-line delegate to itself.
 
 ## Sync / async interop
 

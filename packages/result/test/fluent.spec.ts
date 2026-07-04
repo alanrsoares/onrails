@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { okAsync } from "../src/async-lift.js";
-import { fluent, fluentAsync } from "../src/fluent.js";
+import { fluent } from "../src/fluent.js";
 import { err, ok } from "../src/result.js";
 
 describe("fluent", () => {
@@ -13,16 +12,6 @@ describe("fluent", () => {
         () => "err",
       );
     expect(out).toBe("6");
-  });
-
-  it("async fluent matches", async () => {
-    const out = await fluentAsync(okAsync(1))
-      .map((n) => n + 1)
-      .match(
-        (n) => n,
-        () => 0,
-      );
-    expect(out).toBe(2);
   });
 });
 
