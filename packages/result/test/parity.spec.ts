@@ -1,8 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
-import { ResultAsync } from "../src/async.js";
 import * as compat from "../src/compat/neverthrow.js";
-import { fluent, fluentAsync } from "../src/fluent.js";
+import { fluent } from "../src/fluent.js";
 import * as core from "../src/result.js";
 
 /**
@@ -16,7 +15,6 @@ type Row = {
   /** export name on the core module, or null when core deliberately lacks it */
   core: string | null;
   fluent: readonly string[];
-  fluentAsync: readonly string[];
   compatSync: readonly string[];
   compatAsync: readonly string[];
 };
@@ -26,7 +24,6 @@ const TABLE: readonly Row[] = [
     label: "map",
     core: "map",
     fluent: ["map"],
-    fluentAsync: ["map"],
     compatSync: ["map"],
     compatAsync: ["map"],
   },
@@ -34,7 +31,6 @@ const TABLE: readonly Row[] = [
     label: "mapErr",
     core: "mapErr",
     fluent: ["mapErr"],
-    fluentAsync: ["mapErr"],
     compatSync: ["mapErr"],
     compatAsync: ["mapErr"],
   },
@@ -42,7 +38,6 @@ const TABLE: readonly Row[] = [
     label: "bimap",
     core: "bimap",
     fluent: ["bimap"],
-    fluentAsync: [],
     compatSync: [],
     compatAsync: [],
   },
@@ -50,7 +45,6 @@ const TABLE: readonly Row[] = [
     label: "flatMap",
     core: "flatMap",
     fluent: ["flatMap", "andThen"],
-    fluentAsync: ["flatMap", "andThen"],
     compatSync: ["andThen", "asyncAndThen"],
     compatAsync: ["flatMap", "andThen", "chain"],
   },
@@ -58,7 +52,6 @@ const TABLE: readonly Row[] = [
     label: "recover",
     core: "recover",
     fluent: ["recover"],
-    fluentAsync: ["recover", "orElse"],
     compatSync: ["orElse"],
     compatAsync: ["orElse"],
   },
@@ -66,7 +59,6 @@ const TABLE: readonly Row[] = [
     label: "tap",
     core: "tap",
     fluent: ["tap"],
-    fluentAsync: ["tap"],
     compatSync: [],
     compatAsync: ["andTee"],
   },
@@ -74,7 +66,6 @@ const TABLE: readonly Row[] = [
     label: "tapErr",
     core: "tapErr",
     fluent: ["tapErr"],
-    fluentAsync: ["tapErr"],
     compatSync: [],
     compatAsync: ["orTee"],
   },
@@ -82,7 +73,6 @@ const TABLE: readonly Row[] = [
     label: "match",
     core: "match",
     fluent: ["match"],
-    fluentAsync: ["match"],
     compatSync: ["match"],
     compatAsync: ["match"],
   },
@@ -90,7 +80,6 @@ const TABLE: readonly Row[] = [
     label: "unwrapOr",
     core: "unwrapOr",
     fluent: ["unwrapOr"],
-    fluentAsync: ["unwrapOr"],
     compatSync: ["unwrapOr"],
     compatAsync: ["unwrapOr"],
   },
@@ -98,7 +87,6 @@ const TABLE: readonly Row[] = [
     label: "isOk guard",
     core: "isOk",
     fluent: [],
-    fluentAsync: [],
     compatSync: ["isOk"],
     compatAsync: ["isOk"],
   },
@@ -106,7 +94,6 @@ const TABLE: readonly Row[] = [
     label: "isErr guard",
     core: "isErr",
     fluent: [],
-    fluentAsync: [],
     compatSync: ["isErr"],
     compatAsync: ["isErr"],
   },
@@ -115,7 +102,6 @@ const TABLE: readonly Row[] = [
     label: "unwrapOk",
     core: "unwrapOk",
     fluent: [],
-    fluentAsync: [],
     compatSync: ["_unsafeUnwrap"],
     compatAsync: [],
   },
@@ -123,7 +109,6 @@ const TABLE: readonly Row[] = [
     label: "unwrapErr",
     core: "unwrapErr",
     fluent: [],
-    fluentAsync: [],
     compatSync: ["_unsafeUnwrapErr"],
     compatAsync: [],
   },
@@ -132,7 +117,6 @@ const TABLE: readonly Row[] = [
     label: "resolve",
     core: null,
     fluent: [],
-    fluentAsync: ["resolve"],
     compatSync: [],
     compatAsync: ["resolve"],
   },
@@ -141,7 +125,6 @@ const TABLE: readonly Row[] = [
     label: "of",
     core: "of",
     fluent: [],
-    fluentAsync: [],
     compatSync: [],
     compatAsync: [],
   },
@@ -150,7 +133,6 @@ const TABLE: readonly Row[] = [
     label: "show",
     core: "show",
     fluent: ["toString"],
-    fluentAsync: [],
     compatSync: [],
     compatAsync: [],
   },
@@ -159,7 +141,6 @@ const TABLE: readonly Row[] = [
     label: "toResult",
     core: null,
     fluent: ["toResult"],
-    fluentAsync: [],
     compatSync: [],
     compatAsync: [],
   },
@@ -172,8 +153,8 @@ const COMPAT_ONLY = {
   async: ["toCore", "then"], // core bridge + thenable protocol
 } as const;
 
-// data-carrier props on the fluent wrappers, not operations
-const FLUENT_CARRIERS = ["result", "resultAsync"] as const;
+// data-carrier prop on the fluent wrapper, not an operation
+const FLUENT_CARRIERS = ["result"] as const;
 
 const protoMembers = (o: object): string[] => {
   const s = new Set<string>();
@@ -187,7 +168,6 @@ const protoMembers = (o: object): string[] => {
 
 const samples = {
   fluent: fluent(core.ok<number, string>(1)),
-  fluentAsync: fluentAsync(ResultAsync.ok<number, string>(1)),
   compatSync: compat.ok<number, string>(1),
   compatAsync: compat.okAsync<number, string>(1),
 };
@@ -199,10 +179,6 @@ describe("parity: every declared op exists on its surface", () => {
     }
     for (const name of row.fluent)
       expect(typeof (samples.fluent as unknown as Record<string, unknown>)[name]).toBe("function");
-    for (const name of row.fluentAsync)
-      expect(typeof (samples.fluentAsync as unknown as Record<string, unknown>)[name]).toBe(
-        "function",
-      );
     for (const name of row.compatSync)
       expect(typeof (samples.compatSync as unknown as Record<string, unknown>)[name]).not.toBe(
         "undefined",
@@ -221,14 +197,6 @@ describe("parity: no undeclared members (reverse drift guard)", () => {
   it("fluent sync surface is fully declared", () => {
     const allowed = declared((r) => r.fluent);
     const actual = Object.keys(samples.fluent).filter(
-      (k) => !FLUENT_CARRIERS.includes(k as (typeof FLUENT_CARRIERS)[number]),
-    );
-    expect(actual.filter((k) => !allowed.has(k)).sort()).toEqual([]);
-  });
-
-  it("fluent async surface is fully declared", () => {
-    const allowed = declared((r) => r.fluentAsync);
-    const actual = Object.keys(samples.fluentAsync).filter(
       (k) => !FLUENT_CARRIERS.includes(k as (typeof FLUENT_CARRIERS)[number]),
     );
     expect(actual.filter((k) => !allowed.has(k)).sort()).toEqual([]);
@@ -255,17 +223,6 @@ describe("parity: alias pairs agree on a sample (deep behaviour lives in conform
     expect(fluent(core.ok<number, string>(3)).andThen(double).result).toEqual(
       core.flatMap(core.ok<number, string>(3), double),
     );
-  });
-
-  it("fluentAsync orElse ≡ recover", async () => {
-    const fix = () => ResultAsync.ok<number, string>(9);
-    const viaOrElse = await fluentAsync(ResultAsync.err<number, string>("boom"))
-      .orElse(fix)
-      .resolve();
-    const viaRecover = await fluentAsync(ResultAsync.err<number, string>("boom"))
-      .recover(fix)
-      .resolve();
-    expect(viaOrElse).toEqual(viaRecover);
   });
 
   it("compat async chain ≡ andThen ≡ flatMap", async () => {

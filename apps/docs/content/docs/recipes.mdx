@@ -126,8 +126,9 @@ const summary = Railway.fromSync("id", () => IdSchema.parse(raw), toError)
 - `derive` adds a pure value computed from the context.
 - `select` collapses the final context into your result.
 
-> `@onrails/result/fluent` (`fluent(r)` / `fluentAsync(ra)`) is app-edge sugar for
-> dot-chaining — keep it out of library and service internals.
+> `@onrails/result/fluent` (`fluent(r)`) is app-edge sugar for dot-chaining —
+> keep it out of library and service internals. `ResultAsync` is already
+> fluent, so there's no `fluentAsync` wrapper.
 
 ## Validating with Zod
 
