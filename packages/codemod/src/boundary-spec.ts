@@ -5,6 +5,7 @@
  * 1. no `Promise<Result<…>>` in public signatures (`no-promise-result`)
  * 2. no unsafe unwraps outside tests (`no-unsafe-unwrap`)
  * 3. no deprecated neverthrow-era synonyms (`no-deprecated-synonyms`)
+ * 4. the fluent wrapper stays local (`fluent-stays-local`)
  *
  * The ESLint plugin (plain JS, `packages/eslint-plugin/src/index.js`) and the
  * Biome plugin (GritQL, `packages/biome-plugin/rules/*.grit`) cannot import
@@ -123,6 +124,29 @@ export const NO_DEPRECATED_SYNONYMS_RULE = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Fluent locality (RFC 0002 §9 rule 2)
+// ---------------------------------------------------------------------------
+
+/** The opt-in dot-chaining wrapper types — must open and close within a function body. */
+export const FLUENT_WRAPPER_TYPES = ["FluentResult", "FluentMaybe"] as const;
+
+/** Call targets treated as serialization/transfer sinks for the escape check. */
+export const FLUENT_ESCAPE_SINK_NAMES = [
+  "postMessage",
+  "structuredClone",
+  "JSON.stringify",
+] as const;
+
+/** The fluent wrapper escaping its function — return type, export, field, or serialize-sink argument. */
+export const FLUENT_STAYS_LOCAL_RULE = {
+  id: "fluent-stays-local",
+  wrapperTypes: FLUENT_WRAPPER_TYPES,
+  sinks: FLUENT_ESCAPE_SINK_NAMES,
+  message:
+    "FluentResult/FluentMaybe must stay local — it was flagged as a return type, an exported binding, a stored field, or an argument to a serialize/postMessage/cache call. Call toResult()/toMaybe()/toString() before it leaves the function.",
+} as const;
+
+// ---------------------------------------------------------------------------
 // Declared divergences
 // ---------------------------------------------------------------------------
 
@@ -149,5 +173,18 @@ export const ENGINE_DIVERGENCES: readonly EngineDivergence[] = [
       "acceptable; GritQL patterns cannot read the file path, so the Biome rule " +
       "flags test code too. Suppress with a biome-ignore comment or a linter " +
       "override for test globs.",
+  },
+  {
+    rule: FLUENT_STAYS_LOCAL_RULE.id,
+    engine: "biome",
+    divergence: "no-position-scoping",
+    detail:
+      "The ESLint rule only flags FluentResult/FluentMaybe in the four scoped " +
+      "positions (return type, exported binding, stored field, serialize-sink " +
+      "argument) and inspects call-argument shape for the sink check. GritQL " +
+      "matches the bare type reference wherever it appears — a broader net " +
+      "that also catches local annotations the ESLint rule leaves alone — and " +
+      "cannot express the serialize/postMessage/cache argument heuristic at " +
+      "all, since that needs expression-shape traversal, not a type pattern.",
   },
 ];

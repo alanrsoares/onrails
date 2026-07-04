@@ -16,7 +16,9 @@ Reference the rule files in `biome.json` plugins:
 {
   "plugins": [
     "./node_modules/@onrails/biome-plugin/rules/no-promise-result.grit",
-    "./node_modules/@onrails/biome-plugin/rules/no-unsafe-unwrap.grit"
+    "./node_modules/@onrails/biome-plugin/rules/no-unsafe-unwrap.grit",
+    "./node_modules/@onrails/biome-plugin/rules/no-deprecated-synonyms.grit",
+    "./node_modules/@onrails/biome-plugin/rules/fluent-stays-local.grit"
   ]
 }
 ```
@@ -27,6 +29,8 @@ Reference the rule files in `biome.json` plugins:
 |------|------------------|
 | `no-promise-result` | `Promise<Result<T, E>>` in any type position — return `ResultAsync<T, E>` and use `fromAsync` / `tryAsync` at the boundary (error) |
 | `no-unsafe-unwrap`  | `._unsafeUnwrap()` / `._unsafeUnwrapErr()` calls — use `match` / `resolve` / `yieldResult` instead (error) |
+| `no-deprecated-synonyms` | Deprecated synonyms (`chain`, `fold`, `getOrElse`, `of`, …) — use the canonical names (error) |
+| `fluent-stays-local` | Bare `FluentResult<…>` / `FluentMaybe<…>` type references — broader net than the ESLint rule, see `ENGINE_DIVERGENCES` (error) |
 
 ## Tests
 

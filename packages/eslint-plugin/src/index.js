@@ -200,6 +200,154 @@ const noDeprecatedSynonyms = {
   },
 };
 
+/**
+ * Fluent wrapper types and serialize-sink names. Hand-copied from
+ * `@onrails/codemod` `src/boundary-spec.ts` (cross-package imports are
+ * forbidden); `packages/codemod/test/boundary-conformance.spec.ts` keeps the
+ * copies in sync.
+ */
+const FLUENT_WRAPPER_TYPES = new Set(["FluentResult", "FluentMaybe"]);
+const FLUENT_ESCAPE_SINKS = new Set(["postMessage", "structuredClone", "JSON.stringify"]);
+/** Fluent methods that exit the wrapper — a chain ending here is already plain data. */
+const FLUENT_TERMINAL_METHODS = new Set(["toResult", "toMaybe", "toString", "match", "unwrapOr"]);
+
+/**
+ * Loose parent-chain node shape for structural classification — mirrors
+ * {@link TsTypeReference} for nodes outside estree's bundled types
+ * (`TSTypeAnnotation`, `PropertyDefinition`, `VariableDeclarator`, …).
+ *
+ * @typedef {object} LooseNode
+ * @property {string} type
+ * @property {string} [name]
+ * @property {LooseNode} [parent]
+ * @property {LooseNode} [returnType]
+ * @property {LooseNode} [object]
+ * @property {LooseNode} [property]
+ * @property {LooseNode} [callee]
+ */
+
+/**
+ * @param {unknown} node
+ * @returns {LooseNode}
+ */
+const asLoose = (node) => /** @type {LooseNode} */ (node);
+
+/**
+ * @param {LooseNode} node
+ * @returns {string}
+ */
+const calleeName = (node) => {
+  if (node.type === "Identifier") return node.name ?? "";
+  if (
+    node.type === "MemberExpression" &&
+    node.object?.type === "Identifier" &&
+    node.property?.type === "Identifier"
+  )
+    return `${node.object.name}.${node.property.name}`;
+  return "";
+};
+
+/**
+ * True when `node` still holds a fluent wrapper — a call chain rooted at
+ * `fluent(...)` that hasn't reached a terminal (`toResult`, `match`, …) yet.
+ * `fluent(r).toResult()` is plain data by the time it reaches a sink;
+ * `fluent(r)` and `fluent(r).map(f)` are not. Purely syntactic: a
+ * `fluent(...)` result stashed in a variable first is out of reach without
+ * type information.
+ *
+ * @param {unknown} node
+ * @returns {boolean}
+ */
+const isFluentChain = (node) => {
+  if (!node) return false;
+  const loose = asLoose(node);
+  if (loose.type !== "CallExpression" || !loose.callee) return false;
+  if (loose.callee.type === "Identifier") return loose.callee.name === "fluent";
+  if (loose.callee.type === "MemberExpression") {
+    const method = loose.callee.property?.name;
+    if (method && FLUENT_TERMINAL_METHODS.has(method)) return false;
+    return isFluentChain(loose.callee.object);
+  }
+  return false;
+};
+
+/** @type {import('eslint').Rule.RuleModule} */
+const fluentStaysLocal = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow FluentResult/FluentMaybe escaping its function — as a return type, an exported binding, a stored field, or an argument to a serialize/postMessage/cache call.",
+    },
+    schema: [],
+    messages: {
+      returnType:
+        "{{name}} as a function return type lets the fluent wrapper escape — call toResult()/toMaybe()/toString() and return plain data instead.",
+      exported:
+        "{{name}} on an exported binding lets the fluent wrapper escape its module — call toResult()/toMaybe()/toString() before exporting.",
+      storedField:
+        "{{name}} on a stored field lets the fluent wrapper escape — call toResult()/toMaybe()/toString() before storing it.",
+      serializeArg:
+        "Passing a fluent(...) chain into {{sink}}() serializes/transfers a closure — call toResult()/toMaybe()/toString() first.",
+    },
+  },
+  create(context) {
+    return {
+      TSTypeReference(/** @type {import('eslint').Rule.Node} */ node) {
+        const typeRef = asTsTypeReference(node);
+        const typeName = typeRef.typeName;
+        if (typeName.type !== "Identifier" || !FLUENT_WRAPPER_TYPES.has(typeName.name ?? ""))
+          return;
+        const name = typeName.name;
+
+        const annotation = asLoose(node).parent;
+        if (annotation?.type !== "TSTypeAnnotation") return;
+        const owner = annotation.parent;
+        if (!owner) return;
+
+        if (
+          [
+            "FunctionDeclaration",
+            "FunctionExpression",
+            "ArrowFunctionExpression",
+            "TSMethodSignature",
+            "TSDeclareFunction",
+            "TSFunctionType",
+            "TSCallSignatureDeclaration",
+          ].includes(owner.type) &&
+          owner.returnType === annotation
+        ) {
+          context.report({ node, messageId: "returnType", data: { name } });
+          return;
+        }
+
+        // A variable's type annotation hangs off its `id` pattern, e.g.
+        // `const chain: FluentResult<…>` attaches to the Identifier "chain",
+        // whose parent is the VariableDeclarator.
+        if (owner.type === "Identifier" && owner.parent?.type === "VariableDeclarator") {
+          if (owner.parent.parent?.parent?.type === "ExportNamedDeclaration") {
+            context.report({ node, messageId: "exported", data: { name } });
+            return;
+          }
+        }
+
+        if (owner.type === "PropertyDefinition" || owner.type === "TSPropertySignature") {
+          context.report({ node, messageId: "storedField", data: { name } });
+        }
+      },
+      CallExpression(node) {
+        const sink = calleeName(asLoose(node.callee));
+        if (!FLUENT_ESCAPE_SINKS.has(sink)) return;
+        for (const arg of node.arguments) {
+          if (isFluentChain(arg)) {
+            context.report({ node: arg, messageId: "serializeArg", data: { sink } });
+          }
+        }
+      },
+    };
+  },
+};
+
 /** @type {import('eslint').ESLint.Plugin} */
 const plugin = {
   meta: {
@@ -210,6 +358,7 @@ const plugin = {
     "no-promise-result": noPromiseResult,
     "no-unsafe-unwrap": noUnsafeUnwrap,
     "no-deprecated-synonyms": noDeprecatedSynonyms,
+    "fluent-stays-local": fluentStaysLocal,
   },
 };
 
@@ -224,6 +373,7 @@ export const configs = {
       "@onrails/result/no-promise-result": "warn",
       "@onrails/result/no-unsafe-unwrap": "warn",
       "@onrails/result/no-deprecated-synonyms": "warn",
+      "@onrails/result/fluent-stays-local": "warn",
     },
   },
 };
