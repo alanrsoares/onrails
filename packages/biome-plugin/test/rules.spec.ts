@@ -57,6 +57,13 @@ describe("no-deprecated-synonyms", () => {
   });
 });
 
+describe("fluent-stays-local", () => {
+  test("flags FluentResult/FluentMaybe escaping as return type or stored field", () => {
+    const diags = diagnosticsFor("invalid/fluent-escape.ts");
+    expect(diags.some((d) => messageOf(d).includes("FluentResult/FluentMaybe must stay local"))).toBe(true);
+  });
+});
+
 describe("exemptions", () => {
   test("ResultAsync return types produce no diagnostics", () => {
     const diags = diagnosticsFor("valid/result-async.ts");

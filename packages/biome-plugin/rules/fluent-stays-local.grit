@@ -1,0 +1,27 @@
+// @onrails/biome-plugin: fluent-stays-local
+//
+// Flag `FluentResult<T, E>` / `FluentMaybe<T>` named as a type — the fluent
+// wrapper (`@onrails/result/fluent`, `@onrails/maybe/fluent`) must open and
+// close within a function body, never escape as a return type, an exported
+// binding, or a stored field.
+//
+// Limitation: GritQL matches the bare type reference wherever it appears —
+// a broader net than the ESLint rule, which only flags the four scoped
+// positions (return type, exported binding, stored field, serialize-sink
+// argument) and inspects call-argument shape for the sink check. This rule
+// cannot express that argument heuristic at all; declared in
+// ENGINE_DIVERGENCES (`fluent-stays-local` / `no-position-scoping`).
+
+engine biome(1.0)
+language js
+
+or {
+  `FluentResult<$ok, $err>` as $t,
+  `FluentMaybe<$value>` as $t
+} where {
+  register_diagnostic(
+    span = $t,
+    message = "FluentResult/FluentMaybe must stay local — it was flagged as a return type, an exported binding, a stored field, or an argument to a serialize/postMessage/cache call. Call toResult()/toMaybe()/toString() before it leaves the function.",
+    severity = "error"
+  )
+}

@@ -14,6 +14,7 @@ import { join } from "node:path";
 import {
   DEPRECATED_SYNONYMS,
   ENGINE_DIVERGENCES,
+  FLUENT_STAYS_LOCAL_RULE,
   NO_DEPRECATED_SYNONYMS_RULE,
   NO_PROMISE_RESULT_RULE,
   NO_UNSAFE_UNWRAP_RULE,
@@ -28,6 +29,7 @@ const eslintSource = read("../../eslint-plugin/src/index.js");
 const gritUnsafeUnwrap = read("../../biome-plugin/rules/no-unsafe-unwrap.grit");
 const gritDeprecatedSynonyms = read("../../biome-plugin/rules/no-deprecated-synonyms.grit");
 const gritPromiseResult = read("../../biome-plugin/rules/no-promise-result.grit");
+const gritFluentStaysLocal = read("../../biome-plugin/rules/fluent-stays-local.grit");
 const biomePkg = JSON.parse(read("../../biome-plugin/package.json")) as {
   exports: Record<string, string>;
 };
@@ -98,11 +100,48 @@ describe("no-promise-result conformance", () => {
   });
 });
 
+describe("fluent-stays-local conformance", () => {
+  it("eslint registers the rule id", () => {
+    expect(eslintSource).toContain(`"${FLUENT_STAYS_LOCAL_RULE.id}"`);
+  });
+
+  it.each(
+    FLUENT_STAYS_LOCAL_RULE.wrapperTypes.map((name) => ({ label: name, name })),
+  )("eslint flags $label", ({ name }) => {
+    expect(eslintSource).toContain(`"${name}"`);
+  });
+
+  it.each(
+    FLUENT_STAYS_LOCAL_RULE.sinks.map((name) => ({ label: name, name })),
+  )("eslint flags the $label sink", ({ name }) => {
+    expect(eslintSource).toContain(name);
+  });
+
+  it("eslint's per-position messages point at the same terminal-method fix", () => {
+    expect(eslintSource).toContain("toResult()/toMaybe()/toString()");
+  });
+
+  it("biome rule header names the rule id", () => {
+    expect(gritFluentStaysLocal).toContain(FLUENT_STAYS_LOCAL_RULE.id);
+  });
+
+  it.each(
+    FLUENT_STAYS_LOCAL_RULE.wrapperTypes.map((name) => ({ label: name, name })),
+  )("biome flags $label", ({ name }) => {
+    expect(gritFluentStaysLocal).toContain(name);
+  });
+
+  it("biome diagnostic carries the spec message verbatim", () => {
+    expect(gritFluentStaysLocal).toContain(FLUENT_STAYS_LOCAL_RULE.message);
+  });
+});
+
 describe("biome-plugin packaging", () => {
   const ruleIds = [
     NO_PROMISE_RESULT_RULE.id,
     NO_UNSAFE_UNWRAP_RULE.id,
     NO_DEPRECATED_SYNONYMS_RULE.id,
+    FLUENT_STAYS_LOCAL_RULE.id,
   ];
 
   it.each(ruleIds.map((id) => ({ label: id, id })))("package.json exports ./rules/$label.grit", ({
@@ -132,8 +171,18 @@ describe("declared divergences", () => {
     expect(gritUnsafeUnwrap.includes(".spec.")).toBe(false);
   });
 
+  it("biome's broader net on fluent-stays-local is declared, not accidental", () => {
+    const declared = ENGINE_DIVERGENCES.some(
+      (d) =>
+        d.rule === FLUENT_STAYS_LOCAL_RULE.id &&
+        d.engine === "biome" &&
+        d.divergence === "no-position-scoping",
+    );
+    expect(declared).toBe(true);
+  });
+
   it("no undeclared divergences exist in the spec", () => {
-    expect(ENGINE_DIVERGENCES).toHaveLength(1);
+    expect(ENGINE_DIVERGENCES).toHaveLength(2);
   });
 });
 
