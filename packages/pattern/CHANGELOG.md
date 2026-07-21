@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/alanrsoares/onrails/compare/pattern-v0.3.2...pattern-v0.3.3) (2026-07-21)
+
+
+### Bug Fixes
+
+* **pattern:** tail-call match dispatch for constant-stack recursion ([3a92d3e](https://github.com/alanrsoares/onrails/commit/3a92d3eda6d0fe5e8c39fc14fe2efd428b490b33))
+
 ## [0.3.2](https://github.com/alanrsoares/onrails/compare/pattern-v0.3.1...pattern-v0.3.2) (2026-07-04)
 
 
