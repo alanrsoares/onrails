@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.3](https://github.com/alanrsoares/onrails/compare/docgen-v1.1.2...docgen-v1.1.3) (2026-07-21)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/pattern bumped to 0.3.3
+
 ## [1.1.2](https://github.com/alanrsoares/onrails/compare/docgen-v1.1.1...docgen-v1.1.2) (2026-07-04)
 
 
