@@ -59,25 +59,23 @@ const matches = <T>(input: T, pattern: Pattern<T>): boolean => {
   return true;
 };
 
-// Sentinel for "no case matched". Distinct from a handler legitimately
-// returning `undefined` (e.g. side-effect-only handlers), which would
-// otherwise be misreported as non-exhaustive.
-const NO_MATCH = Symbol("@onrails/pattern/no-match");
-type NoMatch = typeof NO_MATCH;
-
 // Sentinel for "curried matcher, no captured input". Distinct from a
 // data-first `match(undefined)` / `match(null)`, which must run immediately
 // like any other value instead of silently degrading to curried mode.
 const NO_INPUT = Symbol("@onrails/pattern/no-input");
 type NoInput = typeof NO_INPUT;
 
-const runCases = <T, R>(input: T, cases: readonly Case<T, R>[]): R | NoMatch => {
-  for (const c of cases) {
-    if (c.test(input)) {
-      return c.run(input);
-    }
+// Returns the matched case, not its result, so the caller invokes `run`
+// itself in tail position (ES2015 PTC) — needed for constant-stack
+// recursive handlers, e.g. compiled alang `switch` loops on JSC. Index
+// loop, not `for..of`: a `return` inside `for..of` runs IteratorClose
+// after the call returns, disqualifying it from tail position.
+const findCase = <T, R>(input: T, cases: readonly Case<T, R>[]): Case<T, R> | null => {
+  for (let i = 0; i < cases.length; i++) {
+    const c = cases[i] as Case<T, R>;
+    if (c.test(input)) return c;
   }
-  return NO_MATCH;
+  return null;
 };
 
 const caseForPatterns = <T, R>(
@@ -304,11 +302,12 @@ export class MatchBuilder<
     if (value === NO_INPUT) {
       throw new Error("match.run: no input value");
     }
-    const out = runCases(value, this.cases);
-    if (out === NO_MATCH) {
+    const c = findCase(value, this.cases);
+    if (c === null) {
       throw new Error("Non-exhaustive match: no case matched input");
     }
-    return out as R;
+    // Tail call: recursive handlers run in constant stack (see findCase).
+    return c.run(value) as R;
   }
 
   /**
@@ -366,8 +365,9 @@ export class MatchBuilder<
    */
   otherwise(handler: (input: T) => R): HasInput extends true ? R : (input: T) => R {
     const runWithFallback = (value: T): R => {
-      const out = runCases(value, this.cases);
-      return out === NO_MATCH ? handler(value) : (out as R);
+      const c = findCase(value, this.cases);
+      // Both branches are tail calls (see findCase).
+      return c === null ? handler(value) : (c.run(value) as R);
     };
     // Safe: HasInput is true exactly when match(value) captured an input.
     return (
