@@ -221,7 +221,15 @@ const summary = Railway.fromSync("profileId", () => ProfileIdSchema.parse(id), t
 
 Sync-only workflows return `Result<T, E>`. The first `fromPromise`, `fromAsync`, or `parallel` step upgrades the output to `ResultAsync<T, E>`.
 
-Use lower-level helpers (`asyncAfter`, `fromResult`, `flatMapResult`) for one or two steps where a builder would add ceremony.
+Step keys must be unique. Reusing one is a compile error naming the offending key — previously it overwrote at runtime while the type silently collapsed to `never`:
+
+```ts
+Railway.empty()
+  .derive("x", () => 1)
+  .derive("x", () => "two");   // ✗ key "x" already exists in the workflow context
+```
+
+Use lower-level helpers (`asyncAfter`, `fromResult`, `flatMap`) for one or two steps where a builder would add ceremony.
 
 To share steps across workflows, extract plain functions of the context and plug them in via `.fromResult` / `.fromAsync`:
 

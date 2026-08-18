@@ -357,6 +357,39 @@ describe("Railway types: fluent", () => {
   });
 });
 
+describe("Railway types: context shape and key collisions", () => {
+  it("flattens the accumulated context instead of chaining intersections", () => {
+    const out = Railway.fromResult("id", () => ok("profile-1" as const))
+      .derive("slug", ({ id }) => `${id}-slug`)
+      .done();
+
+    expectType<TypeEqual<typeof out, Result<{ id: "profile-1"; slug: string }, never>>>(true);
+  });
+
+  it("preserves optional and readonly modifiers on a seeded context", () => {
+    const base = { a: 1 } as { a?: number; readonly b: string };
+    const out = Railway.context(base)
+      .derive("c", () => true)
+      .done();
+
+    expectType<
+      TypeEqual<typeof out, Result<{ a?: number; readonly b: string; c: boolean }, never>>
+    >(true);
+  });
+
+  it("rejects a step whose key already exists in the context", () => {
+    Railway.empty()
+      .derive("x", () => 1)
+      // @ts-expect-error FreshKey demands an unsatisfiable extra argument for a duplicate key
+      .derive("x", () => "two");
+  });
+
+  it("rejects a parallel branch key that collides with the context", () => {
+    // @ts-expect-error FreshKeys flags "recent" as already present
+    Railway.context({ recent: 1 }).parallel({ recent: () => ResultAsync.ok([1]) });
+  });
+});
+
 describe("Railway types: end-to-end", () => {
   it("full workflow chains unions errors and merges parallel outputs", () => {
     const out = Railway.fromSync(
