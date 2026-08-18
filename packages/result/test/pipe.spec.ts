@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
-import { flow } from "../src/pipe.js";
-import { flatMap, map, ok, pipe, tap } from "../src/result.js";
+import { flow, pipe } from "../src/pipe.js";
+import { flatMap, map, ok, tap } from "../src/result.js";
 import type { Result } from "../src/types.js";
 
 describe("pipe", () => {

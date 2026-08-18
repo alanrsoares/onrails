@@ -31,7 +31,7 @@ export {
 } from "./async-lift.js";
 export { combine, combineTuple, validateAll, validateTuple } from "./collections.js";
 export type { InferErr, InferOk } from "./internal/infer.js";
-export { flow } from "./pipe.js";
+export { flow, pipe } from "./pipe.js";
 export {
   bimap,
   err,
@@ -43,7 +43,6 @@ export {
   match,
   of,
   ok,
-  pipe,
   recover,
   show,
   tap,

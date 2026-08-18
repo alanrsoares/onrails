@@ -211,6 +211,8 @@ const summary = Railway.fromSync("profileId", () => ProfileIdSchema.parse(id), t
 
 ## Pipe
 
+`pipe` and `flow` both live in `@onrails/result/pipe`; `pipe` is also re-exported from the package root.
+
 ```ts
 import { pipe } from "@onrails/result";
 import { flow } from "@onrails/result/pipe";
@@ -233,9 +235,35 @@ const parseUserName = flow(
 parseUserName(raw);
 ```
 
+Both cap at **12 steps**. That cap is deliberate: a single recursive variadic signature would remove it, but it cannot give each step a contextual type from the previous step's output, so lambda parameters degrade to `unknown` (`map((cfg) => cfg.user)` stops inferring). Longer chains nest — `pipe(pipe(v, ...), ...)` — or factor a segment into a named `flow`.
+
 ## ESLint
 
 `@onrails/eslint-plugin` — warns on `Promise<Result<…>>` and `_unsafeUnwrap*`.
+
+## Breaking changes
+
+### `trySync` is now eager; the lazy form is `fromThrowable`
+
+`trySync` used to lift a throwing *function* and return a wrapper, while
+`tryAsync` took a *value* and ran immediately — same prefix, opposite contract.
+The two now agree, and the lifting form takes neverthrow's own name.
+
+```ts
+// before
+const parse = trySync(JSON.parse, toErr);
+parse(raw);
+trySync(() => Schema.parse(input), toErr)();   // note the trailing ()
+
+// after
+const parse = fromThrowable(JSON.parse, toErr);
+parse(raw);
+trySync(() => Schema.parse(input), toErr);     // runs now, returns Result
+trySync(() => Schema.parse(input));            // Result<T, Error> — onThrow optional
+```
+
+Mechanical migration: rename `trySync` → `fromThrowable` everywhere, then drop
+the trailing `()` on any call site that immediately invoked the wrapper.
 
 ## Migration from neverthrow
 
