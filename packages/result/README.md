@@ -29,7 +29,7 @@ For worked examples of multi-step pipelines, parser builders, validator ladders,
 
 | Shape                              | Reach for                                                            |
 | ---------------------------------- | -------------------------------------------------------------------- |
-| One or two sync steps              | `flatMapResult`, `mapResult`, `match`                                |
+| One or two sync steps              | `flatMap`, `map`, `match`                                            |
 | One or two async steps             | `ResultAsync.flatMap`, `asyncAfter`                                  |
 | Long sync chain, value-first        | `pipe(r, map(...), flatMap(...), ...)`                              |
 | Long sync chain, dot-style preferred | `fluent(r)` from `@onrails/result/fluent`                          |
@@ -250,7 +250,7 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 - `Result` / `ResultAsync` are class-shaped (`CompatResult` / `CompatResultAsync`).
 - `await ra` resolves to a `CompatResult<T, E>` (thenable), so `.isOk()`, `.value`, `.error`, `.match()`, `.unwrapOr()` all work without an extra `.resolve()` call.
 - `andThen` / `chain` / `flatMap` / `orElse` accept any of `CompatResultAsync` / `ResultAsync` / `CompatResult` / tagged `Result` returns and union the error type.
-- Supported: `andThen`, `asyncAndThen`, `chain`, `flatMap`, `flatMapResult`, `andThenResult`, `map`, `mapErr`, `orElse`, `match`, `unwrapOr`, `isOk`, `isErr`, `andTee`, `orTee`, `Result.combine`, `Result.fromThrowable`, `ResultAsync.combine`, `ResultAsync.fromPromise`, `ResultAsync.fromSafePromise`, `ResultAsync.fromThrowable`, `_unsafeUnwrap` / `_unsafeUnwrapErr`.
+- Supported: `andThen`, `asyncAndThen`, `chain`, `flatMap`, `map`, `mapErr`, `orElse`, `match`, `unwrapOr`, `isOk`, `isErr`, `andTee`, `orTee`, `Result.combine`, `Result.fromThrowable`, `ResultAsync.combine`, `ResultAsync.fromPromise`, `ResultAsync.fromSafePromise`, `ResultAsync.fromThrowable`, `_unsafeUnwrap` / `_unsafeUnwrapErr`.
 - Treat the compat surface as a migration step, not the destination — once a package migrates, switch its imports to `@onrails/result` and `@onrails/result/fluent`.
 
 ## Subpaths

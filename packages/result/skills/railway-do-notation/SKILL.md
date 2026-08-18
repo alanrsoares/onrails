@@ -1,6 +1,6 @@
 ---
 name: railway-do-notation
-description: "Ergonomic railway composition for `@onrails/result`: when to use low-level Result/ResultAsync helpers, fluent `Railway.*` workflows, or sync `tryGen`. Use when writing or refactoring Result-heavy TypeScript, Drizzle/Zod ETL workflows, nested `flatMapResult` chains, mixed sync/async railway code, or when a user asks about 'Railway', 'railway', 'do-notation', 'safe workflow', or 'expressive Result code'. Do NOT use workflow builders for tiny repository methods where `asyncAfter` or `.flatMap` is clearer."
+description: "Ergonomic railway composition for `@onrails/result`: when to use low-level Result/ResultAsync helpers, fluent `Railway.*` workflows, or sync `tryGen`. Use when writing or refactoring Result-heavy TypeScript, Drizzle/Zod ETL workflows, nested `flatMap` chains, mixed sync/async railway code, or when a user asks about 'Railway', 'railway', 'do-notation', 'safe workflow', or 'expressive Result code'. Do NOT use workflow builders for tiny repository methods where `asyncAfter` or `.flatMap` is clearer."
 ---
 
 # Railway ergonomics in `@onrails/result`
@@ -16,7 +16,7 @@ The goal is expressive safe code without exposing plumbing at every composition 
 Use the smallest layer that makes the code clear:
 
 1. **Low-level helpers** for small functions and library internals.
-   - Use `trySync`, `tryAsync`, `fromResult`, `asyncAfter`, `flatMapResult`, `.flatMap`, `.andThen`.
+   - Use `trySync`, `fromThrowable`, `tryAsync`, `fromResult`, `asyncAfter`, `flatMap`, `.flatMap`, `.andThen`.
    - Best for one or two steps, repository helpers, and package internals.
 
 2. **Fluent `Railway.*`** for service workflows.
@@ -25,7 +25,7 @@ Use the smallest layer that makes the code clear:
    - For steps shared across workflows, extract plain context functions and plug them in via `.fromResult` / `.fromAsync`.
 
 3. **Sync `tryGen`** for dense synchronous `Result` chains only.
-   - Use sparingly when no workflow builder is warranted and nested sync `flatMapResult` is hard to read.
+   - Use sparingly when no workflow builder is warranted and nested sync `flatMap` is hard to read.
    - Never use for `ResultAsync` or anything with `await`.
 
 ## Layer 1 — Low-Level Helpers
@@ -35,7 +35,7 @@ Use low-level helpers when the operation is small and direct.
 ```ts
 return asyncAfter(
   // Sync validation boundary. If Zod throws, map the thrown value to Error.
-  trySync(() => ArtifactSchema.parse(artifact), toError)(),
+  trySync(() => ArtifactSchema.parse(artifact), toError),
 
   // Async IO boundary. Promise rejection becomes Err(Error).
   (validated) =>
@@ -169,7 +169,7 @@ function loadProfileSummary(id: string): ResultAsync<ProfileSummary, Error> {
 Use fluent `Railway.*` when it removes manual bridges like:
 
 - `fromResult(...)`
-- nested `flatMapResult(...)`
+- nested `flatMap(...)`
 - positional tuple destructuring for parallel work
 - manual context-carrying objects after every step
 
@@ -212,7 +212,7 @@ Each step function is independently testable — call it with a hand-built conte
 Use it only when:
 
 - every step is sync
-- the function body has nested `flatMapResult` / `mapResult`
+- the function body has nested `flatMap` / `map`
 - a full `Railway.*` workflow would be overkill
 
 ```ts
@@ -342,7 +342,7 @@ Better:
 
 ```ts
 return asyncAfter(
-  trySync(() => ArtifactSchema.parse(artifact), toError)(),
+  trySync(() => ArtifactSchema.parse(artifact), toError),
   (validated) =>
     tryAsync(
       getDb()
@@ -375,14 +375,14 @@ Consider extracting reusable step functions when:
 Consider `tryGen` when:
 
 - all steps are sync
-- the current code is a nested `flatMapResult` tree
+- the current code is a nested `flatMap` tree
 - a workflow builder would introduce unnecessary named context
 
 Stay low-level when:
 
 - the function has one or two steps
 - the code is library internals
-- the operation is already readable with `asyncAfter`, `.flatMap`, or `mapResult`
+- the operation is already readable with `asyncAfter`, `.flatMap`, or `map`
 
 ## Maintainer Workflow For Case Studies
 
