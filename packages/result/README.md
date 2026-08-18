@@ -139,6 +139,20 @@ import { match } from "ts-pattern";
 R.match(result, onOk, onErr);
 ```
 
+For an object-form, self-labelling fold, use `matchTag` from [`@onrails/pattern`](../pattern/README.md) — it dispatches on `_tag` and requires one branch per tag, so the branches read as names instead of argument positions:
+
+```ts
+import { matchTag } from "@onrails/pattern";
+
+const label = (r: Result<number, string>) =>
+  matchTag(r, {
+    Ok: (v) => `ok:${v.value}`,    // v: Ok<number>  — the member, not the payload
+    Err: (e) => `err:${e.error}`,  // e: Err<string>
+  });
+```
+
+Note the difference: `match` hands each branch the *payload*, `matchTag` hands it the narrowed *member*.
+
 `unwrapOk` and `unwrapErr` are test/assertion helpers. Prefer `match`, `isOk`, or `isErr` in production control flow.
 
 ```ts
