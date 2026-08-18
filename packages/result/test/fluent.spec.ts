@@ -15,6 +15,14 @@ describe("fluent", () => {
   });
 });
 
+describe("fluent unwrapOr", () => {
+  it("accepts a fallback of a different type, matching the core helper", () => {
+    const missing = fluent(err<number, string>("e")).unwrapOr(null);
+    expect(missing).toBeNull();
+    expect(fluent(ok<number, string>(1)).unwrapOr(null)).toBe(1);
+  });
+});
+
 describe("fluent Err path", () => {
   it("short-circuits", () => {
     const out = fluent(err("e"))

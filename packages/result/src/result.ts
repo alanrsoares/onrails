@@ -246,19 +246,21 @@ export const match: {
 );
 
 /**
- * Returns the `Ok` value, or `defaultValue` when the result is `Err`.
+ * Returns the `Ok` value, or `defaultValue` when the result is `Err`. The
+ * fallback may be a different type from `T` — the return widens to `T | U`,
+ * matching `ResultAsync.unwrapOr` and the compat shim.
  *
  * @example
  * ```ts
- * unwrapOr(parsedSetting, "default-value");
+ * unwrapOr(parsedSetting, "default-value");  // string
+ * unwrapOr(parsedPort, null);                // number | null
  * ```
  */
 export const unwrapOr: {
-  <T, E>(result: Result<T, E>, defaultValue: T): T;
-  <T>(defaultValue: T): <E>(result: Result<T, E>) => T;
-} = dual(
-  2,
-  <T, E>(result: Result<T, E>, defaultValue: T): T => (isOk(result) ? result.value : defaultValue),
+  <T, E, U>(result: Result<T, E>, defaultValue: U): T | U;
+  <U>(defaultValue: U): <T, E>(result: Result<T, E>) => T | U;
+} = dual(2, <T, E, U>(result: Result<T, E>, defaultValue: U): T | U =>
+  isOk(result) ? result.value : defaultValue,
 );
 
 /**

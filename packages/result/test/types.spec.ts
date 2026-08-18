@@ -107,6 +107,16 @@ describe("Result sync types: unwrap and combine", () => {
     expectType<TypeEqual<typeof v, number>>(true);
   });
 
+  it("unwrapOr widens to T | U when the fallback differs from the Ok type", () => {
+    const port = ok(8080) as Result<number, string>;
+
+    const dataFirst = unwrapOr(port, null);
+    expectType<TypeEqual<typeof dataFirst, number | null>>(true);
+
+    const curried = unwrapOr(null)(port);
+    expectType<TypeEqual<typeof curried, number | null>>(true);
+  });
+
   it("unwrap helpers return the unwrapped side type", () => {
     const okValue = unwrapOk(ok(1) as Result<number, string>);
     const errValue = unwrapErr(err("x") as Result<number, string>);

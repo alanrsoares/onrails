@@ -1,5 +1,5 @@
 import type { InferErr, InferOk } from "./internal/infer.js";
-import { err, isErr, map, mapErr, ok } from "./result.js";
+import { bimap, err, isErr, map, mapErr, ok } from "./result.js";
 import type { Result } from "./types.js";
 import { UnexpectedError } from "./types.js";
 
@@ -38,8 +38,8 @@ const sequenceSettled = (
 
 /**
  * Async railway carrier. Wraps a deferred `Promise<Result<T, E>>` and exposes
- * the same dual-track transforms as the sync {@link Result} — `map`, `flatMap`,
- * `recover`, `tap`, `match`. The public API never surfaces `Promise<Result<…>>`
+ * the same dual-track transforms as the sync {@link Result} — `map`, `mapErr`,
+ * `bimap`, `flatMap`, `recover`, `tap`, `match`. The public API never surfaces `Promise<Result<…>>`
  * directly: `await` the instance (it is thenable) or call {@link resolve} /
  * {@link match} to settle it.
  *
@@ -294,6 +294,19 @@ export class ResultAsync<T, E> {
    */
   mapErr<F>(fn: (error: E) => F): ResultAsync<T, F> {
     return new ResultAsync(async () => mapErr(await this.resolve(), fn));
+  }
+
+  /**
+   * Transforms both tracks in one step — the async mirror of the sync
+   * `bimap`. Exactly one of `onOk` / `onErr` runs.
+   *
+   * @example
+   * ```ts
+   * load(id).bimap(toDto, (e): AppError => ({ kind: "load", cause: e }));
+   * ```
+   */
+  bimap<U, F>(onOk: (value: T) => U, onErr: (error: E) => F): ResultAsync<U, F> {
+    return new ResultAsync(async () => bimap(await this.resolve(), onOk, onErr));
   }
 
   /**

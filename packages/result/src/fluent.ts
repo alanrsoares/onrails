@@ -25,7 +25,7 @@ export type FluentResult<T, E> = {
   tapErr: (fn: (error: E) => void) => FluentResult<T, E>;
 
   match: <U>(onOk: (value: T) => U, onErr: (error: E) => U) => U;
-  unwrapOr: (defaultValue: T) => T;
+  unwrapOr: <U>(defaultValue: U) => T | U;
   /** Exit the wrapper — hand back the canonical plain-data result. */
   toResult: () => Result<T, E>;
   /** Debug terminal — `Ok(…)` / `Err(…)`, same output as {@link show}. */
