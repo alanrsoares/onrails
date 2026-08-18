@@ -93,11 +93,12 @@ describe("no-promise-result conformance", () => {
   });
 
   const tokens = [NO_PROMISE_RESULT_RULE.replacement, ...NO_PROMISE_RESULT_RULE.boundaryHelpers];
-  it.each(tokens.map((token) => ({ label: token, token })))("eslint message names $label", ({
-    token,
-  }) => {
-    expect(eslintSource).toContain(token);
-  });
+  it.each(tokens.map((token) => ({ label: token, token })))(
+    "eslint message names $label",
+    ({ token }) => {
+      expect(eslintSource).toContain(token);
+    },
+  );
 });
 
 describe("fluent-stays-local conformance", () => {
@@ -105,17 +106,19 @@ describe("fluent-stays-local conformance", () => {
     expect(eslintSource).toContain(`"${FLUENT_STAYS_LOCAL_RULE.id}"`);
   });
 
-  it.each(
-    FLUENT_STAYS_LOCAL_RULE.wrapperTypes.map((name) => ({ label: name, name })),
-  )("eslint flags $label", ({ name }) => {
-    expect(eslintSource).toContain(`"${name}"`);
-  });
+  it.each(FLUENT_STAYS_LOCAL_RULE.wrapperTypes.map((name) => ({ label: name, name })))(
+    "eslint flags $label",
+    ({ name }) => {
+      expect(eslintSource).toContain(`"${name}"`);
+    },
+  );
 
-  it.each(
-    FLUENT_STAYS_LOCAL_RULE.sinks.map((name) => ({ label: name, name })),
-  )("eslint flags the $label sink", ({ name }) => {
-    expect(eslintSource).toContain(name);
-  });
+  it.each(FLUENT_STAYS_LOCAL_RULE.sinks.map((name) => ({ label: name, name })))(
+    "eslint flags the $label sink",
+    ({ name }) => {
+      expect(eslintSource).toContain(name);
+    },
+  );
 
   it("eslint's per-position messages point at the same terminal-method fix", () => {
     expect(eslintSource).toContain("toResult()/toMaybe()/toString()");
@@ -125,11 +128,12 @@ describe("fluent-stays-local conformance", () => {
     expect(gritFluentStaysLocal).toContain(FLUENT_STAYS_LOCAL_RULE.id);
   });
 
-  it.each(
-    FLUENT_STAYS_LOCAL_RULE.wrapperTypes.map((name) => ({ label: name, name })),
-  )("biome flags $label", ({ name }) => {
-    expect(gritFluentStaysLocal).toContain(name);
-  });
+  it.each(FLUENT_STAYS_LOCAL_RULE.wrapperTypes.map((name) => ({ label: name, name })))(
+    "biome flags $label",
+    ({ name }) => {
+      expect(gritFluentStaysLocal).toContain(name);
+    },
+  );
 
   it("biome diagnostic carries the spec message verbatim", () => {
     expect(gritFluentStaysLocal).toContain(FLUENT_STAYS_LOCAL_RULE.message);
@@ -144,11 +148,12 @@ describe("biome-plugin packaging", () => {
     FLUENT_STAYS_LOCAL_RULE.id,
   ];
 
-  it.each(ruleIds.map((id) => ({ label: id, id })))("package.json exports ./rules/$label.grit", ({
-    id,
-  }) => {
-    expect(biomePkg.exports[`./rules/${id}.grit`]).toBe(`./rules/${id}.grit`);
-  });
+  it.each(ruleIds.map((id) => ({ label: id, id })))(
+    "package.json exports ./rules/$label.grit",
+    ({ id }) => {
+      expect(biomePkg.exports[`./rules/${id}.grit`]).toBe(`./rules/${id}.grit`);
+    },
+  );
 });
 
 describe("declared divergences", () => {

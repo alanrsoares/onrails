@@ -1,4 +1,4 @@
-import ts from "typescript";
+import ts from "typescript6";
 import { walkSource } from "./ast.js";
 import { COMPAT_ONLY_PATTERNS, COMPAT_SPEC } from "./constants.js";
 import type { Warning } from "./types.js";

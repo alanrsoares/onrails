@@ -3,6 +3,4 @@ import { llms } from "fumadocs-core/source";
 
 export const revalidate = false;
 
-export function GET() {
-  return new Response(llms(source).index());
-}
+export const GET = () => new Response(llms(source).index());

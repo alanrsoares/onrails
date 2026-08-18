@@ -1,7 +1,7 @@
 {
   "name": "@onrails/maybe",
   "version": "0.2.3",
-  "description": "Tagged Maybe for expected absence — pure tagged unions, Result interop, tree-shakeable",
+  "description": "Tagged Maybe for expected absence \u2014 pure tagged unions, Result interop, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
   "homepage": "https://alanrsoares.github.io/onrails/modules/_onrails_maybe.html",
@@ -43,23 +43,38 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./fluent": {
-      "types": "./dist/fluent.d.ts",
-      "import": "./dist/fluent.js",
-      "require": "./dist/fluent.cjs"
+      "import": {
+        "types": "./dist/fluent.d.ts",
+        "default": "./dist/fluent.js"
+      },
+      "require": {
+        "types": "./dist/fluent.d.cts",
+        "default": "./dist/fluent.cjs"
+      }
     },
     "./interop": {
-      "types": "./dist/interop.d.ts",
-      "import": "./dist/interop.js",
-      "require": "./dist/interop.cjs"
+      "import": {
+        "types": "./dist/interop.d.ts",
+        "default": "./dist/interop.js"
+      },
+      "require": {
+        "types": "./dist/interop.d.cts",
+        "default": "./dist/interop.cjs"
+      }
     }
   },
   "peerDependencies": {
-    "@onrails/result": "workspace:*"
+    "@onrails/result": "workspace:^"
   },
   "peerDependenciesMeta": {
     "@onrails/result": {
@@ -70,14 +85,14 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "check": "bun typecheck && bun test",
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json && bun run ../../scripts/dts-to-cts.ts",
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "@onrails/result": "workspace:*",
-    "fast-check": "^3.23.2",
-    "ts-expect": "^1.3.0",
-    "tsup": "^8.5.1"
+    "fast-check": "catalog:",
+    "ts-expect": "catalog:",
+    "tsup": "catalog:"
   }
 }

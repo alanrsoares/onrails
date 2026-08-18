@@ -3,8 +3,7 @@ import { appName, gitConfig } from './shared';
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
-export function baseOptions(): BaseLayoutProps {
-  return {
+export const baseOptions = (): BaseLayoutProps => ({
     nav: {
       title: (
         <span className="flex items-center gap-2 font-semibold text-base select-none">
@@ -14,5 +13,4 @@ export function baseOptions(): BaseLayoutProps {
       ),
     },
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
-  };
-}
+  });

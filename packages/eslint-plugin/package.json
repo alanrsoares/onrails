@@ -1,7 +1,7 @@
 {
   "name": "@onrails/eslint-plugin",
   "version": "0.1.4",
-  "description": "ESLint rules for @onrails/result boundaries — flags Promise<Result<…>> in public APIs and _unsafeUnwrap*. Replaces unmaintained eslint-plugin-neverthrow.",
+  "description": "ESLint rules for @onrails/result boundaries \u2014 flags Promise<Result<\u2026>> in public APIs and _unsafeUnwrap*. Replaces unmaintained eslint-plugin-neverthrow.",
   "license": "MIT",
   "author": "Alan R. Soares",
   "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/eslint-plugin#readme",
@@ -41,7 +41,7 @@
     "LICENSE"
   ],
   "peerDependencies": {
-    "eslint": "^10.4.0"
+    "eslint": "^10.8.1"
   },
   "peerDependenciesMeta": {
     "@typescript-eslint/parser": {
@@ -54,7 +54,8 @@
     "check": "bun run typecheck && bun test"
   },
   "devDependencies": {
-    "@typescript-eslint/parser": "^8.60.0",
-    "eslint": "^10.4.0"
+    "@typescript-eslint/parser": "^8.67.0",
+    "eslint": "^10.8.1",
+    "typescript": "^6.0.3"
   }
 }

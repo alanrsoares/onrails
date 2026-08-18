@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import ts from "typescript";
+import ts from "typescript6";
 
 // Resolve @onrails/* to source (not built dist) so hover types never go stale.
 // Shared by the MDX pipeline (source.config.ts) and the server-rendered
@@ -25,8 +25,7 @@ const repoRoot = resolve(process.cwd(), "../..");
  * `rendererRich.processHoverDocs`, so fumadocs' own markdown/code rendering
  * stays intact — it just runs on the cleaned-up string.
  */
-export function processHoverDocs(docs: string): string {
-  return docs
+export const processHoverDocs = (docs: string): string => docs
     .replace(
       /[ \t]*\n*[ \t]*\{@link\s+([^}]*?)\s*\}[ \t]*\n*[ \t]*/g,
       (_match, name: string) => ` \`${name.trim()}\` `,
@@ -34,7 +33,6 @@ export function processHoverDocs(docs: string): string {
     .replace(/[ \t]+([,.;:)])/g, "$1")
     .replace(/(\()[ \t]+/g, "$1")
     .trim();
-}
 
 export const twoslashCompilerOptions = {
   baseUrl: repoRoot,

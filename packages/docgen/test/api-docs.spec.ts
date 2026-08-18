@@ -119,7 +119,7 @@ describe("renderPackageMdx", () => {
   });
 });
 
-import ts from "typescript";
+import ts from "typescript6";
 import { checkExamples } from "../src/api/check.js";
 import { generateApiDocs } from "../src/api/generate.js";
 import type { ApiCompilerHost } from "../src/api/types.js";
@@ -164,17 +164,11 @@ class MemoryCompilerHost implements ApiCompilerHost {
   createProgram(rootNames: readonly string[], options: ts.CompilerOptions): ts.Program {
     const tsHost = ts.createCompilerHost(options);
 
-    tsHost.fileExists = (fileName) => {
-      if (this.files.has(fileName)) return true;
-      return ts.sys.fileExists(fileName);
-    };
+    tsHost.fileExists = (fileName) =>
+      this.files.has(fileName) ? true : ts.sys.fileExists(fileName);
 
-    tsHost.readFile = (fileName) => {
-      if (this.files.has(fileName)) {
-        return this.files.get(fileName);
-      }
-      return ts.sys.readFile(fileName);
-    };
+    tsHost.readFile = (fileName) =>
+      this.files.has(fileName) ? this.files.get(fileName) : ts.sys.readFile(fileName);
 
     tsHost.writeFile = (fileName, data) => {
       this.files.set(fileName, data);

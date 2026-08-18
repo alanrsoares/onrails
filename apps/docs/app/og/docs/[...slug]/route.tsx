@@ -20,9 +20,7 @@ export async function GET(_req: Request, { params }: RouteContext<"/og/docs/[...
   );
 }
 
-export function generateStaticParams() {
-  return source.getPages().map((page) => ({
+export const generateStaticParams = () => source.getPages().map((page) => ({
     lang: page.locale,
     slug: getPageImage(page).segments,
   }));
-}

@@ -1,5 +1,5 @@
 import { type Maybe, none, some } from "@onrails/maybe";
-import ts from "typescript";
+import ts from "typescript6";
 import { edit, spanEdit, walkSource } from "./ast.js";
 import { applyEditStep, byStartDesc } from "./chains.js";
 import { scanIfToSwitchSequences } from "./switch.js";

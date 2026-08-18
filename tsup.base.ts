@@ -8,13 +8,10 @@ import type { Options } from "tsup";
 export const baseTsupOptions: Options = {
   sourcemap: true,
   clean: true,
-  dts: {
-    compilerOptions: {
-      ignoreDeprecations: "6.0",
-    },
-  },
+  dts: false,
   format: ["esm", "cjs"],
   splitting: false,
   treeshake: true,
+  external: ["typescript6", "typescript"],
   target: "es2022",
 };

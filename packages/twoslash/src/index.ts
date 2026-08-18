@@ -74,8 +74,7 @@ const regionLines = (source: string): string[] | null => {
   const lines = source.split("\n");
   const start = lines.findIndex((l) => l.includes("#region snippet"));
   const end = lines.findIndex((l) => l.includes("#endregion"));
-  if (start === -1 || end === -1 || end <= start) return null;
-  return lines.slice(start + 1, end);
+  return start === -1 || end === -1 || end <= start ? null : lines.slice(start + 1, end);
 };
 
 // Drop bindings from a hidden fixture import that the shown region already

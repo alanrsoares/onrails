@@ -9,10 +9,10 @@
  * helper is vendored independently in each package rather than shared.
  */
 export function dual<F>(arity: number, body: (...args: never[]) => unknown): F {
-  const dispatch = (...args: unknown[]): unknown => {
-    if (args.length >= arity) return (body as (...a: unknown[]) => unknown)(...args);
-    return (self: unknown) => (body as (...a: unknown[]) => unknown)(self, ...args);
-  };
+  const dispatch = (...args: unknown[]): unknown =>
+    args.length >= arity
+      ? (body as (...a: unknown[]) => unknown)(...args)
+      : (self: unknown) => (body as (...a: unknown[]) => unknown)(self, ...args);
   // cast: the caller's overloaded type annotation supplies the real signature
   return dispatch as F;
 }

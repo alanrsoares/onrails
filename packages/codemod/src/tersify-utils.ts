@@ -1,4 +1,4 @@
-import ts from "typescript";
+import ts from "typescript6";
 
 // Helper to check for single statement return
 export function getSingleReturnExpression(statement: ts.Statement): ts.Expression | undefined {
@@ -135,12 +135,9 @@ export function getTernaryBranchText(node: ts.Expression, sf: ts.SourceFile): st
   let unwrapped: ts.Expression | undefined;
   if (ts.isJsxFragment(current)) {
     const children = current.children;
-    const nonTriviaChildren = children.filter((child) => {
-      if (ts.isJsxText(child)) {
-        return !child.containsOnlyTriviaWhiteSpaces;
-      }
-      return true;
-    });
+    const nonTriviaChildren = children.filter((child) =>
+      ts.isJsxText(child) ? !child.containsOnlyTriviaWhiteSpaces : true,
+    );
     if (nonTriviaChildren.length === 1) {
       const soleChild = nonTriviaChildren[0];
       if (soleChild && ts.isJsxExpression(soleChild) && soleChild.expression) {
@@ -152,12 +149,9 @@ export function getTernaryBranchText(node: ts.Expression, sf: ts.SourceFile): st
     if (tagName === "Fragment" || tagName === "React.Fragment" || tagName.endsWith(".Fragment")) {
       if (current.openingElement.attributes.properties.length === 0) {
         const children = current.children;
-        const nonTriviaChildren = children.filter((child) => {
-          if (ts.isJsxText(child)) {
-            return !child.containsOnlyTriviaWhiteSpaces;
-          }
-          return true;
-        });
+        const nonTriviaChildren = children.filter((child) =>
+          ts.isJsxText(child) ? !child.containsOnlyTriviaWhiteSpaces : true,
+        );
         if (nonTriviaChildren.length === 1) {
           const soleChild = nonTriviaChildren[0];
           if (soleChild && ts.isJsxExpression(soleChild) && soleChild.expression) {

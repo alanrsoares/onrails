@@ -100,10 +100,11 @@ describe("symmetry: declared asymmetries (update the declaration to close a gap)
     ["compact is maybe-only", M.compact, (R as Record<string, unknown>).compact],
   ];
 
-  it.each(
-    cases.map(([reason, has, missing]) => [reason, has, missing] as const),
-  )("%s", (_reason, has, missing) => {
-    expect(has).toBeDefined();
-    expect(missing).toBeUndefined();
-  });
+  it.each(cases.map(([reason, has, missing]) => [reason, has, missing] as const))(
+    "%s",
+    (_reason, has, missing) => {
+      expect(has).toBeDefined();
+      expect(missing).toBeUndefined();
+    },
+  );
 });

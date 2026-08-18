@@ -44,21 +44,31 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./api": {
-      "types": "./dist/api/generate.d.ts",
-      "import": "./dist/api/generate.js",
-      "require": "./dist/api/generate.cjs"
+      "import": {
+        "types": "./dist/api/generate.d.ts",
+        "default": "./dist/api/generate.js"
+      },
+      "require": {
+        "types": "./dist/api/generate.d.cts",
+        "default": "./dist/api/generate.cjs"
+      }
     }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "check": "bun typecheck && bun test",
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json && bun run ../../scripts/dts-to-cts.ts",
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run build"
   },
@@ -70,8 +80,9 @@
     "typescript": ">=6"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "tsup": "^8.5.1",
-    "typescript": "^6.0.3"
+    "@types/bun": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "typescript6": "catalog:"
   }
 }

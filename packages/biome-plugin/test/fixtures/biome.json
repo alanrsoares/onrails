@@ -7,6 +7,6 @@
     "../../rules/no-deprecated-synonyms.grit",
     "../../rules/fluent-stays-local.grit"
   ],
-  "linter": { "enabled": true, "rules": { "recommended": false } },
+  "linter": { "enabled": true, "rules": { "preset": "none" } },
   "formatter": { "enabled": false }
 }

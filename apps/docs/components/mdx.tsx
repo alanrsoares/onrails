@@ -6,8 +6,7 @@ import type { MDXComponents } from "mdx/types";
 import { CodeCompare } from "@/components/code-compare";
 import { Snippet } from "@/components/snippet";
 
-export function getMDXComponents(components?: MDXComponents) {
-  return {
+export const getMDXComponents = (components?: MDXComponents) => ({
     ...defaultMdxComponents,
     Tab,
     Tabs,
@@ -19,8 +18,7 @@ export function getMDXComponents(components?: MDXComponents) {
     PopupContent,
     PopupTrigger,
     ...components,
-  } satisfies MDXComponents;
-}
+  } satisfies MDXComponents);
 
 export const useMDXComponents = getMDXComponents;
 

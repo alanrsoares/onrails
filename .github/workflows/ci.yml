@@ -31,10 +31,5 @@ jobs:
           bun-version: latest
       - name: Install
         run: bun install --frozen-lockfile
-      - name: Build TS packages (result first so maybe/pattern can resolve its dist/)
-        run: |
-          bun run --filter '@onrails/result' build
-          bun run --filter '@onrails/maybe' --filter '@onrails/pattern' build
-          bun run --filter '@onrails/docgen' build
       - name: Check
         run: bun run check

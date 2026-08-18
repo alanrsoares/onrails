@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { err, flatMap, ok, type Result, trySync } from "@onrails/result";
-import ts from "typescript";
+import ts from "typescript6";
 import { defaultCompilerHost } from "./host.js";
 import { toError } from "./to-error.js";
 import type { ApiCompilerHost, DocParam, DocSymbol } from "./types.js";
@@ -39,8 +39,7 @@ const paramDescription = (tags: readonly ts.JSDocTagInfo[], pName: string): stri
   const paramTag = tags.find(
     (t) => t.name === "param" && t.text && ts.displayPartsToString(t.text).startsWith(pName),
   );
-  if (!paramTag?.text) return "";
-  return ts.displayPartsToString(paramTag.text).slice(pName.length).trim();
+  return !paramTag?.text ? "" : ts.displayPartsToString(paramTag.text).slice(pName.length).trim();
 };
 
 const collectParams = (
@@ -49,11 +48,16 @@ const collectParams = (
   tags: readonly ts.JSDocTagInfo[],
 ): DocParam[] => {
   const firstSig = sigs[0];
-  if (!firstSig) return [];
-  return firstSig.getParameters().map((paramSym) => {
-    const name = paramSym.getName();
-    return { name, type: typesMap.get(name) ?? "any", description: paramDescription(tags, name) };
-  });
+  return !firstSig
+    ? []
+    : firstSig.getParameters().map((paramSym) => {
+        const name = paramSym.getName();
+        return {
+          name,
+          type: typesMap.get(name) ?? "any",
+          description: paramDescription(tags, name),
+        };
+      });
 };
 
 const examplesOf = (tags: readonly ts.JSDocTagInfo[]): string[] =>

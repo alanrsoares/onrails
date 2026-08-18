@@ -1,4 +1,4 @@
-import ts from "typescript";
+import ts from "typescript6";
 import type { Edit } from "./types.js";
 
 interface Comparison {

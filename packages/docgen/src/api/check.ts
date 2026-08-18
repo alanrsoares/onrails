@@ -1,7 +1,7 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isErr, type Result, trySync } from "@onrails/result";
-import ts from "typescript";
+import ts from "typescript6";
 import { extractExports } from "./extract.js";
 import { defaultCompilerHost } from "./host.js";
 import { toError } from "./to-error.js";
@@ -232,10 +232,7 @@ export const checkExamples = (
       target: ts.ScriptTarget.ESNext,
       module: ts.ModuleKind.ESNext,
       moduleResolution: ts.ModuleResolutionKind.Bundler,
-      // No DOM lib: these packages are runtime-agnostic, so an example naming a
-      // DOM global (e.g. a user type `Event`) stubs to `any` instead of
-      // resolving to lib.dom and producing false mismatches.
-      lib: ["lib.esnext.d.ts"],
+      lib: ["lib.es2022.d.ts"],
       strict: true,
       skipLibCheck: true,
       noEmit: true,

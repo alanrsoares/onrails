@@ -9,8 +9,7 @@ import { processHoverDocs, twoslashCompilerOptions } from "@/lib/twoslash";
  * with hover lenses — for use outside MDX, e.g. the landing-page tabs. The input
  * is the `twoslash` form from lib/snippets.generated.ts.
  */
-export async function TwoslashSnippet({ code }: { code: string }) {
-  return highlight(code, {
+export const TwoslashSnippet = async ({ code }: { code: string }) => highlight(code, {
     lang: "ts",
     themes: { light: "github-light", dark: "github-dark" },
     // emit both themes as CSS variables so it follows the .dark class instead of
@@ -34,4 +33,3 @@ export async function TwoslashSnippet({ code }: { code: string }) {
       PopupTrigger,
     },
   });
-}

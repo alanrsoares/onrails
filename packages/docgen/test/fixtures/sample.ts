@@ -5,9 +5,7 @@
  * @param b the second addend
  * @returns the sum of `a` and `b`
  */
-export function add(a: number, b: number): number {
-  return a + b;
-}
+export const add = (a: number, b: number): number => a + b;
 
 /**
  * A greeting string. See {@link add} for arithmetic.

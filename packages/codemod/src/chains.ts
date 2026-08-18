@@ -1,6 +1,6 @@
 import { compactMap, isSome, type Maybe, map, none, some } from "@onrails/maybe";
 import { match } from "@onrails/pattern";
-import ts from "typescript";
+import ts from "typescript6";
 import { argsToText, edit, lookupMap, spanEdit, walkSource } from "./ast.js";
 import {
   ASYNC_ROOT_HINTS,
@@ -34,9 +34,7 @@ const HELPERS = [
 
 type HelperName = (typeof HELPERS)[number];
 
-function isHelperName(x: string): x is HelperName {
-  return (HELPERS as readonly string[]).includes(x);
-}
+const isHelperName = (x: string): x is HelperName => (HELPERS as readonly string[]).includes(x);
 
 function identifierCallToNative(node: ts.CallExpression): Maybe<Edit> {
   if (!ts.isIdentifier(node.expression)) return none();

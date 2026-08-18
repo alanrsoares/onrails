@@ -40,8 +40,7 @@ export const defaultResolveLink = (
   const slugText = label ? `${symbol} ${label}` : symbol;
   const slug = slugify(slugText);
 
-  if (targetPackage === currentPackage) return `#${slug}`;
-  return `./${shortName(targetPackage)}#${slug}`;
+  return targetPackage === currentPackage ? `#${slug}` : `./${shortName(targetPackage)}#${slug}`;
 };
 
 const formatDescription = (desc: string, link: LinkResolver): string =>
@@ -120,12 +119,12 @@ const renderSymbolMDX = (sym: DocSymbol, isFirst: boolean, link: LinkResolver): 
   }
 
   if (sym.params.length > 0) {
-    mdx += `#### Parameters\n\n| Parameter | Type | Description |\n|---|---|---|\n`;
+    mdx += "#### Parameters\n\n| Parameter | Type | Description |\n|---|---|---|\n";
     for (const p of sym.params) {
       const escapedType = p.type.replace(/\|/g, "\\|");
       mdx += `| \`${p.name}\` | \`${escapedType}\` | ${formatDescription(p.description, link)} |\n`;
     }
-    mdx += `\n`;
+    mdx += "\n";
   }
 
   if (sym.returns) {
@@ -133,7 +132,7 @@ const renderSymbolMDX = (sym: DocSymbol, isFirst: boolean, link: LinkResolver): 
   }
 
   if (sym.examples.length > 0) {
-    mdx += `#### Example\n\n`;
+    mdx += "#### Example\n\n";
     for (const ex of sym.examples) {
       mdx += `${formatExample(ex)}\n\n`;
     }

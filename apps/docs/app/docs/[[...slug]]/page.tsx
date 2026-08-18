@@ -49,9 +49,7 @@ export default async function Page(props: PageProps) {
   );
 }
 
-export async function generateStaticParams() {
-  return source.generateParams();
-}
+export const generateStaticParams = async () => source.generateParams();
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const params = await props.params;

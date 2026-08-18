@@ -1,5 +1,5 @@
 import { fromNullable, type Maybe, match, none, some } from "@onrails/maybe";
-import ts from "typescript";
+import ts from "typescript6";
 import { TYPE_ONLY_NATIVE } from "./constants.js";
 import type { Edit } from "./types.js";
 

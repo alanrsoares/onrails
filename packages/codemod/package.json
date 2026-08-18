@@ -1,7 +1,7 @@
 {
   "name": "@onrails/codemod",
   "version": "0.2.5",
-  "description": "Codemods for migrating onto @onrails/result (neverthrow → compat shim, and beyond)",
+  "description": "Codemods for migrating onto @onrails/result (neverthrow \u2192 compat shim, and beyond)",
   "license": "MIT",
   "author": "Alan R. Soares",
   "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/codemod#readme",
@@ -42,13 +42,15 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@onrails/maybe": "workspace:*",
-    "@onrails/pattern": "workspace:*",
-    "@onrails/result": "workspace:*",
-    "typescript": "^6.0.3"
+    "@onrails/maybe": "workspace:^",
+    "@onrails/pattern": "workspace:^",
+    "@onrails/result": "workspace:^",
+    "typescript": "^7.0.2",
+    "typescript6": "npm:typescript@^6.0.3"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "check": "bun run typecheck && bun test"
   }
 }

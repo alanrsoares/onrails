@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { none, some } from "@onrails/maybe";
-import ts from "typescript";
+import ts from "typescript6";
 import {
   concatCollectors,
   countOccurrences,

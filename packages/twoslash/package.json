@@ -43,21 +43,26 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "check": "bun typecheck && bun test",
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json && bun run ../../scripts/dts-to-cts.ts",
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "tsup": "^8.5.1"
+    "@types/bun": "catalog:",
+    "tsup": "catalog:"
   }
 }

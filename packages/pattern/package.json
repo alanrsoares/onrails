@@ -1,7 +1,7 @@
 {
   "name": "@onrails/pattern",
   "version": "0.3.3",
-  "description": "Lightweight exhaustive matching for owned tagged unions — ts-pattern-shaped DX, tree-shakeable",
+  "description": "Lightweight exhaustive matching for owned tagged unions \u2014 ts-pattern-shaped DX, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
   "homepage": "https://alanrsoares.github.io/onrails/modules/_onrails_pattern.html",
@@ -43,27 +43,37 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./tag": {
-      "types": "./dist/tag.d.ts",
-      "import": "./dist/tag.js",
-      "require": "./dist/tag.cjs"
+      "import": {
+        "types": "./dist/tag.d.ts",
+        "default": "./dist/tag.js"
+      },
+      "require": {
+        "types": "./dist/tag.d.cts",
+        "default": "./dist/tag.cjs"
+      }
     }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "check": "bun typecheck && bun test",
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json && bun run ../../scripts/dts-to-cts.ts",
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "@onrails/result": "workspace:*",
-    "ts-expect": "^1.3.0",
-    "tsup": "^8.5.1"
+    "ts-expect": "catalog:",
+    "tsup": "catalog:"
   }
 }

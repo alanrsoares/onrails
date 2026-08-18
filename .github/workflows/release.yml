@@ -32,14 +32,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: result,        path: packages/result,        build: true,  deps: "" }
-          - { name: maybe,         path: packages/maybe,         build: true,  deps: "--filter '@onrails/result'" }
-          - { name: pattern,       path: packages/pattern,       build: true,  deps: "" }
-          - { name: codemod,       path: packages/codemod,       build: false, deps: "" }
-          - { name: eslint-plugin, path: packages/eslint-plugin, build: false, deps: "" }
-          - { name: biome-plugin,  path: packages/biome-plugin,  build: false, deps: "" }
-          - { name: twoslash,      path: packages/twoslash,      build: true,  deps: "" }
-          - { name: docgen,        path: packages/docgen,        build: true,  deps: "--filter '@onrails/result' --filter '@onrails/pattern'" }
+          - { name: result,        path: packages/result,        build: true  }
+          - { name: maybe,         path: packages/maybe,         build: true  }
+          - { name: pattern,       path: packages/pattern,       build: true  }
+          - { name: codemod,       path: packages/codemod,       build: false }
+          - { name: eslint-plugin, path: packages/eslint-plugin, build: false }
+          - { name: biome-plugin,  path: packages/biome-plugin,  build: false }
+          - { name: twoslash,      path: packages/twoslash,      build: true  }
+          - { name: docgen,        path: packages/docgen,        build: true  }
     steps:
       - id: gate
         env:
@@ -60,13 +60,15 @@ jobs:
           bun-version: latest
       - if: steps.gate.outputs.released == 'true'
         run: bun install --frozen-lockfile
-      - if: steps.gate.outputs.released == 'true' && matrix.deps != ''
-        name: Build workspace deps (provide .d.ts for downstream dts)
-        run: bun run ${{ matrix.deps }} build
+      # `bun run build` stages result ahead of its dependents, so every
+      # package's dts step sees the .d.ts it imports. `--filter` alone runs
+      # scripts in parallel and races.
       - if: steps.gate.outputs.released == 'true' && matrix.build
-        name: Build ${{ matrix.name }}
-        working-directory: ${{ matrix.path }}
+        name: Build TS packages
         run: bun run build
+      - if: steps.gate.outputs.released == 'true' && matrix.build
+        name: Verify packaging
+        run: bun run check:packaging
       - if: steps.gate.outputs.released == 'true'
         name: Publish ${{ matrix.name }}
         working-directory: ${{ matrix.path }}

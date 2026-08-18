@@ -9,7 +9,7 @@
  */
 import { generateApiDocs, slugify, type ExportsByPackage, type SymbolKind } from "@onrails/docgen";
 import { isErr } from "@onrails/result";
-import ts from "typescript";
+import ts from "typescript6";
 
 // Single source of truth for categories: ordered category -> the base symbols
 // it owns, per package. Key order IS the doc order; membership IS the
