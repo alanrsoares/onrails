@@ -10,6 +10,7 @@ import {
   bimap,
   err,
   flatMap,
+  fromThrowable,
   isErr,
   isOk,
   map,
@@ -152,12 +153,23 @@ describe("Result sync types: unwrap and combine", () => {
 });
 
 describe("Result sync types: effects", () => {
-  it("trySync preserves function arity and return", () => {
-    const safe = trySync(
+  it("fromThrowable preserves function arity and return", () => {
+    const safe = fromThrowable(
       (a: number, b: string) => a + b.length,
       (e) => String(e),
     );
     expectType<(a: number, b: string) => Result<number, string>>(safe);
+  });
+
+  it("trySync runs eagerly and defaults its error to Error", () => {
+    const defaulted = trySync(() => 1);
+    expectType<TypeEqual<typeof defaulted, Result<number, Error>>>(true);
+
+    const mapped = trySync(
+      () => 1,
+      (e) => String(e),
+    );
+    expectType<TypeEqual<typeof mapped, Result<number, string>>>(true);
   });
 
   it("recover maps only the Err track", () => {

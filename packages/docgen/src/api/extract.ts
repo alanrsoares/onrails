@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { err, flatMap, ok, type Result, trySync } from "@onrails/result";
+import { err, flatMap, fromThrowable, ok, type Result, trySync } from "@onrails/result";
 import ts from "typescript6";
 import { defaultCompilerHost } from "./host.js";
 import { toError } from "./to-error.js";
@@ -227,7 +227,7 @@ const COMPILER_OPTIONS: ts.CompilerOptions = {
 // The TS compiler is a third-party boundary — both program creation and the
 // symbol walk can throw (e.g. synthesized signatures whose getDeclaration() is
 // typed non-null but is undefined at runtime). Wrap both as Result.
-const walkExports = trySync(
+const walkExports = fromThrowable(
   (checker: ts.TypeChecker, moduleSymbol: ts.Symbol, packageName: string, categorize: Categorize) =>
     moduleSymbols(checker, moduleSymbol, packageName, categorize),
   toError,
@@ -244,7 +244,7 @@ export const extractExports = (
     () => host.createProgram([absoluteEntry], COMPILER_OPTIONS),
     toError,
   );
-  return flatMap(createProgram(), (prog) => {
+  return flatMap(createProgram, (prog) => {
     const checker = prog.getTypeChecker();
     const sourceFile = prog.getSourceFile(absoluteEntry);
     if (!sourceFile) return err(new Error(`Could not find source file for ${entry}`));

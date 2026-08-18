@@ -9,7 +9,7 @@ const reorderDeps = (deps: Record<string, string>): Record<string, string> =>
   Object.fromEntries(Object.entries(deps).sort(([a], [b]) => a.localeCompare(b)));
 
 export const parsePackageJson = (raw: string): Result<Record<string, unknown>, Error> =>
-  trySync(() => JSON.parse(raw) as Record<string, unknown>, toError)();
+  trySync(() => JSON.parse(raw) as Record<string, unknown>, toError);
 
 const applyDepRewrite =
   (fileSpec: string) =>

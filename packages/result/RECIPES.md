@@ -81,15 +81,17 @@ Define a parser factory once, instantiate per schema.
 
 ```ts
 import { flow } from "@onrails/result/pipe";
-import { flatMap, trySync, type Result } from "@onrails/result";
+import { flatMap, fromThrowable, type Result } from "@onrails/result";
 
 type ParseError = { kind: "parse"; message: string };
 type SchemaError = { kind: "schema"; field: string };
 
 const parseJsonWith = <T>(schema: { parse: (x: unknown) => T }) =>
   flow(
-    trySync(JSON.parse, (e): ParseError => ({ kind: "parse", message: String(e) })),
-    flatMap(trySync(schema.parse, (e): SchemaError => ({ kind: "schema", field: String(e) }))),
+    fromThrowable(JSON.parse, (e): ParseError => ({ kind: "parse", message: String(e) })),
+    flatMap(
+      fromThrowable(schema.parse, (e): SchemaError => ({ kind: "schema", field: String(e) })),
+    ),
   );
 
 const parseUser = parseJsonWith(UserSchema);
@@ -208,7 +210,7 @@ const buildSummary = (userId: string) =>
       loadProfile(userId),                                                // ResultAsync<Profile, ProfileError>
       loadRecentMetrics(userId),                                          // ResultAsync<Metrics, MetricsError>
       loadFeatureFlags(userId),                                           // ResultAsync<Flags,   never>
-    ] as const),
+    ]),
     (combined) =>
       combined.map(([profile, metrics, flags]) => ({
         userId,

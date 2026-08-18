@@ -84,6 +84,7 @@ const RESULT_SYMBOLS = new Set([
   "bimap",
   "mapErr",
   "trySync",
+  "fromThrowable",
   "tryAsync",
 ]);
 const MAYBE_SYMBOLS = new Set([

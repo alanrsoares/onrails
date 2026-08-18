@@ -31,9 +31,9 @@ bun add @onrails/result
 ```
 
 ```ts
-import { err, flatMap, isErr, isOk, map, match, ok, trySync } from "@onrails/result";
+import { err, flatMap, fromThrowable, isErr, isOk, map, match, ok } from "@onrails/result";
 
-const parse = trySync(
+const parse = fromThrowable(
   (raw: string) => JSON.parse(raw) as { v: number },
   (e) => ({ kind: "parse" as const, message: String(e) }),
 );

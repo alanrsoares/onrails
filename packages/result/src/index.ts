@@ -2,7 +2,7 @@
  * @onrails/result — public surface.
  *
  * Layout:
- *   • core railway          — ok/err, map/flatMap, match, recover, tap, trySync, pipe
+ *   • core railway          — ok/err, map/flatMap, match, recover, tap, trySync/fromThrowable, pipe
  *   • collection (sync)     — combine, combineTuple, validateAll, validateTuple
  *   • async                 — ResultAsync, fromPromise, tryAsync
  *   • async collection      — ResultAsync.combineTuple / combineTupleParallel
@@ -36,6 +36,7 @@ export {
   bimap,
   err,
   flatMap,
+  fromThrowable,
   isErr,
   isOk,
   map,

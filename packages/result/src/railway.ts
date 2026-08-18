@@ -1,5 +1,5 @@
 import { ResultAsync } from "./async.js";
-import { err, flatMap, map, ok, trySync } from "./result.js";
+import { err, flatMap, fromThrowable, map, ok } from "./result.js";
 import type { Result } from "./types.js";
 
 /**
@@ -143,7 +143,7 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     fn: (ctx: C) => T,
     onThrow: (error: unknown) => F,
   ): Railway<C & Record<K, T>, E | F, M> {
-    return this.fromResult(key, (ctx) => trySync(fn, onThrow)(ctx));
+    return this.fromResult(key, (ctx) => fromThrowable(fn, onThrow)(ctx));
   }
 
   /** Sync `Result`-returning step. */

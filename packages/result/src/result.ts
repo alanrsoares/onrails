@@ -1,4 +1,5 @@
 import { dual } from "./internal/dual.js";
+import { toError } from "./internal/to-error.js";
 import type { Err, Ok, Result } from "./types.js";
 
 export type { Err, Ok, Result } from "./types.js";
@@ -311,10 +312,13 @@ export function unwrapErr<T, E>(result: Result<T, E>): E {
 }
 
 /**
- * Wraps a throwing sync function, returning a function that produces a
+ * Wraps a throwing sync **function**, returning a function that produces a
  * {@link Result} instead of throwing. Thrown errors pass through `onThrow` to
- * become a typed `Err`; a normal return becomes `Ok`. The neverthrow analogue
- * is `Result.fromThrowable`.
+ * become a typed `Err`; a normal return becomes `Ok`. Same name and shape as
+ * neverthrow's `Result.fromThrowable`.
+ *
+ * Reach for {@link trySync} instead when you want to run the call right now
+ * rather than build a reusable wrapper.
  *
  * @param fn - the throwing function to wrap
  * @param onThrow - maps a thrown value to the `Err` channel
@@ -323,7 +327,7 @@ export function unwrapErr<T, E>(result: Result<T, E>): E {
  * @example
  * ```ts
  * type ParseError = { kind: "parse"; message: string };
- * const parse = trySync(
+ * const parse = fromThrowable(
  *   JSON.parse,
  *   (e): ParseError => ({ kind: "parse", message: String(e) }),
  * );
@@ -331,15 +335,15 @@ export function unwrapErr<T, E>(result: Result<T, E>): E {
  * parse("nope");    // Err({ kind: "parse", … })
  * ```
  */
-export function trySync<A extends readonly unknown[], T, E>(
+export function fromThrowable<A extends readonly unknown[], T, E>(
   fn: (...args: A) => T,
   onThrow: (error: unknown) => E,
 ): (...args: A) => Result<T, E>;
-export function trySync<F extends (...args: never) => unknown, E>(
+export function fromThrowable<F extends (...args: never) => unknown, E>(
   fn: F,
   onThrow: (error: unknown) => E,
 ): (...args: Parameters<F>) => Result<ReturnType<F>, E>;
-export function trySync(
+export function fromThrowable(
   fn: (...args: never) => unknown,
   onThrow: (error: unknown) => unknown,
 ): (...args: never) => Result<unknown, unknown> {
@@ -350,6 +354,36 @@ export function trySync(
       return err(onThrow(error));
     }
   };
+}
+
+/**
+ * Runs `fn` **now**, catching a throw into the `Err` track — the sync mirror
+ * of `tryAsync`. Without `onThrow` the thrown value is normalized to an
+ * `Error`; pass a mapper for a typed error.
+ *
+ * To lift a throwing function once and call it many times, use
+ * {@link fromThrowable}.
+ *
+ * @param fn - the throwing thunk to run
+ * @param onThrow - maps a thrown value to the `Err` channel
+ *
+ * @example
+ * ```ts
+ * trySync(() => JSON.parse(raw));                    // Result<unknown, Error>
+ * trySync(() => Schema.parse(input), (e): SchemaError => ({
+ *   kind: "schema",
+ *   cause: e,
+ * }));
+ * ```
+ */
+export function trySync<T>(fn: () => T): Result<T, Error>;
+export function trySync<T, E>(fn: () => T, onThrow: (error: unknown) => E): Result<T, E>;
+export function trySync<T, E>(fn: () => T, onThrow?: (error: unknown) => E): Result<T, E | Error> {
+  try {
+    return ok(fn());
+  } catch (error) {
+    return err(onThrow ? onThrow(error) : toError(error));
+  }
 }
 
 const printPayload = (payload: unknown): string => {

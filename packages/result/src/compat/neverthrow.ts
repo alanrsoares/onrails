@@ -6,11 +6,11 @@ import {
   err as coreErr,
   ok as coreOk,
   flatMap,
+  fromThrowable,
   isErr,
   isOk,
   map,
   mapErr,
-  trySync,
   unwrapOr,
 } from "../result.js";
 import type { Result as ResultType } from "../types.js";
@@ -36,7 +36,7 @@ export class CompatResult<T, E> {
     fn: (...args: A) => U,
     onThrow: (error: unknown) => F,
   ): (...args: A) => CompatResult<U, F> {
-    const wrapped = trySync(fn, onThrow);
+    const wrapped = fromThrowable(fn, onThrow);
     return (...args: A) => new CompatResult(wrapped(...args));
   }
 

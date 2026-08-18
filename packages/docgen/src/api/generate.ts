@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { isErr, ok, type Result, trySync } from "@onrails/result";
+import { fromThrowable, isErr, ok, type Result } from "@onrails/result";
 import { type Categorize, defaultCategorize, extractExports } from "./extract.js";
 import { defaultCompilerHost } from "./host.js";
 import { renderPackageMdx } from "./render.js";
@@ -51,7 +51,7 @@ export const generateApiDocs = (
     }),
   );
 
-  const writeMdx = trySync((out: string, mdx: string) => {
+  const writeMdx = fromThrowable((out: string, mdx: string) => {
     host.mkdir(dirname(out));
     host.writeFile(out, mdx);
   }, toError);

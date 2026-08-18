@@ -11,9 +11,13 @@ bun add @onrails/result
 ## Quick start (value-first — best inference)
 
 ```ts
-import { err, flatMap, match, ok, trySync } from "@onrails/result";
+import { err, flatMap, fromThrowable, match, ok, trySync } from "@onrails/result";
 
-const parse = trySync(
+// Run it now — the sync mirror of `tryAsync`.
+const parsed = trySync(() => JSON.parse(raw));           // Result<unknown, Error>
+
+// Or lift the throwing function once and reuse it.
+const parse = fromThrowable(
   (raw: string) => JSON.parse(raw),
   (e) => ({ kind: "parse" as const, message: String(e) }),
 );
@@ -39,6 +43,8 @@ For worked examples of multi-step pipelines, parser builders, validator ladders,
 | Independent validations, accumulated failures | `validateAll` / `validateTuple` from `@onrails/result` |
 | Sync → async lift, keep error type | `fromResult`, `asyncAfter` (do **not** use `fromAsync` here)         |
 | `Promise<Result<…>>` boundary lift | `fromAsync` / `tryAsync`                                             |
+| Throwing sync call, run it now     | `trySync(() => f())` — mirrors `tryAsync(promise)`                   |
+| Throwing sync function, reusable   | `fromThrowable(f, onThrow)` — neverthrow's `Result.fromThrowable`    |
 
 Rule of thumb: pick the smallest tool that removes nesting. Reach for `Railway` only when named context replaces positional tuple plumbing.
 
@@ -60,7 +66,7 @@ Use `asyncAfter` for the common "validate synchronously, then run async IO" shap
 import { asyncAfter, tryAsync, trySync } from "@onrails/result";
 
 return asyncAfter(
-  trySync(() => ArtifactSchema.parse(artifact), toError)(),
+  trySync(() => ArtifactSchema.parse(artifact), toError),
   (validated) =>
     tryAsync(
       getDb()

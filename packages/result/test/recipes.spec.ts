@@ -10,13 +10,13 @@ import { flow } from "../src/pipe.js";
 import {
   err,
   flatMap,
+  fromThrowable,
   isErr,
   isOk,
   map,
   ok,
   type Result,
   recover,
-  trySync,
 } from "../src/result.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -236,8 +236,10 @@ describe("recipe 11 — composing flows", () => {
 
 const parseJsonWith = <T>(schema: { parse: (x: unknown) => T }) =>
   flow(
-    trySync(JSON.parse, (e): ParseError => ({ kind: "parse", message: String(e) })),
-    flatMap(trySync(schema.parse, (e): SchemaError => ({ kind: "schema", field: String(e) }))),
+    fromThrowable(JSON.parse, (e): ParseError => ({ kind: "parse", message: String(e) })),
+    flatMap(
+      fromThrowable(schema.parse, (e): SchemaError => ({ kind: "schema", field: String(e) })),
+    ),
   );
 
 type User = { id: string };

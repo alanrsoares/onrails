@@ -24,6 +24,7 @@ const PUBLIC_RUNTIME_EXPORTS = [
   "fromPromise",
   "fromResult",
   "fromSafePromise",
+  "fromThrowable",
   "isErr",
   "isOk",
   "map",

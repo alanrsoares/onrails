@@ -40,7 +40,7 @@ Two distinct lift paths:
 
 ```ts
 asyncAfter(
-  trySync(() => Schema.parse(input), toError)(),
+  trySync(() => Schema.parse(input), toError),
   (value) => tryAsync(save(value)),
 );
 ```

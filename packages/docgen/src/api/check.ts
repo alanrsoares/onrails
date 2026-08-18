@@ -257,4 +257,4 @@ export const checkExamples = (
     } finally {
       host.rm(tmp);
     }
-  }, toError)();
+  }, toError);
