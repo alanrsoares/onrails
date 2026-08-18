@@ -95,7 +95,7 @@ describe("sync Result: trySync & combine", () => {
   });
 
   it("combineTuple preserves tuple types at runtime", () => {
-    const combined = combineTuple([ok(1), ok("a")] as const);
+    const combined = combineTuple([ok(1), ok("a")]);
     expect(combined).toEqual(ok([1, "a"]));
   });
 });

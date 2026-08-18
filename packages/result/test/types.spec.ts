@@ -121,13 +121,23 @@ describe("Result sync types: unwrap and combine", () => {
     expectType<TypeEqual<typeof failed, Result<number[], string>>>(true);
   });
 
-  it("combineTuple preserves tuple shape", () => {
-    // Bind to typed intermediates so contextual inference from the
-    // `Result<unknown, unknown>` constraint doesn't widen `never` errors to `unknown`.
-    const a = ok(1);
-    const b = ok("a");
-    const r = combineTuple([a, b] as const);
+  it("combineTuple preserves tuple shape from inline literals", () => {
+    // No `as const`, no hoisted intermediates: the parameter is a bare `R`, so
+    // nothing contextually widens `ok()`'s defaulted `E = never`.
+    const r = combineTuple([ok(1), ok("a")]);
     expectType<TypeEqual<typeof r, Result<readonly [number, string], never>>>(true);
+  });
+
+  it("combineTuple keeps both channels precise for a mixed inline tuple", () => {
+    const r = combineTuple([ok(1), err("boom")]);
+    expectType<TypeEqual<typeof r, Result<readonly [number, never], string>>>(true);
+  });
+
+  it("tuple combinators reject a non-Result element at the call site", () => {
+    // @ts-expect-error the TupleGuard demands an extra argument that cannot be supplied
+    combineTuple([ok(1), 42]);
+    // @ts-expect-error same guard on the accumulating twin
+    validateTuple([ok(1), 42]);
   });
 });
 
@@ -188,8 +198,8 @@ describe("ResultAsync types", () => {
   it("combineTuple and combineTupleParallel preserve tuple shape and union errors", () => {
     const a = ResultAsync.ok<number, "a">(1);
     const b = ResultAsync.ok<string, "b">("x");
-    const combined = ResultAsync.combineTuple([a, b] as const);
-    const paralleled = ResultAsync.combineTupleParallel([a, b] as const);
+    const combined = ResultAsync.combineTuple([a, b]);
+    const paralleled = ResultAsync.combineTupleParallel([a, b]);
 
     expectType<TypeEqual<typeof combined, ResultAsync<readonly [number, string], "a" | "b">>>(true);
     expectType<TypeEqual<typeof paralleled, ResultAsync<readonly [number, string], "a" | "b">>>(
@@ -270,10 +280,7 @@ describe("Result validation types", () => {
   });
 
   it("tuple validation preserves tuple values and accumulates errors", () => {
-    const a = ok(1);
-    const b = ok("x");
-    const c = err("bad" as const);
-    const r = validateTuple([a, b, c] as const);
+    const r = validateTuple([ok(1), ok("x"), err("bad" as const)]);
     expectType<TypeEqual<typeof r, Result<readonly [number, string, never], readonly "bad"[]>>>(
       true,
     );

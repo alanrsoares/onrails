@@ -4,10 +4,23 @@ import type { Result } from "./types.js";
 import { UnexpectedError } from "./types.js";
 
 type PromiseFactory<T, E> = () => Promise<Result<T, E>>;
-type CombineTupleAsync<R extends readonly ResultAsync<unknown, unknown>[]> = ResultAsync<
-  { [K in keyof R]: InferOk<R[K]> },
-  { [K in keyof R]: InferErr<R[K]> }[number]
->;
+type AnyResultAsync = ResultAsync<unknown, unknown>;
+
+/**
+ * Mirrors the sync `CombineTuple` in `./collections.ts`: the element check
+ * lives in the RETURN type, never in the parameter constraint. A
+ * `ResultAsync<unknown, unknown>` constraint contextually types the arguments
+ * and widens `okAsync(1)`'s defaulted `E = never` to `unknown`, so call sites
+ * would need hoisted intermediates to keep their error union.
+ */
+type CombineTupleAsync<R extends readonly unknown[]> = R[number] extends AnyResultAsync
+  ? ResultAsync<{ [K in keyof R]: InferOk<R[K]> }, InferErr<R[number]>>
+  : never;
+
+/** Mirrors `TupleGuard` in `./collections.ts` — see the note there. */
+type AsyncTupleGuard<R extends readonly unknown[]> = R[number] extends AnyResultAsync
+  ? []
+  : [error: "expected an array of ResultAsync values"];
 
 /** Collapses settled results left-to-right, short-circuiting on the first `Err`. */
 const sequenceSettled = (
@@ -215,7 +228,7 @@ export class ResultAsync<T, E> {
    *
    * @example
    * ```ts
-   * const combined = ResultAsync.combineTuple([loadCfg(), loadCatalog()] as const);
+   * const combined = ResultAsync.combineTuple([loadCfg(), loadCatalog()]);
    * // ResultAsync<readonly [Cfg, Catalog], CfgError | CatalogError>
    * const r = await combined;
    * if (isOk(r)) {
@@ -223,13 +236,14 @@ export class ResultAsync<T, E> {
    * }
    * ```
    */
-  static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(
+  static combineTuple<const R extends readonly unknown[]>(
     results: R,
+    ..._guard: AsyncTupleGuard<R>
   ): CombineTupleAsync<R> {
     // Runtime identical to combine; the cast restores per-index tuple types.
     return ResultAsync.combine(
-      results as readonly ResultAsync<unknown, unknown>[],
-    ) as CombineTupleAsync<R>;
+      results as readonly AnyResultAsync[],
+    ) as unknown as CombineTupleAsync<R>;
   }
 
   /**
@@ -242,16 +256,19 @@ export class ResultAsync<T, E> {
    * const combined = ResultAsync.combineTupleParallel([
    *   loadProfile(id),
    *   loadMetrics(id),
-   * ] as const);
+   * ]);
    * ```
    */
-  static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknown>[]>(
+  static combineTupleParallel<const R extends readonly unknown[]>(
     results: R,
+    ..._guard: AsyncTupleGuard<R>
   ): CombineTupleAsync<R> {
     // Cast restores per-index tuple types over the untyped sequence core.
     return new ResultAsync(async () =>
-      sequenceSettled(await Promise.all(results.map((ra) => ra.resolve()))),
-    ) as CombineTupleAsync<R>;
+      sequenceSettled(
+        await Promise.all((results as readonly AnyResultAsync[]).map((ra) => ra.resolve())),
+      ),
+    ) as unknown as CombineTupleAsync<R>;
   }
 
   /**

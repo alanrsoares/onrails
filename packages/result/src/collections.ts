@@ -33,10 +33,32 @@ export const combine = <T, E>(results: readonly Result<T, E>[]): Result<T[], E> 
   return ok(values);
 };
 
-type CombineTuple<R extends readonly Result<unknown, unknown>[]> = Result<
-  { [K in keyof R]: InferOk<R[K]> },
-  { [K in keyof R]: InferErr<R[K]> }[number]
->;
+type AnyResult = Result<unknown, unknown>;
+
+/** Positionally preserved `Ok` payloads for a tuple of results. */
+type OkTuple<R extends readonly unknown[]> = { [K in keyof R]: InferOk<R[K]> };
+
+/**
+ * The element check lives in the RETURN type, never in the parameter
+ * constraint. A `readonly Result<unknown, unknown>[]` constraint contextually
+ * types the arguments, which widens `ok(1)`'s defaulted `E = never` — and
+ * `err(e)`'s `T = never` — all the way to `unknown`. Holding the parameter at
+ * a bare `R` keeps both channels precise for inline literals, so call sites
+ * need neither `as const` nor hoisted intermediates.
+ */
+type CombineTuple<R extends readonly unknown[]> = R[number] extends AnyResult
+  ? Result<OkTuple<R>, InferErr<R[number]>>
+  : never;
+
+/**
+ * Restores the "every element is a Result" check the parameter constraint used
+ * to provide. Resolves to `[]` for a well-formed tuple and to a one-element
+ * tuple otherwise, so a bad call fails at the call site (with the message
+ * visible in signature help) instead of silently yielding `never`.
+ */
+type TupleGuard<R extends readonly unknown[]> = R[number] extends AnyResult
+  ? []
+  : [error: "expected an array of Result values"];
 
 /**
  * Heterogeneous tuple combine — like {@link combine} but preserves each
@@ -45,18 +67,19 @@ type CombineTuple<R extends readonly Result<unknown, unknown>[]> = Result<
  *
  * @example
  * ```ts
- * const r = combineTuple([ok(1), ok("x")] as const);
- * // Result<readonly [number, string], never>
+ * const r = combineTuple([ok(1), ok("x")]);
+ * // Result<readonly [number, string], never> — no `as const` needed
  * if (isOk(r)) {
  *   const [n, s] = r.value;   // typed per position
  * }
  * ```
  */
-export const combineTuple = <const R extends readonly Result<unknown, unknown>[]>(
+export const combineTuple = <const R extends readonly unknown[]>(
   results: R,
+  ..._guard: TupleGuard<R>
 ): CombineTuple<R> =>
   // Runtime identical to combine; the cast restores per-index tuple types.
-  combine(results as readonly Result<unknown, unknown>[]) as CombineTuple<R>;
+  combine(results as readonly AnyResult[]) as CombineTuple<R>;
 
 /**
  * Accumulate independent validation failures. Returns `Ok<T[]>` only when
@@ -107,32 +130,37 @@ export function validateAll<T, E>(
  * collected into a readonly array; with `combineErrors`, all inputs must
  * share the error type `E` and failures fold into a single `E`.
  *
+ * Like {@link combineTuple}, the element check lives in the return type, so
+ * inline literals keep their precise error types without `as const`.
+ *
  * @example
  * ```ts
  * const name: Result<string, string[]> = ok("Ada");
  * const age: Result<number, string[]> = ok(36);
  *
- * validateTuple([name, age] as const);
+ * validateTuple([name, age]);
  * // Result<readonly [string, number], readonly string[][]>
  *
- * validateTuple([name, age] as const, (l, r) => [...l, ...r]);
+ * validateTuple([name, age], (l, r) => [...l, ...r]);
  * // Result<readonly [string, number], string[]>
  * ```
  */
-export function validateTuple<const R extends readonly Result<unknown, unknown>[]>(
+export function validateTuple<const R extends readonly unknown[]>(
   results: R,
-): Result<{ [K in keyof R]: InferOk<R[K]> }, readonly InferErr<R[number]>[]>;
-export function validateTuple<
-  const R extends readonly Result<unknown, unknown>[],
-  E = InferErr<R[number]>,
->(
-  results: R & readonly Result<unknown, E>[],
+  ..._guard: TupleGuard<R>
+): R[number] extends AnyResult ? Result<OkTuple<R>, readonly InferErr<R[number]>[]> : never;
+export function validateTuple<const R extends readonly unknown[], E = InferErr<R[number]>>(
+  results: R,
   combineErrors: (left: E, right: E) => E,
-): Result<{ [K in keyof R]: InferOk<R[K]> }, E>;
+  ..._guard: TupleGuard<R>
+): R[number] extends AnyResult ? Result<OkTuple<R>, E> : never;
 export function validateTuple(
-  results: readonly Result<unknown, unknown>[],
-  combineErrors?: (left: unknown, right: unknown) => unknown,
+  results: readonly AnyResult[],
+  // Rest-typed so both overloads (whose trailing `TupleGuard` arity differs)
+  // stay assignable to this implementation signature.
+  ...rest: readonly unknown[]
 ): Result<readonly unknown[], unknown> {
+  const combineErrors = rest[0] as ((left: unknown, right: unknown) => unknown) | undefined;
   // Runtime identical to validateAll; the overloads restore per-index tuple types.
   return combineErrors ? validateAll(results, combineErrors) : validateAll(results);
 }

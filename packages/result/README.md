@@ -163,7 +163,7 @@ import { ResultAsync } from "@onrails/result";
 const combined = ResultAsync.combineTuple([
   loadSettings(),
   loadModelCatalog(),
-] as const);
+]);
 
 const dto = combined.map(([settings, catalog]) =>
   buildDto(settings, catalog),
