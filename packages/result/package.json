@@ -69,6 +69,16 @@
         "default": "./dist/fluent.cjs"
       }
     },
+    "./async": {
+      "import": {
+        "types": "./dist/async-fns.d.ts",
+        "default": "./dist/async-fns.js"
+      },
+      "require": {
+        "types": "./dist/async-fns.d.cts",
+        "default": "./dist/async-fns.cjs"
+      }
+    },
     "./extra": {
       "import": {
         "types": "./dist/extra.d.ts",

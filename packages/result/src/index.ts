@@ -13,6 +13,7 @@
  * Decision tree:
  *   single sync value         → flatMap / match
  *   single async value        → ResultAsync.flatMap / asyncAfter
+ *   async chain via pipe/flow → @onrails/result/async (data-last twins)
  *   named multi-step workflow → @onrails/result/railway
  *   generator-style sync sugar → @onrails/result/try-gen
  *   independent validations   → validateAll / validateTuple

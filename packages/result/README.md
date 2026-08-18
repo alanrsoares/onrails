@@ -35,6 +35,7 @@ For worked examples of multi-step pipelines, parser builders, validator ladders,
 | ---------------------------------- | -------------------------------------------------------------------- |
 | One or two sync steps              | `flatMap`, `map`, `match`                                            |
 | One or two async steps             | `ResultAsync.flatMap`, `asyncAfter`                                  |
+| Long async chain, value-first      | `pipe(ra, RA.map(...), RA.flatMap(...))` from `@onrails/result/async` |
 | Long sync chain, value-first        | `pipe(r, map(...), flatMap(...), ...)`                              |
 | Long sync chain, dot-style preferred | `fluent(r)` from `@onrails/result/fluent`                          |
 | Reusable composed function          | `flow(...)` from `@onrails/result/pipe`                             |
@@ -178,6 +179,25 @@ const dto = combined.map(([settings, catalog]) =>
 
 When TS only infers the first error in a generator-style flow, use `declareErrors<E1 | E2>()` from `/extra`.
 
+## Async pipelines — `@onrails/result/async`
+
+`ResultAsync` is a class, so dot-chaining is always available and stays the shortest form for a one-off chain. When you want the sync side's *other* two syntaxes on the async carrier — value-first `pipe`, or point-free `flow` — import the data-last twins as a namespace:
+
+```ts
+import * as RA from "@onrails/result/async";
+import { pipe } from "@onrails/result";
+import { flow } from "@onrails/result/pipe";
+
+// value-first
+pipe(loadUser(id), RA.flatMap(loadOrders), RA.map((os) => os.length));
+// ResultAsync<number, NotFound | DbError>
+
+// reusable point-free pipeline — no value yet
+const orderCount = flow(loadUser, RA.flatMap(loadOrders), RA.map((os) => os.length));
+```
+
+Every `ResultAsync` method has a twin here — `map`, `mapErr`, `bimap`, `flatMap`, `recover`, `tap`, `tapErr`, `match`, `unwrapOr` — each in both data-first and curried form. The terminals (`match`, `unwrapOr`) resolve to a plain `Promise`, ending the pipeline.
+
 ## `Railway` — named service workflows
 
 Use `Railway` from `@onrails/result/railway` when a service workflow has several named sync/async steps and would otherwise need manual context-carrying objects:
@@ -292,9 +312,10 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | Path | Contents |
 |------|----------|
 | `@onrails/result` | Core + interop exports |
+| `@onrails/result/async` | Data-last twins of the `ResultAsync` methods (for `pipe` / `flow`) |
 | `@onrails/result/fluent` | `fluent()` |
 | `@onrails/result/extra` | Error-type utilities |
-| `@onrails/result/pipe` | `flow` (variadic point-free composition) |
+| `@onrails/result/pipe` | `pipe` (value-first) and `flow` (point-free), up to 12 steps |
 | `@onrails/result/railway` | `Railway` named-context workflow builder |
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |
 | `@onrails/result/compat/neverthrow` | Migration shim |
