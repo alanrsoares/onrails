@@ -3,6 +3,7 @@ import { combine, combineTuple } from "../src/collections.js";
 import {
   err,
   flatMap,
+  fromThrowable,
   map,
   mapErr,
   match,
@@ -10,7 +11,6 @@ import {
   recover,
   tap,
   tapErr,
-  fromThrowable,
   trySync,
   unwrap,
   unwrapErr,

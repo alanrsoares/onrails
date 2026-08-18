@@ -86,7 +86,7 @@ flatMap(parseInput(raw), (data) =>
 
 ### flow <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Variadic point-free composition — chains up to nine unary fns left-to-right
+Variadic point-free composition — chains up to twelve unary fns left-to-right
 into one reusable function. The first fn may take multiple arguments; the
 rest are unary. Use [pipe](#pipe-ƒ) from `@onrails/result` when you already
 have a starting value; use [flow](#flow-ƒ) to define a reusable composed
@@ -101,6 +101,10 @@ function flow<A extends readonly unknown[], B, C, D, E, F>(ab: (...a: A) => B, b
 function flow<A extends readonly unknown[], B, C, D, E, F, G>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G): (...a: A) => G
 function flow<A extends readonly unknown[], B, C, D, E, F, G, H>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H): (...a: A) => H
 function flow<A extends readonly unknown[], B, C, D, E, F, G, H, I>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I): (...a: A) => I
+function flow<A extends readonly unknown[], B, C, D, E, F, G, H, I, J>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J): (...a: A) => J
+function flow<A extends readonly unknown[], B, C, D, E, F, G, H, I, J, K>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J, jk: (j: J) => K): (...a: A) => K
+function flow<A extends readonly unknown[], B, C, D, E, F, G, H, I, J, K, L>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J, jk: (j: J) => K, kl: (k: K) => L): (...a: A) => L
+function flow<A extends readonly unknown[], B, C, D, E, F, G, H, I, J, K, L, M>(ab: (...a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J, jk: (j: J) => K, kl: (k: K) => L, lm: (l: L) => M): (...a: A) => M
 ```
 
 #### Parameters
@@ -119,6 +123,46 @@ const parseUserName = flow(
 );
 
 parseUserName(raw); // Result<string, ParseError | { kind: "missing" }>
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### fromThrowable <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Wraps a throwing sync **function**, returning a function that produces a
+[Result](#result-type) instead of throwing. Thrown errors pass through `onThrow` to
+become a typed `Err`; a normal return becomes `Ok`. Same name and shape as
+neverthrow's `Result.fromThrowable`.
+
+Reach for [trySync](#trysync-ƒ) instead when you want to run the call right now
+rather than build a reusable wrapper.
+
+```typescript
+function fromThrowable<A extends readonly unknown[], T, E>(fn: (...args: A) => T, onThrow: (error: unknown) => E): (...args: A) => Result<T, E>
+function fromThrowable<F extends (...args: never) => unknown, E>(fn: F, onThrow: (error: unknown) => E): (...args: Parameters<F>) => Result<ReturnType<F>, E>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `fn` | `(...args: A) => T` | - the throwing function to wrap |
+| `onThrow` | `(error: unknown) => E` | - maps a thrown value to the `Err` channel |
+
+#### Returns
+
+a function with `fn`'s parameters that returns `Result<ReturnType, E>`
+
+#### Example
+
+```ts
+type ParseError = { kind: "parse"; message: string };
+const parse = fromThrowable(
+  JSON.parse,
+  (e): ParseError => ({ kind: "parse", message: String(e) }),
+);
+parse("{}");      // Ok({})
+parse("nope");    // Err({ kind: "parse", … })
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -305,9 +349,9 @@ const typed: Result<number, "parse"> = ok(1);
 
 ### pipe <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Variadic value-first pipe — threads `value` through up to nine unary fns,
-left-to-right. Use [pipe](#pipe-ƒ) when you already have a starting value;
-use [flow](#flow-ƒ) to define a reusable composed function with no value yet.
+Variadic value-first pipe — threads `value` through up to twelve unary fns,
+left-to-right. Use [pipe](#pipe-ƒ) when you already have a starting value; use
+[flow](#flow-ƒ) to define a reusable composed function with no value yet.
 
 ```typescript
 function pipe<A>(value: A): A
@@ -319,6 +363,10 @@ function pipe<A, B, C, D, E, F>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: 
 function pipe<A, B, C, D, E, F, G>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G): G
 function pipe<A, B, C, D, E, F, G, H>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H): H
 function pipe<A, B, C, D, E, F, G, H, I>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I): I
+function pipe<A, B, C, D, E, F, G, H, I, J>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J): J
+function pipe<A, B, C, D, E, F, G, H, I, J, K>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J, jk: (j: J) => K): K
+function pipe<A, B, C, D, E, F, G, H, I, J, K, L>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J, jk: (j: J) => K, kl: (k: K) => L): L
+function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D, de: (d: D) => E, ef: (e: E) => F, fg: (f: F) => G, gh: (g: G) => H, hi: (h: H) => I, ij: (i: I) => J, jk: (j: J) => K, kl: (k: K) => L, lm: (l: L) => M): M
 ```
 
 #### Parameters
@@ -332,9 +380,8 @@ function pipe<A, B, C, D, E, F, G, H, I>(value: A, ab: (a: A) => B, bc: (b: B) =
 ```ts
 pipe(
   parseConfig(raw),
-  map((cfg) => cfg.name),
-  flatMap((name) => (name ? ok(name) : err({ kind: "empty" as const }))),
-  tap(log),
+  map((cfg) => cfg.user),
+  flatMap((u) => (u.name ? ok(u.name) : err({ kind: "missing" as const }))),
 );
 ```
 
@@ -452,37 +499,32 @@ pipe(
 
 ### trySync <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Wraps a throwing sync function, returning a function that produces a
-[Result](#result-type) instead of throwing. Thrown errors pass through `onThrow` to
-become a typed `Err`; a normal return becomes `Ok`. The neverthrow analogue
-is `Result.fromThrowable`.
+Runs `fn` **now**, catching a throw into the `Err` track — the sync mirror
+of `tryAsync`. Without `onThrow` the thrown value is normalized to an
+`Error`; pass a mapper for a typed error.
+
+To lift a throwing function once and call it many times, use
+[fromThrowable](#fromthrowable-ƒ).
 
 ```typescript
-function trySync<A extends readonly unknown[], T, E>(fn: (...args: A) => T, onThrow: (error: unknown) => E): (...args: A) => Result<T, E>
-function trySync<F extends (...args: never) => unknown, E>(fn: F, onThrow: (error: unknown) => E): (...args: Parameters<F>) => Result<ReturnType<F>, E>
+function trySync<T>(fn: () => T): Result<T, Error>
+function trySync<T, E>(fn: () => T, onThrow: (error: unknown) => E): Result<T, E>
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `fn` | `(...args: A) => T` | - the throwing function to wrap |
-| `onThrow` | `(error: unknown) => E` | - maps a thrown value to the `Err` channel |
-
-#### Returns
-
-a function with `fn`'s parameters that returns `Result<ReturnType, E>`
+| `fn` | `() => T` | - the throwing thunk to run |
 
 #### Example
 
 ```ts
-type ParseError = { kind: "parse"; message: string };
-const parse = trySync(
-  JSON.parse,
-  (e): ParseError => ({ kind: "parse", message: String(e) }),
-);
-parse("{}");      // Ok({})
-parse("nope");    // Err({ kind: "parse", … })
+trySync(() => JSON.parse(raw));                    // Result<unknown, Error>
+trySync(() => Schema.parse(input), (e): SchemaError => ({
+  kind: "schema",
+  cause: e,
+}));
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -569,11 +611,13 @@ expect(() => unwrapOk(err(error))).toThrow(error);
 
 ### unwrapOr <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Returns the `Ok` value, or `defaultValue` when the result is `Err`.
+Returns the `Ok` value, or `defaultValue` when the result is `Err`. The
+fallback may be a different type from `T` — the return widens to `T | U`,
+matching `ResultAsync.unwrapOr` and the compat shim.
 
 ```typescript
-function unwrapOr<T, E>(result: Result<T, E>, defaultValue: T): T
-function unwrapOr<T>(defaultValue: T): <E>(result: Result<T, E>) => T
+function unwrapOr<T, E, U>(result: Result<T, E>, defaultValue: U): T | U
+function unwrapOr<U>(defaultValue: U): <T, E>(result: Result<T, E>) => U | T
 ```
 
 #### Parameters
@@ -581,12 +625,13 @@ function unwrapOr<T>(defaultValue: T): <E>(result: Result<T, E>) => T
 | Parameter | Type | Description |
 |---|---|---|
 | `result` | `Result<T, E>` |  |
-| `defaultValue` | `T` |  |
+| `defaultValue` | `U` |  |
 
 #### Example
 
 ```ts
-unwrapOr(parsedSetting, "default-value");
+unwrapOr(parsedSetting, "default-value");  // string
+unwrapOr(parsedPort, null);                // number | null
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -632,9 +677,12 @@ Tuple-preserving variant of [validateAll](#validateall-ƒ). Heterogeneous input 
 collected into a readonly array; with `combineErrors`, all inputs must
 share the error type `E` and failures fold into a single `E`.
 
+Like [combineTuple](#combinetuple-ƒ), the element check lives in the return type, so
+inline literals keep their precise error types without `as const`.
+
 ```typescript
-function validateTuple<const R extends readonly Result<unknown, unknown>[]>(results: R): Result<{ [K in keyof R]: InferOk<R[K]>; }, readonly InferErr<R[number]>[]>
-function validateTuple<const R extends readonly Result<unknown, unknown>[], E = InferErr<R[number]>>(results: R & readonly Result<unknown, E>[], combineErrors: (left: E, right: E) => E): Result<{ [K in keyof R]: InferOk<...>; }, E>
+function validateTuple<const R extends readonly unknown[]>(results: R, ..._guard: TupleGuard<R>): R[number] extends AnyResult ? Result<OkTuple<R>, readonly InferErr<R[number]>[]> : never
+function validateTuple<const R extends readonly unknown[], E = InferErr<R[number]>>(results: R, combineErrors: (left: E, right: E) => E, ..._guard: TupleGuard<R>): R[number] extends AnyResult ? Result<...> : never
 ```
 
 #### Parameters
@@ -642,6 +690,7 @@ function validateTuple<const R extends readonly Result<unknown, unknown>[], E = 
 | Parameter | Type | Description |
 |---|---|---|
 | `results` | `R` |  |
+| `_guard` | `TupleGuard<R>` |  |
 
 #### Example
 
@@ -649,10 +698,10 @@ function validateTuple<const R extends readonly Result<unknown, unknown>[], E = 
 const name: Result<string, string[]> = ok("Ada");
 const age: Result<number, string[]> = ok(36);
 
-validateTuple([name, age] as const);
+validateTuple([name, age]);
 // Result<readonly [string, number], readonly string[][]>
 
-validateTuple([name, age] as const, (l, r) => [...l, ...r]);
+validateTuple([name, age], (l, r) => [...l, ...r]);
 // Result<readonly [string, number], string[]>
 ```
 
@@ -751,8 +800,8 @@ const r = okAsync(42);                  // ResultAsync<number, never>
 ### ResultAsync <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">class</span>
 
 Async railway carrier. Wraps a deferred `Promise<Result<T, E>>` and exposes
-the same dual-track transforms as the sync [Result](#result-type) — `map`, `flatMap`,
-`recover`, `tap`, `match`. The public API never surfaces `Promise<Result<…>>`
+the same dual-track transforms as the sync [Result](#result-type) — `map`, `mapErr`,
+`bimap`, `flatMap`, `recover`, `tap`, `match`. The public API never surfaces `Promise<Result<…>>`
 directly: `await` the instance (it is thenable) or call [resolve](#resolve) /
 [match](./pattern#match-ƒ) to settle it.
 
@@ -999,7 +1048,7 @@ This is the canonical sequential async combine (replaces the former
 `sequenceTupleAsync`).
 
 ```typescript
-static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
+static combineTuple<const R extends readonly unknown[]>(results: R, ..._guard: AsyncTupleGuard<R>): CombineTupleAsync<R>
 ```
 
 #### Parameters
@@ -1007,11 +1056,12 @@ static combineTuple<const R extends readonly ResultAsync<unknown, unknown>[]>(re
 | Parameter | Type | Description |
 |---|---|---|
 | `results` | `R` |  |
+| `_guard` | `AsyncTupleGuard<R>` |  |
 
 #### Example
 
 ```ts
-const combined = ResultAsync.combineTuple([loadCfg(), loadCatalog()] as const);
+const combined = ResultAsync.combineTuple([loadCfg(), loadCatalog()]);
 // ResultAsync<readonly [Cfg, Catalog], CfgError | CatalogError>
 const r = await combined;
 if (isOk(r)) {
@@ -1027,7 +1077,7 @@ Like [combineTuple](#combinetuple-ƒ), but starts every branch before awaiting (
 parallel for independent IO). On failure, returns the first `Err` in input order.
 
 ```typescript
-static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknown>[]>(results: R): CombineTupleAsync<R>
+static combineTupleParallel<const R extends readonly unknown[]>(results: R, ..._guard: AsyncTupleGuard<R>): CombineTupleAsync<R>
 ```
 
 #### Parameters
@@ -1035,6 +1085,7 @@ static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknow
 | Parameter | Type | Description |
 |---|---|---|
 | `results` | `R` |  |
+| `_guard` | `AsyncTupleGuard<R>` |  |
 
 #### Example
 
@@ -1043,7 +1094,7 @@ static combineTupleParallel<const R extends readonly ResultAsync<unknown, unknow
 const combined = ResultAsync.combineTupleParallel([
   loadProfile(id),
   loadMetrics(id),
-] as const);
+]);
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -1089,6 +1140,30 @@ mapErr<F>(fn: (error: E) => F): ResultAsync<T, F>
 
 ```ts
 load(id).mapErr((e): AppError => ({ kind: "load", cause: e })); // ResultAsync<T, AppError>
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### ResultAsync.prototype.bimap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Transforms both tracks in one step — the async mirror of the sync
+`bimap`. Exactly one of `onOk` / `onErr` runs.
+
+```typescript
+bimap<U, F>(onOk: (value: T) => U, onErr: (error: E) => F): ResultAsync<U, F>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `onOk` | `(value: T) => U` |  |
+| `onErr` | `(error: E) => F` |  |
+
+#### Example
+
+```ts
+load(id).bimap(toDto, (e): AppError => ({ kind: "load", cause: e }));
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -1387,7 +1462,7 @@ branch's `Ok` type by position, so the result destructures type-safely.
 Short-circuits on the first `Err` in input order (neverthrow-style).
 
 ```typescript
-function combineTuple<const R extends readonly Result<unknown, unknown>[]>(results: R): CombineTuple<R>
+function combineTuple<const R extends readonly unknown[]>(results: R, ..._guard: TupleGuard<R>): CombineTuple<R>
 ```
 
 #### Parameters
@@ -1395,12 +1470,13 @@ function combineTuple<const R extends readonly Result<unknown, unknown>[]>(resul
 | Parameter | Type | Description |
 |---|---|---|
 | `results` | `R` |  |
+| `_guard` | `TupleGuard<R>` |  |
 
 #### Example
 
 ```ts
-const r = combineTuple([ok(1), ok("x")] as const);
-// Result<readonly [number, string], never>
+const r = combineTuple([ok(1), ok("x")]);
+// Result<readonly [number, string], never> — no `as const` needed
 if (isOk(r)) {
   const [n, s] = r.value;   // typed per position
 }
