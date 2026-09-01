@@ -10,6 +10,7 @@ import {
   bimap,
   err,
   flatMap,
+  fromThrowable,
   isErr,
   isOk,
   map,
@@ -107,6 +108,16 @@ describe("Result sync types: unwrap and combine", () => {
     expectType<TypeEqual<typeof v, number>>(true);
   });
 
+  it("unwrapOr widens to T | U when the fallback differs from the Ok type", () => {
+    const port = ok(8080) as Result<number, string>;
+
+    const dataFirst = unwrapOr(port, null);
+    expectType<TypeEqual<typeof dataFirst, number | null>>(true);
+
+    const curried = unwrapOr(null)(port);
+    expectType<TypeEqual<typeof curried, number | null>>(true);
+  });
+
   it("unwrap helpers return the unwrapped side type", () => {
     const okValue = unwrapOk(ok(1) as Result<number, string>);
     const errValue = unwrapErr(err("x") as Result<number, string>);
@@ -121,23 +132,44 @@ describe("Result sync types: unwrap and combine", () => {
     expectType<TypeEqual<typeof failed, Result<number[], string>>>(true);
   });
 
-  it("combineTuple preserves tuple shape", () => {
-    // Bind to typed intermediates so contextual inference from the
-    // `Result<unknown, unknown>` constraint doesn't widen `never` errors to `unknown`.
-    const a = ok(1);
-    const b = ok("a");
-    const r = combineTuple([a, b] as const);
+  it("combineTuple preserves tuple shape from inline literals", () => {
+    // No `as const`, no hoisted intermediates: the parameter is a bare `R`, so
+    // nothing contextually widens `ok()`'s defaulted `E = never`.
+    const r = combineTuple([ok(1), ok("a")]);
     expectType<TypeEqual<typeof r, Result<readonly [number, string], never>>>(true);
+  });
+
+  it("combineTuple keeps both channels precise for a mixed inline tuple", () => {
+    const r = combineTuple([ok(1), err("boom")]);
+    expectType<TypeEqual<typeof r, Result<readonly [number, never], string>>>(true);
+  });
+
+  it("tuple combinators reject a non-Result element at the call site", () => {
+    // @ts-expect-error the TupleGuard demands an extra argument that cannot be supplied
+    combineTuple([ok(1), 42]);
+    // @ts-expect-error same guard on the accumulating twin
+    validateTuple([ok(1), 42]);
   });
 });
 
 describe("Result sync types: effects", () => {
-  it("trySync preserves function arity and return", () => {
-    const safe = trySync(
+  it("fromThrowable preserves function arity and return", () => {
+    const safe = fromThrowable(
       (a: number, b: string) => a + b.length,
       (e) => String(e),
     );
     expectType<(a: number, b: string) => Result<number, string>>(safe);
+  });
+
+  it("trySync runs eagerly and defaults its error to Error", () => {
+    const defaulted = trySync(() => 1);
+    expectType<TypeEqual<typeof defaulted, Result<number, Error>>>(true);
+
+    const mapped = trySync(
+      () => 1,
+      (e) => String(e),
+    );
+    expectType<TypeEqual<typeof mapped, Result<number, string>>>(true);
   });
 
   it("recover maps only the Err track", () => {
@@ -188,8 +220,8 @@ describe("ResultAsync types", () => {
   it("combineTuple and combineTupleParallel preserve tuple shape and union errors", () => {
     const a = ResultAsync.ok<number, "a">(1);
     const b = ResultAsync.ok<string, "b">("x");
-    const combined = ResultAsync.combineTuple([a, b] as const);
-    const paralleled = ResultAsync.combineTupleParallel([a, b] as const);
+    const combined = ResultAsync.combineTuple([a, b]);
+    const paralleled = ResultAsync.combineTupleParallel([a, b]);
 
     expectType<TypeEqual<typeof combined, ResultAsync<readonly [number, string], "a" | "b">>>(true);
     expectType<TypeEqual<typeof paralleled, ResultAsync<readonly [number, string], "a" | "b">>>(
@@ -270,10 +302,7 @@ describe("Result validation types", () => {
   });
 
   it("tuple validation preserves tuple values and accumulates errors", () => {
-    const a = ok(1);
-    const b = ok("x");
-    const c = err("bad" as const);
-    const r = validateTuple([a, b, c] as const);
+    const r = validateTuple([ok(1), ok("x"), err("bad" as const)]);
     expectType<TypeEqual<typeof r, Result<readonly [number, string, never], readonly "bad"[]>>>(
       true,
     );
@@ -325,6 +354,39 @@ describe("Railway types: fluent", () => {
       .select(({ saved }) => saved.id);
 
     expectType<ResultAsync<string, "parse" | "missing" | "write">>(out);
+  });
+});
+
+describe("Railway types: context shape and key collisions", () => {
+  it("flattens the accumulated context instead of chaining intersections", () => {
+    const out = Railway.fromResult("id", () => ok("profile-1" as const))
+      .derive("slug", ({ id }) => `${id}-slug`)
+      .done();
+
+    expectType<TypeEqual<typeof out, Result<{ id: "profile-1"; slug: string }, never>>>(true);
+  });
+
+  it("preserves optional and readonly modifiers on a seeded context", () => {
+    const base = { a: 1 } as { a?: number; readonly b: string };
+    const out = Railway.context(base)
+      .derive("c", () => true)
+      .done();
+
+    expectType<
+      TypeEqual<typeof out, Result<{ a?: number; readonly b: string; c: boolean }, never>>
+    >(true);
+  });
+
+  it("rejects a step whose key already exists in the context", () => {
+    Railway.empty()
+      .derive("x", () => 1)
+      // @ts-expect-error FreshKey demands an unsatisfiable extra argument for a duplicate key
+      .derive("x", () => "two");
+  });
+
+  it("rejects a parallel branch key that collides with the context", () => {
+    // @ts-expect-error FreshKeys flags "recent" as already present
+    Railway.context({ recent: 1 }).parallel({ recent: () => ResultAsync.ok([1]) });
   });
 });
 

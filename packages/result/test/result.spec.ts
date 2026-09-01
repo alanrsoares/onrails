@@ -3,6 +3,7 @@ import { combine, combineTuple } from "../src/collections.js";
 import {
   err,
   flatMap,
+  fromThrowable,
   map,
   mapErr,
   match,
@@ -79,14 +80,33 @@ describe("sync Result: unwrap", () => {
   });
 });
 
-describe("sync Result: trySync & combine", () => {
-  it("trySync catches throws", () => {
-    const parse = trySync(
+describe("sync Result: trySync / fromThrowable & combine", () => {
+  it("fromThrowable wraps a throwing function", () => {
+    const parse = fromThrowable(
       (raw: string) => JSON.parse(raw) as { v: number },
       (e) => ({ message: String(e) }),
     );
     expect(parse('{"v":1}')).toEqual(ok({ v: 1 }));
     expect(parse("not-json")._tag).toBe("Err");
+  });
+
+  it("trySync runs the thunk eagerly", () => {
+    expect(trySync(() => JSON.parse('{"v":1}') as { v: number })).toEqual(ok({ v: 1 }));
+
+    const failed = trySync(() => JSON.parse("not-json"));
+    expect(failed._tag).toBe("Err");
+    if (failed._tag === "Err") expect(failed.error).toBeInstanceOf(Error);
+  });
+
+  it("trySync honors a custom throw mapper", () => {
+    expect(
+      trySync(
+        () => {
+          throw new Error("boom");
+        },
+        (e) => ({ message: String(e) }),
+      ),
+    ).toEqual(err({ message: "Error: boom" }));
   });
 
   it("combine collects or returns first Err", () => {
@@ -95,7 +115,7 @@ describe("sync Result: trySync & combine", () => {
   });
 
   it("combineTuple preserves tuple types at runtime", () => {
-    const combined = combineTuple([ok(1), ok("a")] as const);
+    const combined = combineTuple([ok(1), ok("a")]);
     expect(combined).toEqual(ok([1, "a"]));
   });
 });

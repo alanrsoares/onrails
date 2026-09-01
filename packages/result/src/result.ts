@@ -1,4 +1,5 @@
 import { dual } from "./internal/dual.js";
+import { toError } from "./internal/to-error.js";
 import type { Err, Ok, Result } from "./types.js";
 
 export type { Err, Ok, Result } from "./types.js";
@@ -246,19 +247,21 @@ export const match: {
 );
 
 /**
- * Returns the `Ok` value, or `defaultValue` when the result is `Err`.
+ * Returns the `Ok` value, or `defaultValue` when the result is `Err`. The
+ * fallback may be a different type from `T` — the return widens to `T | U`,
+ * matching `ResultAsync.unwrapOr` and the compat shim.
  *
  * @example
  * ```ts
- * unwrapOr(parsedSetting, "default-value");
+ * unwrapOr(parsedSetting, "default-value");  // string
+ * unwrapOr(parsedPort, null);                // number | null
  * ```
  */
 export const unwrapOr: {
-  <T, E>(result: Result<T, E>, defaultValue: T): T;
-  <T>(defaultValue: T): <E>(result: Result<T, E>) => T;
-} = dual(
-  2,
-  <T, E>(result: Result<T, E>, defaultValue: T): T => (isOk(result) ? result.value : defaultValue),
+  <T, E, U>(result: Result<T, E>, defaultValue: U): T | U;
+  <U>(defaultValue: U): <T, E>(result: Result<T, E>) => T | U;
+} = dual(2, <T, E, U>(result: Result<T, E>, defaultValue: U): T | U =>
+  isOk(result) ? result.value : defaultValue,
 );
 
 /**
@@ -309,10 +312,13 @@ export function unwrapErr<T, E>(result: Result<T, E>): E {
 }
 
 /**
- * Wraps a throwing sync function, returning a function that produces a
+ * Wraps a throwing sync **function**, returning a function that produces a
  * {@link Result} instead of throwing. Thrown errors pass through `onThrow` to
- * become a typed `Err`; a normal return becomes `Ok`. The neverthrow analogue
- * is `Result.fromThrowable`.
+ * become a typed `Err`; a normal return becomes `Ok`. Same name and shape as
+ * neverthrow's `Result.fromThrowable`.
+ *
+ * Reach for {@link trySync} instead when you want to run the call right now
+ * rather than build a reusable wrapper.
  *
  * @param fn - the throwing function to wrap
  * @param onThrow - maps a thrown value to the `Err` channel
@@ -321,7 +327,7 @@ export function unwrapErr<T, E>(result: Result<T, E>): E {
  * @example
  * ```ts
  * type ParseError = { kind: "parse"; message: string };
- * const parse = trySync(
+ * const parse = fromThrowable(
  *   JSON.parse,
  *   (e): ParseError => ({ kind: "parse", message: String(e) }),
  * );
@@ -329,15 +335,15 @@ export function unwrapErr<T, E>(result: Result<T, E>): E {
  * parse("nope");    // Err({ kind: "parse", … })
  * ```
  */
-export function trySync<A extends readonly unknown[], T, E>(
+export function fromThrowable<A extends readonly unknown[], T, E>(
   fn: (...args: A) => T,
   onThrow: (error: unknown) => E,
 ): (...args: A) => Result<T, E>;
-export function trySync<F extends (...args: never) => unknown, E>(
+export function fromThrowable<F extends (...args: never) => unknown, E>(
   fn: F,
   onThrow: (error: unknown) => E,
 ): (...args: Parameters<F>) => Result<ReturnType<F>, E>;
-export function trySync(
+export function fromThrowable(
   fn: (...args: never) => unknown,
   onThrow: (error: unknown) => unknown,
 ): (...args: never) => Result<unknown, unknown> {
@@ -351,75 +357,33 @@ export function trySync(
 }
 
 /**
- * Variadic value-first pipe — threads `value` through up to nine unary fns,
- * left-to-right. Use {@link pipe} when you already have a starting value;
- * use {@link flow} to define a reusable composed function with no value yet.
+ * Runs `fn` **now**, catching a throw into the `Err` track — the sync mirror
+ * of `tryAsync`. Without `onThrow` the thrown value is normalized to an
+ * `Error`; pass a mapper for a typed error.
+ *
+ * To lift a throwing function once and call it many times, use
+ * {@link fromThrowable}.
+ *
+ * @param fn - the throwing thunk to run
+ * @param onThrow - maps a thrown value to the `Err` channel
  *
  * @example
  * ```ts
- * pipe(
- *   parseConfig(raw),
- *   map((cfg) => cfg.name),
- *   flatMap((name) => (name ? ok(name) : err({ kind: "empty" as const }))),
- *   tap(log),
- * );
+ * trySync(() => JSON.parse(raw));                    // Result<unknown, Error>
+ * trySync(() => Schema.parse(input), (e): SchemaError => ({
+ *   kind: "schema",
+ *   cause: e,
+ * }));
  * ```
  */
-export function pipe<A>(value: A): A;
-export function pipe<A, B>(value: A, ab: (a: A) => B): B;
-export function pipe<A, B, C>(value: A, ab: (a: A) => B, bc: (b: B) => C): C;
-export function pipe<A, B, C, D>(value: A, ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D): D;
-export function pipe<A, B, C, D, E>(
-  value: A,
-  ab: (a: A) => B,
-  bc: (b: B) => C,
-  cd: (c: C) => D,
-  de: (d: D) => E,
-): E;
-export function pipe<A, B, C, D, E, F>(
-  value: A,
-  ab: (a: A) => B,
-  bc: (b: B) => C,
-  cd: (c: C) => D,
-  de: (d: D) => E,
-  ef: (e: E) => F,
-): F;
-export function pipe<A, B, C, D, E, F, G>(
-  value: A,
-  ab: (a: A) => B,
-  bc: (b: B) => C,
-  cd: (c: C) => D,
-  de: (d: D) => E,
-  ef: (e: E) => F,
-  fg: (f: F) => G,
-): G;
-export function pipe<A, B, C, D, E, F, G, H>(
-  value: A,
-  ab: (a: A) => B,
-  bc: (b: B) => C,
-  cd: (c: C) => D,
-  de: (d: D) => E,
-  ef: (e: E) => F,
-  fg: (f: F) => G,
-  gh: (g: G) => H,
-): H;
-export function pipe<A, B, C, D, E, F, G, H, I>(
-  value: A,
-  ab: (a: A) => B,
-  bc: (b: B) => C,
-  cd: (c: C) => D,
-  de: (d: D) => E,
-  ef: (e: E) => F,
-  fg: (f: F) => G,
-  gh: (g: G) => H,
-  hi: (h: H) => I,
-): I;
-export function pipe(value: unknown, ...fns: ReadonlyArray<(x: unknown) => unknown>): unknown {
-  let acc = value;
-  for (const fn of fns) {
-    acc = fn(acc);
+export function trySync<T>(fn: () => T): Result<T, Error>;
+export function trySync<T, E>(fn: () => T, onThrow: (error: unknown) => E): Result<T, E>;
+export function trySync<T, E>(fn: () => T, onThrow?: (error: unknown) => E): Result<T, E | Error> {
+  try {
+    return ok(fn());
+  } catch (error) {
+    return err(onThrow ? onThrow(error) : toError(error));
   }
-  return acc;
 }
 
 const printPayload = (payload: unknown): string => {

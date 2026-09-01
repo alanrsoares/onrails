@@ -8,6 +8,7 @@
 import { ResultAsync } from "./async.js";
 import { dual } from "./internal/dual.js";
 import type { InferErr, InferOk } from "./internal/infer.js";
+import { toError } from "./internal/to-error.js";
 import type { Result, UnexpectedError } from "./types.js";
 
 // The bare renames below detach statics from the class. Safe: every
@@ -116,9 +117,6 @@ export const fromAsync =
       InferOk<R>,
       InferErr<R> | UnexpectedError
     >;
-
-const toError = (error: unknown): Error =>
-  error instanceof Error ? error : new Error(String(error));
 
 /**
  * Convenience wrapper over {@link fromPromise} with default `Error`

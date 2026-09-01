@@ -1,5 +1,5 @@
 import { ResultAsync } from "./async.js";
-import { err, flatMap, map, ok, trySync } from "./result.js";
+import { err, flatMap, fromThrowable, map, ok } from "./result.js";
 import type { Result } from "./types.js";
 
 /**
@@ -35,11 +35,42 @@ export type ParallelOutput<R extends BranchRecord> = {
 };
 export type ParallelError<R extends BranchRecord> = BranchErr<R[keyof R]>;
 
+/** Collapses an intersection into a single displayed object type. */
+type Prettify<T> = { [K in keyof T]: T[K] } & {};
+
+/**
+ * The context after one more named step. Chaining `C & Record<K, T>` instead
+ * builds an intersection that TS echoes verbatim in every hover and error
+ * message (`Record<never, never> & Record<"id", string> & …`); `Omit` keeps
+ * property modifiers and `Prettify` collapses the result to a flat object.
+ */
+type Extend<C extends object, K extends string, T> = Prettify<Omit<C, K> & Record<K, T>>;
+
+/**
+ * Rejects a key already present in the context. Railway merges each step with
+ * a spread, so a repeated key overwrites at runtime while the old
+ * `C & Record<K, T>` type intersected the two field types — `number & string`
+ * became `never` and nothing complained. Resolves to `[]` for a fresh key and
+ * to an unsatisfiable extra parameter otherwise, so the collision fails at the
+ * call site with the offending name in the message.
+ */
+type FreshKey<C, K extends string> = K extends keyof C
+  ? [error: `key "${K}" already exists in the workflow context`]
+  : [];
+
+/** {@link FreshKey} for a whole record of parallel branches. */
+type FreshKeys<C, R> =
+  Extract<keyof R, keyof C> extends never
+    ? []
+    : [
+        error: `branch key "${Extract<keyof R, keyof C> & string}" already exists in the workflow context`,
+      ];
+
 const addField = <C extends object, K extends string, T>(
   ctx: C,
   key: K,
   value: T,
-): C & Record<K, T> => ({ ...ctx, [key]: value }) as C & Record<K, T>;
+): Extend<C, K, T> => ({ ...ctx, [key]: value }) as Extend<C, K, T>;
 
 /**
  * Named-context workflow builder. Each step appends a typed field to the
@@ -65,7 +96,11 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     fn: () => T,
     onThrow: (error: unknown) => E,
   ): Railway<Record<K, T>, E, "sync"> {
-    return Railway.empty().fromSync(key, fn, onThrow);
+    return Railway.empty().addSync(key, () => fromThrowable(fn, onThrow)()) as Railway<
+      Record<K, T>,
+      E,
+      "sync"
+    >;
   }
 
   /** Start a sync workflow with a `Result`-returning function. */
@@ -73,7 +108,7 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     key: K,
     fn: () => Result<T, E>,
   ): Railway<Record<K, T>, E, "sync"> {
-    return Railway.empty().fromResult(key, fn);
+    return Railway.empty().addSync(key, fn) as Railway<Record<K, T>, E, "sync">;
   }
 
   /** Start an async workflow with a `PromiseLike`-returning function. */
@@ -82,7 +117,11 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     fn: () => PromiseLike<T>,
     onReject: (error: unknown) => E,
   ): Railway<Record<K, T>, E, "async"> {
-    return Railway.empty().fromPromise(key, fn, onReject);
+    return Railway.empty().addAsync(key, () => ResultAsync.fromPromise(fn(), onReject)) as Railway<
+      Record<K, T>,
+      E,
+      "async"
+    >;
   }
 
   /** Start an async workflow with a `ResultAsync`-returning function. */
@@ -90,7 +129,7 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     key: K,
     fn: () => ResultAsync<T, E>,
   ): Railway<Record<K, T>, E, "async"> {
-    return Railway.empty().fromAsync(key, fn);
+    return Railway.empty().addAsync(key, fn) as Railway<Record<K, T>, E, "async">;
   }
 
   /**
@@ -132,26 +171,16 @@ export class Railway<C extends object, E, M extends RailwayMode> {
       : this.state.result;
   }
 
-  /** Pure sync derivation. */
-  derive<K extends string, T>(key: K, fn: (ctx: C) => T): Railway<C & Record<K, T>, E, M> {
-    return this.fromResult(key, (ctx) => ok(fn(ctx)));
-  }
-
-  /** Throwing sync transform. */
-  fromSync<K extends string, T, F>(
-    key: K,
-    fn: (ctx: C) => T,
-    onThrow: (error: unknown) => F,
-  ): Railway<C & Record<K, T>, E | F, M> {
-    return this.fromResult(key, (ctx) => trySync(fn, onThrow)(ctx));
-  }
-
-  /** Sync `Result`-returning step. */
-  fromResult<K extends string, T, F>(
+  /**
+   * Internal plumbing for a sync field append. Public steps wrap this and add
+   * the {@link FreshKey} collision guard; the static factories bypass the
+   * guard because they always start from an empty context.
+   */
+  private addSync<K extends string, T, F>(
     key: K,
     fn: (ctx: C) => Result<T, F>,
-  ): Railway<C & Record<K, T>, E | F, M> {
-    return this.step(
+  ): Railway<Extend<C, K, T>, E | F, M> {
+    return this.step<Extend<C, K, T>, F>(
       (result) => flatMap(result, (ctx) => map(fn(ctx), (value) => addField(ctx, key, value))),
       (result) =>
         result.flatMap((ctx) =>
@@ -160,24 +189,62 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     );
   }
 
+  /** Internal plumbing for an async field append — upgrades the mode. */
+  private addAsync<K extends string, T, F>(
+    key: K,
+    fn: (ctx: C) => ResultAsync<T, F>,
+  ): Railway<Extend<C, K, T>, E | F, "async"> {
+    return new Railway({
+      mode: "async",
+      result: this.toAsync().flatMap((ctx) => fn(ctx).map((value) => addField(ctx, key, value))),
+    });
+  }
+
+  /** Pure sync derivation. */
+  derive<K extends string, T>(
+    key: K,
+    fn: (ctx: C) => T,
+    ..._guard: FreshKey<C, K>
+  ): Railway<Extend<C, K, T>, E, M> {
+    return this.addSync(key, (ctx) => ok(fn(ctx)));
+  }
+
+  /** Throwing sync transform. */
+  fromSync<K extends string, T, F>(
+    key: K,
+    fn: (ctx: C) => T,
+    onThrow: (error: unknown) => F,
+    ..._guard: FreshKey<C, K>
+  ): Railway<Extend<C, K, T>, E | F, M> {
+    return this.addSync(key, (ctx) => fromThrowable(fn, onThrow)(ctx));
+  }
+
+  /** Sync `Result`-returning step. */
+  fromResult<K extends string, T, F>(
+    key: K,
+    fn: (ctx: C) => Result<T, F>,
+    ..._guard: FreshKey<C, K>
+  ): Railway<Extend<C, K, T>, E | F, M> {
+    return this.addSync(key, fn);
+  }
+
   /** Promise-returning step — upgrades the workflow to async mode. */
   fromPromise<K extends string, T, F>(
     key: K,
     fn: (ctx: C) => PromiseLike<T>,
     onReject: (error: unknown) => F,
-  ): Railway<C & Record<K, T>, E | F, "async"> {
-    return this.fromAsync(key, (ctx) => ResultAsync.fromPromise(fn(ctx), onReject));
+    ..._guard: FreshKey<C, K>
+  ): Railway<Extend<C, K, T>, E | F, "async"> {
+    return this.addAsync(key, (ctx) => ResultAsync.fromPromise(fn(ctx), onReject));
   }
 
   /** `ResultAsync`-returning step — upgrades the workflow to async mode. */
   fromAsync<K extends string, T, F>(
     key: K,
     fn: (ctx: C) => ResultAsync<T, F>,
-  ): Railway<C & Record<K, T>, E | F, "async"> {
-    return new Railway({
-      mode: "async",
-      result: this.toAsync().flatMap((ctx) => fn(ctx).map((value) => addField(ctx, key, value))),
-    });
+    ..._guard: FreshKey<C, K>
+  ): Railway<Extend<C, K, T>, E | F, "async"> {
+    return this.addAsync(key, fn);
   }
 
   /** Narrow a nullable context field into a required non-null field. */
@@ -185,17 +252,19 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     key: K,
     source: S,
     onMissing: (ctx: C) => F,
-  ): Railway<C & Record<K, NonNullable<C[S]>>, E | F, M> {
-    return this.fromResult(key, (ctx) => {
+    ..._guard: FreshKey<C, K>
+  ): Railway<Extend<C, K, NonNullable<C[S]>>, E | F, M> {
+    return this.addSync(key, (ctx) => {
       const value = ctx[source];
-      return value == null ? err(onMissing(ctx)) : ok(value);
+      return value == null ? err(onMissing(ctx)) : ok(value as NonNullable<C[S]>);
     });
   }
 
   /** Run independent `ResultAsync` branches concurrently and merge outputs. */
   parallel<R extends Record<string, BranchFn<C>>>(
     branches: R,
-  ): Railway<C & ParallelOutput<R>, E | ParallelError<R>, "async"> {
+    ..._guard: FreshKeys<C, R>
+  ): Railway<Prettify<Omit<C, keyof R> & ParallelOutput<R>>, E | ParallelError<R>, "async"> {
     const merged = this.toAsync().flatMap((ctx) =>
       ResultAsync.combineTupleParallel(
         Object.entries(branches).map(([, branch]) => branch(ctx)),
@@ -206,7 +275,7 @@ export class Railway<C extends object, E, M extends RailwayMode> {
           ({
             ...ctx,
             ...Object.fromEntries(Object.keys(branches).map((key, index) => [key, values[index]])),
-          }) as C & ParallelOutput<R>,
+          }) as Prettify<Omit<C, keyof R> & ParallelOutput<R>>,
       ),
     );
     return new Railway({
@@ -214,7 +283,10 @@ export class Railway<C extends object, E, M extends RailwayMode> {
       // BranchFn erases per-key types to `ResultAsync<unknown, unknown>`
       // (ParallelOutput/ParallelError recover them from R), so re-assert the
       // precise value/error union the branches actually produce.
-      result: merged as ResultAsync<C & ParallelOutput<R>, E | ParallelError<R>>,
+      result: merged as ResultAsync<
+        Prettify<Omit<C, keyof R> & ParallelOutput<R>>,
+        E | ParallelError<R>
+      >,
     });
   }
 

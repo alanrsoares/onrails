@@ -46,6 +46,39 @@ describe("ResultAsync: construction", () => {
   });
 });
 
+describe("ResultAsync: bimap mirrors the sync surface", () => {
+  const onOk = (n: number) => n * 2;
+  const onErr = (e: string) => ({ kind: "wrapped" as const, cause: e });
+
+  it("maps the Ok track and leaves the Err mapper unrun", async () => {
+    expect(await okAsync<number, string>(3).bimap(onOk, onErr).resolve()).toEqual(ok(6));
+  });
+
+  it("maps the Err track and leaves the Ok mapper unrun", async () => {
+    expect(await errAsync<number, string>("boom").bimap(onOk, onErr).resolve()).toEqual(
+      err({ kind: "wrapped", cause: "boom" }),
+    );
+  });
+
+  it("runs exactly one branch", async () => {
+    let okRuns = 0;
+    let errRuns = 0;
+    await okAsync<number, string>(1)
+      .bimap(
+        (n) => {
+          okRuns += 1;
+          return n;
+        },
+        (e) => {
+          errRuns += 1;
+          return e;
+        },
+      )
+      .resolve();
+    expect([okRuns, errRuns]).toEqual([1, 0]);
+  });
+});
+
 describe("ResultAsync: chaining and combine", () => {
   it("flatMap chains async steps", async () => {
     const ra = okAsync(2).flatMap((n) => okAsync(n + 1));
@@ -73,16 +106,12 @@ describe("ResultAsync: chaining and combine", () => {
   });
 
   it("combineTuple preserves value order at runtime", async () => {
-    const combined = ResultAsync.combineTuple([okAsync(1), okAsync("a")] as const);
+    const combined = ResultAsync.combineTuple([okAsync(1), okAsync("a")]);
     expect(await combined.resolve()).toEqual(ok([1, "a"]));
   });
 
   it("combineTuple returns first Err in input order", async () => {
-    const combined = ResultAsync.combineTuple([
-      okAsync(1),
-      errAsync("first"),
-      errAsync("second"),
-    ] as const);
+    const combined = ResultAsync.combineTuple([okAsync(1), errAsync("first"), errAsync("second")]);
     expect(await combined.resolve()).toEqual(err("first"));
   });
 });
@@ -93,7 +122,7 @@ describe("ResultAsync: tuple concurrency", () => {
       okAsync(1),
       errAsync("first"),
       errAsync("second"),
-    ] as const);
+    ]);
     expect(await combined.resolve()).toEqual(err("first"));
   });
 
@@ -110,7 +139,7 @@ describe("ResultAsync: tuple concurrency", () => {
         return ok(value);
       });
 
-    const result = await ResultAsync.combineTupleParallel([lazy(1), lazy(2)] as const).resolve();
+    const result = await ResultAsync.combineTupleParallel([lazy(1), lazy(2)]).resolve();
     expect(result).toEqual(ok([1, 2]));
     expect(maxInFlight).toBe(2);
   });
@@ -128,7 +157,7 @@ describe("ResultAsync: tuple concurrency", () => {
         return ok(value);
       });
 
-    const result = await ResultAsync.combineTuple([lazy(1), lazy(2)] as const).resolve();
+    const result = await ResultAsync.combineTuple([lazy(1), lazy(2)]).resolve();
     expect(result).toEqual(ok([1, 2]));
     expect(maxInFlight).toBe(1);
   });

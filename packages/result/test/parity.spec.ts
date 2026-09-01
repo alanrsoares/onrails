@@ -1,19 +1,22 @@
 import { describe, expect, it } from "bun:test";
 
+import * as asyncFns from "../src/async-fns.js";
 import * as compat from "../src/compat/neverthrow.js";
 import { fluent } from "../src/fluent.js";
 import * as core from "../src/result.js";
 
 /**
- * The surface contract for the triple surface (core module-functions /
- * fluent sugar / compat shim). Each row declares where an operation is
- * expected to exist; the specs below fail when a surface drifts —
- * in either direction (missing declared op, or undeclared new op).
+ * The surface contract for every parallel surface (core module-functions /
+ * data-last async twins / fluent sugar / compat shim). Each row declares where
+ * an operation is expected to exist; the specs below fail when a surface drifts
+ * — in either direction (missing declared op, or undeclared new op).
  */
 type Row = {
   label: string;
   /** export name on the core module, or null when core deliberately lacks it */
   core: string | null;
+  /** export name on `@onrails/result/async`, or null when it deliberately lacks it */
+  asyncFn: string | null;
   fluent: readonly string[];
   compatSync: readonly string[];
   compatAsync: readonly string[];
@@ -23,6 +26,7 @@ const TABLE: readonly Row[] = [
   {
     label: "map",
     core: "map",
+    asyncFn: "map",
     fluent: ["map"],
     compatSync: ["map"],
     compatAsync: ["map"],
@@ -30,6 +34,7 @@ const TABLE: readonly Row[] = [
   {
     label: "mapErr",
     core: "mapErr",
+    asyncFn: "mapErr",
     fluent: ["mapErr"],
     compatSync: ["mapErr"],
     compatAsync: ["mapErr"],
@@ -37,6 +42,7 @@ const TABLE: readonly Row[] = [
   {
     label: "bimap",
     core: "bimap",
+    asyncFn: "bimap",
     fluent: ["bimap"],
     compatSync: [],
     compatAsync: [],
@@ -44,6 +50,7 @@ const TABLE: readonly Row[] = [
   {
     label: "flatMap",
     core: "flatMap",
+    asyncFn: "flatMap",
     fluent: ["flatMap", "andThen"],
     compatSync: ["andThen", "asyncAndThen"],
     compatAsync: ["flatMap", "andThen", "chain"],
@@ -51,6 +58,7 @@ const TABLE: readonly Row[] = [
   {
     label: "recover",
     core: "recover",
+    asyncFn: "recover",
     fluent: ["recover"],
     compatSync: ["orElse"],
     compatAsync: ["orElse"],
@@ -58,6 +66,7 @@ const TABLE: readonly Row[] = [
   {
     label: "tap",
     core: "tap",
+    asyncFn: "tap",
     fluent: ["tap"],
     compatSync: [],
     compatAsync: ["andTee"],
@@ -65,6 +74,7 @@ const TABLE: readonly Row[] = [
   {
     label: "tapErr",
     core: "tapErr",
+    asyncFn: "tapErr",
     fluent: ["tapErr"],
     compatSync: [],
     compatAsync: ["orTee"],
@@ -72,6 +82,7 @@ const TABLE: readonly Row[] = [
   {
     label: "match",
     core: "match",
+    asyncFn: "match",
     fluent: ["match"],
     compatSync: ["match"],
     compatAsync: ["match"],
@@ -79,6 +90,7 @@ const TABLE: readonly Row[] = [
   {
     label: "unwrapOr",
     core: "unwrapOr",
+    asyncFn: "unwrapOr",
     fluent: ["unwrapOr"],
     compatSync: ["unwrapOr"],
     compatAsync: ["unwrapOr"],
@@ -86,6 +98,7 @@ const TABLE: readonly Row[] = [
   {
     label: "isOk guard",
     core: "isOk",
+    asyncFn: null,
     fluent: [],
     compatSync: ["isOk"],
     compatAsync: ["isOk"],
@@ -93,6 +106,7 @@ const TABLE: readonly Row[] = [
   {
     label: "isErr guard",
     core: "isErr",
+    asyncFn: null,
     fluent: [],
     compatSync: ["isErr"],
     compatAsync: ["isErr"],
@@ -101,6 +115,7 @@ const TABLE: readonly Row[] = [
   {
     label: "unwrapOk",
     core: "unwrapOk",
+    asyncFn: null,
     fluent: [],
     compatSync: ["_unsafeUnwrap"],
     compatAsync: [],
@@ -108,6 +123,7 @@ const TABLE: readonly Row[] = [
   {
     label: "unwrapErr",
     core: "unwrapErr",
+    asyncFn: null,
     fluent: [],
     compatSync: ["_unsafeUnwrapErr"],
     compatAsync: [],
@@ -116,6 +132,7 @@ const TABLE: readonly Row[] = [
   {
     label: "resolve",
     core: null,
+    asyncFn: null,
     fluent: [],
     compatSync: [],
     compatAsync: ["resolve"],
@@ -124,6 +141,7 @@ const TABLE: readonly Row[] = [
   {
     label: "of",
     core: "of",
+    asyncFn: null,
     fluent: [],
     compatSync: [],
     compatAsync: [],
@@ -132,6 +150,7 @@ const TABLE: readonly Row[] = [
   {
     label: "show",
     core: "show",
+    asyncFn: null,
     fluent: ["toString"],
     compatSync: [],
     compatAsync: [],
@@ -140,6 +159,7 @@ const TABLE: readonly Row[] = [
   {
     label: "toResult",
     core: null,
+    asyncFn: null,
     fluent: ["toResult"],
     compatSync: [],
     compatAsync: [],
@@ -177,6 +197,9 @@ describe("parity: every declared op exists on its surface", () => {
     if (row.core !== null) {
       expect(typeof (core as Record<string, unknown>)[row.core]).toBe("function");
     }
+    if (row.asyncFn !== null) {
+      expect(typeof (asyncFns as Record<string, unknown>)[row.asyncFn]).toBe("function");
+    }
     for (const name of row.fluent)
       expect(typeof (samples.fluent as unknown as Record<string, unknown>)[name]).toBe("function");
     for (const name of row.compatSync)
@@ -199,6 +222,12 @@ describe("parity: no undeclared members (reverse drift guard)", () => {
     const actual = Object.keys(samples.fluent).filter(
       (k) => !FLUENT_CARRIERS.includes(k as (typeof FLUENT_CARRIERS)[number]),
     );
+    expect(actual.filter((k) => !allowed.has(k)).sort()).toEqual([]);
+  });
+
+  it("async data-last surface is fully declared", () => {
+    const allowed = new Set(TABLE.map((row) => row.asyncFn).filter((n): n is string => n !== null));
+    const actual = Object.keys(asyncFns);
     expect(actual.filter((k) => !allowed.has(k)).sort()).toEqual([]);
   });
 

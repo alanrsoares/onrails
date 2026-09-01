@@ -20,7 +20,7 @@ describe("validation", () => {
 
   it("validateTuple preserves values and accumulates failures", () => {
     const result = validateTuple(
-      [ok(1), err(["name"]), err(["email"])] as const,
+      [ok(1), err(["name"]), err(["email"])],
       (left: readonly string[], right: readonly string[]) => [...left, ...right],
     );
 
@@ -29,8 +29,6 @@ describe("validation", () => {
 
   it("without a combiner, collects every failure into an array", () => {
     expect(validateAll([ok(1), err("name"), err("email")])).toEqual(err(["name", "email"]));
-    expect(validateTuple([ok(1), err("name"), err("email")] as const)).toEqual(
-      err(["name", "email"]),
-    );
+    expect(validateTuple([ok(1), err("name"), err("email")])).toEqual(err(["name", "email"]));
   });
 });

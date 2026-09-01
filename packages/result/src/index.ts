@@ -2,7 +2,7 @@
  * @onrails/result — public surface.
  *
  * Layout:
- *   • core railway          — ok/err, map/flatMap, match, recover, tap, trySync, pipe
+ *   • core railway          — ok/err, map/flatMap, match, recover, tap, trySync/fromThrowable, pipe
  *   • collection (sync)     — combine, combineTuple, validateAll, validateTuple
  *   • async                 — ResultAsync, fromPromise, tryAsync
  *   • async collection      — ResultAsync.combineTuple / combineTupleParallel
@@ -13,6 +13,7 @@
  * Decision tree:
  *   single sync value         → flatMap / match
  *   single async value        → ResultAsync.flatMap / asyncAfter
+ *   async chain via pipe/flow → @onrails/result/async (data-last twins)
  *   named multi-step workflow → @onrails/result/railway
  *   generator-style sync sugar → @onrails/result/try-gen
  *   independent validations   → validateAll / validateTuple
@@ -31,11 +32,12 @@ export {
 } from "./async-lift.js";
 export { combine, combineTuple, validateAll, validateTuple } from "./collections.js";
 export type { InferErr, InferOk } from "./internal/infer.js";
-export { flow } from "./pipe.js";
+export { flow, pipe } from "./pipe.js";
 export {
   bimap,
   err,
   flatMap,
+  fromThrowable,
   isErr,
   isOk,
   map,
@@ -43,7 +45,6 @@ export {
   match,
   of,
   ok,
-  pipe,
   recover,
   show,
   tap,
