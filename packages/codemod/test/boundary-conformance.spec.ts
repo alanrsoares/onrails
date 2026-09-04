@@ -77,6 +77,11 @@ describe("no-deprecated-synonyms conformance", () => {
   it("eslint registers the rule id", () => {
     expect(eslintSource).toContain(`"${NO_DEPRECATED_SYNONYMS_RULE.id}"`);
   });
+
+  it("biome marks only the method rename as a safe fix", () => {
+    expect(gritDeprecatedSynonyms).toContain('$kind = "safe"');
+    expect(gritDeprecatedSynonyms).toContain('$kind = "unsafe"');
+  });
 });
 
 describe("no-promise-result conformance", () => {
@@ -186,8 +191,23 @@ describe("declared divergences", () => {
     expect(declared).toBe(true);
   });
 
+  it("biome's import scoping on no-deprecated-synonyms is declared, not accidental", () => {
+    const declared = ENGINE_DIVERGENCES.some(
+      (d) =>
+        d.rule === NO_DEPRECATED_SYNONYMS_RULE.id &&
+        d.engine === "biome" &&
+        d.divergence === "import-scoped",
+    );
+    expect(declared).toBe(true);
+  });
+
+  it("biome implements the import scoping, eslint does not", () => {
+    expect(gritDeprecatedSynonyms).toContain("JsModuleSource");
+    expect(eslintSource.includes("JsModuleSource")).toBe(false);
+  });
+
   it("no undeclared divergences exist in the spec", () => {
-    expect(ENGINE_DIVERGENCES).toHaveLength(2);
+    expect(ENGINE_DIVERGENCES).toHaveLength(3);
   });
 });
 

@@ -66,9 +66,10 @@ export interface DeprecatedSynonym {
 
 /**
  * Deprecated neverthrow/fp-era synonyms → canonical onrails names.
- * Matching is name-based in every engine — neither GritQL nor the ESLint
- * rules scope by import, so same-named calls from other libraries (RxJS
- * `of`, fp-ts `fold`) are flagged too.
+ * The ESLint rule matches by name alone, so same-named calls from other
+ * libraries (RxJS `of`, fp-ts `fold`) are flagged too; the Biome rule scopes
+ * to files carrying an `@onrails/*` module source. See `ENGINE_DIVERGENCES`
+ * (`no-deprecated-synonyms` / `import-scoped`).
  */
 export const DEPRECATED_SYNONYMS: readonly DeprecatedSynonym[] = [
   { name: "chain", form: "method", canonical: "flatMap" },
@@ -173,6 +174,18 @@ export const ENGINE_DIVERGENCES: readonly EngineDivergence[] = [
       "acceptable; GritQL patterns cannot read the file path, so the Biome rule " +
       "flags test code too. Suppress with a biome-ignore comment or a linter " +
       "override for test globs.",
+  },
+  {
+    rule: NO_DEPRECATED_SYNONYMS_RULE.id,
+    engine: "biome",
+    divergence: "import-scoped",
+    detail:
+      "GritQL can read the module sources of the file it is matching, so the " +
+      "Biome rule only flags synonyms in files that mention an `@onrails/*` " +
+      "specifier — RxJS `of` and fp-ts `fold` in unrelated files stay quiet. " +
+      "The ESLint rule matches by name everywhere, so it is the noisier of " +
+      "the two in mixed codebases and the stricter one in codebases that " +
+      "re-export onrails through a local alias.",
   },
   {
     rule: FLUENT_STAYS_LOCAL_RULE.id,
