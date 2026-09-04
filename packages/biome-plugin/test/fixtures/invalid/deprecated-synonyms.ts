@@ -1,3 +1,5 @@
+import "@onrails/result";
+
 declare const r: { chain(fn: (v: unknown) => unknown): unknown; isOk(): Promise<boolean>; isErr(): Promise<boolean> };
 declare const fold: (fn: unknown) => unknown;
 declare const matchResult: (fn: unknown) => unknown;

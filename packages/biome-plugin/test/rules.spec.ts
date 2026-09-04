@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const PKG_DIR = resolve(import.meta.dirname, "..");
@@ -13,6 +14,25 @@ function runBiome(target: string) {
     { cwd: FIXTURE_DIR, encoding: "utf8" },
   );
   return { stdout: stdout ?? "", exitCode: status ?? -1 };
+}
+
+function writeBiome(target: string) {
+  return spawnSync("bunx", ["@biomejs/biome", "check", "--write", target], {
+    cwd: FIXTURE_DIR,
+    encoding: "utf8",
+  });
+}
+
+/** Runs `--write` on a throwaway copy of `source` and returns the rewritten text. */
+function afterSafeFix(source: string, target: string): string {
+  const path = resolve(FIXTURE_DIR, target);
+  writeFileSync(path, source);
+  try {
+    writeBiome(target);
+    return readFileSync(path, "utf8");
+  } finally {
+    rmSync(path, { force: true });
+  }
 }
 
 interface Diagnostic {
@@ -68,5 +88,24 @@ describe("exemptions", () => {
   test("ResultAsync return types produce no diagnostics", () => {
     const diags = diagnosticsFor("valid/result-async.ts");
     expect(diags).toEqual([]);
+  });
+
+  test("same-named calls in a file with no @onrails module source are not flagged", () => {
+    const diags = diagnosticsFor("valid/foreign-synonyms.ts");
+    expect(diags).toEqual([]);
+  });
+});
+
+describe("no-deprecated-synonyms fixes", () => {
+  const onrailsImport = 'import type { Result } from "@onrails/result";\n';
+
+  test("rewrites .chain() to .flatMap() as a safe fix", () => {
+    const source = `${onrailsImport}declare const r: { chain(fn: (v: unknown) => unknown): unknown };\nexport const a = r.chain(() => {});\n`;
+    expect(afterSafeFix(source, "invalid/fix-chain.tmp.ts")).toContain("r.flatMap(() => {})");
+  });
+
+  test("leaves the free-function renames alone without --unsafe", () => {
+    const source = `${onrailsImport}declare const collect: (a: unknown) => unknown;\nexport const a = collect([]);\n`;
+    expect(afterSafeFix(source, "invalid/fix-collect.tmp.ts")).toContain("collect([])");
   });
 });
