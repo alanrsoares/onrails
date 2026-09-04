@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.5...codemod-v0.2.6) (2026-09-04)
+
+
+### Features
+
+* **biome-plugin:** import-scope and autofix deprecated synonyms ([#90](https://github.com/alanrsoares/onrails/issues/90)) ([a50700c](https://github.com/alanrsoares/onrails/commit/a50700cea63785172165a6204c07750e6bb84ddc))
+
 ## [0.2.5](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.4...codemod-v0.2.5) (2026-07-21)
 
 
