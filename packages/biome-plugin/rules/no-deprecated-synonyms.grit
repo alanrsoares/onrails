@@ -9,32 +9,45 @@
 // - collect() -> combine()
 // - ResultAsync.isOk() / isErr() -> await and narrow with isOk() / isErr()
 //
-// Limitation: matching is name-based — GritQL cannot scope by import, so
-// same-named calls from other libraries (RxJS `of`, fp-ts `fold`,
-// neverthrow `.isOk()`) are flagged too. Suppress with an inline
-// biome-ignore comment in mixed codebases.
+// Scoping: only files that mention an `@onrails/*` module source are matched,
+// so same-named calls from other libraries (RxJS `of`, fp-ts `fold`) are left
+// alone. The ESLint rule is name-based everywhere; declared in
+// ENGINE_DIVERGENCES (`no-deprecated-synonyms` / `import-scoped`).
+//
+// Fixes: `.chain()` -> `.flatMap()` is a safe rewrite (method rename, no
+// import churn). The free-function renames are unsafe fixes — they need the
+// canonical name imported, which GritQL cannot add; run `--write --unsafe`
+// and fix the import, or use `@onrails/codemod`, which rewrites both.
 
 engine biome(1.0)
-language js
+language js(typescript)
 
 or {
-  `$_.chain($_)` as $call,
-  `$_?.chain($_)` as $call,
-  `$_.isOk()` as $call,
-  `$_?.isOk()` as $call,
-  `$_.isErr()` as $call,
-  `$_?.isErr()` as $call,
-  `fold($_)` as $call,
-  `matchResult($_)` as $call,
-  `matchMaybe($_)` as $call,
-  `getOrElse($_)` as $call,
-  `sequenceTupleAsync($_)` as $call,
-  `collect($_)` as $call,
-  `of($_)` as $call
-} where {
+  `$x.chain($args)` => `$x.flatMap($args)`,
+  `$x?.chain($args)` => `$x?.flatMap($args)`,
+  `matchResult($args)` => `match($args)`,
+  `matchMaybe($args)` => `match($args)`,
+  `getOrElse($args)` => `unwrapOr($args)`,
+  `collect($args)` => `combine($args)`,
+  `sequenceTupleAsync($args)` => `ResultAsync.combineTuple($args)`,
+  `fold($args)`,
+  `of($args)`,
+  `$x.isOk()`,
+  `$x?.isOk()`,
+  `$x.isErr()`,
+  `$x?.isErr()`
+} as $call where {
+  $call <: within JsModule(items = $items),
+  $items <: contains JsModuleSource() as $source,
+  $source <: r".*@onrails/.*",
+  or {
+    { $call <: or { `$_.chain($_)`, `$_?.chain($_)` }, $kind = "safe" },
+    { $kind = "unsafe" }
+  },
   register_diagnostic(
     span = $call,
     message = "Avoid deprecated onrails synonyms/methods. Use the canonical equivalents instead.",
-    severity = "error"
+    severity = "error",
+    fix_kind = $kind
   )
 }

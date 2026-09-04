@@ -48,7 +48,7 @@
     "check": "bun test"
   },
   "peerDependencies": {
-    "@biomejs/biome": ">=2.0.0"
+    "@biomejs/biome": ">=2.5.12"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:"
