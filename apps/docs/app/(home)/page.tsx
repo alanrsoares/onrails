@@ -10,21 +10,25 @@ const features = [
     icon: Zap,
     title: "Railway-Oriented Programming",
     body: "Tame expected failure paths using type-safe Result, ResultAsync, and Maybe patterns without throwing exceptions across API boundaries.",
+    href: "/docs/core-concepts#the-railway",
   },
   {
     icon: ShieldCheck,
     title: "Strict Type Inference",
     body: "Fully typed returns and errors. Compatible with TS strict options like noUncheckedIndexedAccess to guarantee robustness.",
+    href: "/docs/api/result",
   },
   {
     icon: Workflow,
     title: "Expressive Railway Flow",
     body: "Chain operations using functional composition: pipe, flow, or fluent builders. Write clean nested contexts via railway-do-notation.",
+    href: "/docs/recipes#point-free-composition-pipe--flow",
   },
   {
     icon: Layers,
     title: "No Runtime Bloat",
     body: "Zero external dependencies at runtime. Thin, pure TypeScript wrappers with maximum optimization and native interop.",
+    href: "/docs/comparisons",
   },
 ];
 
@@ -90,17 +94,21 @@ export default function HomePage() {
 
       {/* features */}
       <section className="grid w-full max-w-5xl gap-4 pb-24 sm:grid-cols-2">
-        {features.map(({ icon: Icon, title, body }) => (
-          <div
+        {features.map(({ icon: Icon, title, body, href }) => (
+          <Link
             key={title}
-            className="rounded-xl border border-fd-border bg-fd-card p-5 transition-colors hover:border-fd-primary/40"
+            href={href}
+            className="group rounded-xl border border-fd-border bg-fd-card p-5 transition-colors hover:border-fd-primary/40 hover:bg-fd-accent/40"
           >
             <div className="mb-3 inline-flex rounded-lg bg-fd-primary/10 p-2 text-fd-primary">
               <Icon className="size-5" />
             </div>
-            <h2 className="mb-1.5 font-semibold">{title}</h2>
+            <h2 className="mb-1.5 flex items-center gap-1.5 font-semibold">
+              {title}
+              <ArrowRight className="size-4 text-fd-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+            </h2>
             <p className="text-sm text-fd-muted-foreground">{body}</p>
-          </div>
+          </Link>
         ))}
       </section>
     </main>
