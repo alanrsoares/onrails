@@ -200,7 +200,7 @@ export const ProfileIdSchema = z.string().uuid();
 
 // 1. Exportable sync parsing step
 export const parseProfileId = (raw: unknown): Result<string, Error> =>
-  trySync(() => ProfileIdSchema.parse(raw), toError)();
+  trySync(() => ProfileIdSchema.parse(raw), toError);
 
 // 2. Exportable async loading step
 export const loadProfileRow =

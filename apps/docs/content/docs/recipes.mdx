@@ -134,11 +134,11 @@ const summary = Railway.fromSync("id", () => IdSchema.parse(raw), toError)
 
 ## Validating with Zod
 
-A Zod schema's `.parse` throws on invalid input, so wrap it once with `trySync`
-to get a `Result`-returning parser — or use `safeParse` if you'd rather not throw:
+A Zod schema's `.parse` throws on invalid input, so lift it once with
+`fromThrowable` to get a `Result`-returning parser — or use `safeParse` if you'd rather not throw:
 
 ```ts twoslash
-import { err, ok, trySync } from "@onrails/result";
+import { err, fromThrowable, ok } from "@onrails/result";
 import { z } from "zod";
 
 const UserInput = z.object({ email: z.string(), age: z.number().int() });
@@ -151,7 +151,7 @@ const toInvalid = (e: unknown): Invalid => ({
 });
 
 // throwing .parse -> Result
-const parseUser = trySync((raw: unknown) => UserInput.parse(raw), toInvalid);
+const parseUser = fromThrowable((raw: unknown) => UserInput.parse(raw), toInvalid);
 
 // or non-throwing, via safeParse
 const decodeUser = (raw: unknown) => {
