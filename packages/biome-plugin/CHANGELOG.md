@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/alanrsoares/onrails/compare/biome-plugin-v0.1.3...biome-plugin-v0.1.4) (2026-09-04)
+
+
+### Features
+
+* **biome-plugin:** import-scope and autofix deprecated synonyms ([#90](https://github.com/alanrsoares/onrails/issues/90)) ([a50700c](https://github.com/alanrsoares/onrails/commit/a50700cea63785172165a6204c07750e6bb84ddc))
+
 ## [0.1.3](https://github.com/alanrsoares/onrails/compare/biome-plugin-v0.1.2...biome-plugin-v0.1.3) (2026-07-04)
 
 
