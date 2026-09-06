@@ -38,7 +38,8 @@ bimap(parsed, (cfg) => cfg.name, (e) => ({ kind: "input", cause: e }));
 Lifts a value into the error track.
 
 ```typescript
-function err<T = never, E = unknown>(error: E): Result<T, E>
+function err<const E>(error: E): Result<never, Locked<E>>
+function err<T, E>(error: E): Result<T, E>
 ```
 
 #### Parameters
@@ -51,7 +52,11 @@ function err<T = never, E = unknown>(error: E): Result<T, E>
 
 ```ts
 const r = err({ kind: "parse", message: "bad json" });
-// Result<never, { kind: "parse"; message: string }>
+// Result<never, { readonly kind: "parse"; readonly message: string }>
+
+type AppError = { kind: "parse" } | { kind: "io" };
+err<AppError>({ kind: "io" });          // Result<never, AppError> — one arg names the error
+err<number, AppError>({ kind: "io" });  // Result<number, AppError> — neverthrow's T, E order
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -307,7 +312,8 @@ Fantasy Land `pure` — alias of [ok](#ok-ƒ). One lift name shared across the
 trio (`of` / `Maybe.of` / `ResultAsync.of`) for generic and FL-style code.
 
 ```typescript
-function of<T, E = never>(value: T): Result<T, E>
+function of<const T>(value: T): Result<Locked<T>, never>
+function of<T, E>(value: T): Result<T, E>
 ```
 
 #### Parameters
@@ -319,7 +325,7 @@ function of<T, E = never>(value: T): Result<T, E>
 #### Example
 
 ```ts
-const r = of(42);   // Result<number, never> — identical to ok(42)
+const r = of(42);   // Result<42, never> — identical to ok(42)
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -329,7 +335,8 @@ const r = of(42);   // Result<number, never> — identical to ok(42)
 Lifts a value into the success track.
 
 ```typescript
-function ok<T, E = never>(value: T): Result<T, E>
+function ok<const T>(value: T): Result<Locked<T>, never>
+function ok<T, E>(value: T): Result<T, E>
 ```
 
 #### Parameters
@@ -341,8 +348,9 @@ function ok<T, E = never>(value: T): Result<T, E>
 #### Example
 
 ```ts
-const r = ok(42);                          // Result<number, never>
+const r = ok(42);                          // Result<42, never> — literal locked
 const typed: Result<number, "parse"> = ok(1);
+const lift = <T, E>(v: T): Result<T, E> => ok<T, E>(v);  // explicit args opt out
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -713,7 +721,8 @@ validateTuple([name, age], (l, r) => [...l, ...r]);
 Lifts a value into an `Err` async result.
 
 ```typescript
-function errAsync<T = never, E = unknown>(error: E): ResultAsync<T, E>
+function errAsync<const E>(error: E): ResultAsync<never, Locked<E>>
+function errAsync<T, E>(error: E): ResultAsync<T, E>
 ```
 
 #### Parameters
@@ -779,7 +788,7 @@ function fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, 
 Lifts a value into an `Ok` async result.
 
 ```typescript
-function okAsync<T>(value: T): ResultAsync<T, never>
+function okAsync<const T>(value: T): ResultAsync<Locked<T>, never>
 function okAsync<T, E>(value: T): ResultAsync<T, E>
 ```
 
@@ -792,7 +801,7 @@ function okAsync<T, E>(value: T): ResultAsync<T, E>
 #### Example
 
 ```ts
-const r = okAsync(42);                  // ResultAsync<number, never>
+const r = okAsync(42);   // ResultAsync<42, never> — literal locked
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -935,7 +944,7 @@ const r = await insert;   // factory runs exactly once here
 Lifts a value into an `Ok` async result.
 
 ```typescript
-static ok<T>(value: T): ResultAsync<T, never>
+static ok<const T>(value: T): ResultAsync<Locked<T>, never>
 static ok<T, E>(value: T): ResultAsync<T, E>
 ```
 
@@ -959,7 +968,7 @@ Fantasy Land `pure` — alias of [ResultAsync.ok](#resultasyncok-ƒ). One lift n
 shared across the trio (`of` / `Maybe.of` / `ResultAsync.of`).
 
 ```typescript
-static of<T>(value: T): ResultAsync<T, never>
+static of<const T>(value: T): ResultAsync<Locked<T>, never>
 static of<T, E>(value: T): ResultAsync<T, E>
 ```
 
@@ -976,7 +985,8 @@ static of<T, E>(value: T): ResultAsync<T, E>
 Lifts an error into an `Err` async result.
 
 ```typescript
-static err<T = never, E = unknown>(error: E): ResultAsync<T, E>
+static err<const E>(error: E): ResultAsync<never, Locked<E>>
+static err<T, E>(error: E): ResultAsync<T, E>
 ```
 
 #### Parameters
