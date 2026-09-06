@@ -1,4 +1,5 @@
-import { err, isErr } from "./result.js";
+import { mkErr } from "./internal/ctor.js";
+import { isErr } from "./result.js";
 import type { Result } from "./types.js";
 
 /** Internal control-flow signal — not part of public error types */
@@ -63,7 +64,7 @@ export const tryGen = <T, E>(fn: () => Result<T, E>): Result<T, E> => {
     return fn();
   } catch (error) {
     if (error instanceof ErrSignal) {
-      return err(error.error);
+      return mkErr(error.error);
     }
     throw error;
   }

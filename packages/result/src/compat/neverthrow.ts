@@ -1,18 +1,9 @@
 /** @deprecated Migration shim — prefer `@onrails/result` and `@onrails/result/fluent`. */
 import { ResultAsync as CoreResultAsync } from "../async.js";
 import { combineTuple } from "../collections.js";
+import { mkErr as coreErr, mkOk as coreOk } from "../internal/ctor.js";
 import type { InferErr, InferOk } from "../internal/infer.js";
-import {
-  err as coreErr,
-  ok as coreOk,
-  flatMap,
-  fromThrowable,
-  isErr,
-  isOk,
-  map,
-  mapErr,
-  unwrapOr,
-} from "../result.js";
+import { flatMap, fromThrowable, isErr, isOk, map, mapErr, unwrapOr } from "../result.js";
 import type { Result as ResultType } from "../types.js";
 
 type TupleOk<R extends readonly CompatResult<unknown, unknown>[]> = {
@@ -131,7 +122,7 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
   }
 
   static ok<T, E = never>(value: T): CompatResultAsync<T, E> {
-    return new CompatResultAsync(CoreResultAsync.ok(value));
+    return new CompatResultAsync(CoreResultAsync.ok<T, E>(value));
   }
 
   static err<T = never, E = unknown>(error: E): CompatResultAsync<T, E> {

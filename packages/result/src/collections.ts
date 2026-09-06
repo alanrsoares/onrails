@@ -8,8 +8,9 @@
  * default, or folds them with an explicit `combineErrors` when given one.
  */
 
+import { mkErr, mkOk } from "./internal/ctor.js";
 import type { InferErr, InferOk } from "./internal/infer.js";
-import { err, isErr, ok } from "./result.js";
+import { isErr } from "./result.js";
 import type { Result } from "./types.js";
 
 /**
@@ -27,10 +28,10 @@ import type { Result } from "./types.js";
 export const combine = <T, E>(results: readonly Result<T, E>[]): Result<T[], E> => {
   const values: T[] = [];
   for (const result of results) {
-    if (isErr(result)) return err(result.error);
+    if (isErr(result)) return mkErr(result.error);
     values.push(result.value);
   }
-  return ok(values);
+  return mkOk(values);
 };
 
 type AnyResult = Result<unknown, unknown>;
@@ -120,8 +121,8 @@ export function validateAll<T, E>(
     }
   }
 
-  if (errors.length === 0) return ok(values);
-  return err(combineErrors ? errors.reduce(combineErrors) : errors);
+  if (errors.length === 0) return mkOk(values);
+  return mkErr(combineErrors ? errors.reduce(combineErrors) : errors);
 }
 
 /**

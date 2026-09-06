@@ -54,7 +54,9 @@ const cases: Array<{ label: string; run: () => Promise<unknown[]> }> = [
     label: "recover",
     run: async () => [
       await RA.recover(errAsync<number, string>("e"), () => okAsync(0)).resolve(),
-      await RA.recover((_e: string) => okAsync(0))(errAsync<number, string>("e")).resolve(),
+      await RA.recover((_e: string) => okAsync<number, never>(0))(
+        errAsync<number, string>("e"),
+      ).resolve(),
     ],
   },
   {

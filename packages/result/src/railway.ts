@@ -1,5 +1,6 @@
 import { ResultAsync } from "./async.js";
-import { err, flatMap, fromThrowable, map, ok } from "./result.js";
+import { mkErr, mkOk } from "./internal/ctor.js";
+import { flatMap, fromThrowable, map } from "./result.js";
 import type { Result } from "./types.js";
 
 /**
@@ -82,12 +83,12 @@ export class Railway<C extends object, E, M extends RailwayMode> {
 
   /** Start an empty sync workflow with no fields in context. */
   static empty(): Railway<Record<never, never>, never, "sync"> {
-    return new Railway({ mode: "sync", result: ok({}) });
+    return new Railway({ mode: "sync", result: mkOk({}) });
   }
 
   /** Start a sync workflow with the given context as the initial state. */
   static context<C extends object>(context: C): Railway<C, never, "sync"> {
-    return new Railway({ mode: "sync", result: ok(context) });
+    return new Railway({ mode: "sync", result: mkOk(context) });
   }
 
   /** Start a sync workflow with a throwing function. */
@@ -206,7 +207,7 @@ export class Railway<C extends object, E, M extends RailwayMode> {
     fn: (ctx: C) => T,
     ..._guard: FreshKey<C, K>
   ): Railway<Extend<C, K, T>, E, M> {
-    return this.addSync(key, (ctx) => ok(fn(ctx)));
+    return this.addSync(key, (ctx) => mkOk(fn(ctx)));
   }
 
   /** Throwing sync transform. */
@@ -256,7 +257,7 @@ export class Railway<C extends object, E, M extends RailwayMode> {
   ): Railway<Extend<C, K, NonNullable<C[S]>>, E | F, M> {
     return this.addSync(key, (ctx) => {
       const value = ctx[source];
-      return value == null ? err(onMissing(ctx)) : ok(value as NonNullable<C[S]>);
+      return value == null ? mkErr(onMissing(ctx)) : mkOk(value as NonNullable<C[S]>);
     });
   }
 
