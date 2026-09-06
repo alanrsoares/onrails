@@ -25,22 +25,51 @@ const parse = fromThrowable(
 const pipeline = flatMap(parse('{"v":1}'), (data) => ok(data.v));
 ```
 
-Every transform is dual-form: data-first `flatMap(r, fn)` (best inference) or curried `flatMap(fn)(r)` for `pipe`/`flow`. Long chains: `fluent()` from `@onrails/result/fluent`.
-
 For worked examples of multi-step pipelines, parser builders, validator ladders, and parallel sub-workflows see [RECIPES.md](./RECIPES.md).
 
-## When to use what
+## The default path
+
+Two forms cover almost everything. Learn these; treat the rest of this README as reference for the cases they do not fit.
+
+| Sync  | data-first module functions — `flatMap(r, fn)`, `map`, `match` |
+| ----- | -------------------------------------------------------------- |
+| Async | `ResultAsync` dot-chaining — `ra.flatMap(fn).map(fn).match(…)`  |
+
+```ts
+// sync
+const name = match(
+  flatMap(parseConfig(raw), (cfg) => (cfg.name ? ok(cfg.name) : err({ kind: "missing" }))),
+  (n) => n,
+  (e) => `<${e.kind}>`,
+);
+
+// async — `.flatMap` also accepts a plain sync `Result`, so no manual lifting
+const count = await loadUser(id).flatMap(loadOrders).map((os) => os.length).unwrapOr(0);
+```
+
+Data-first gives the best inference, and `ResultAsync.flatMap` takes either carrier, so mixed sync/async chains need no lift step.
+
+## Other syntaxes (opt-in)
+
+Same operations, different shape. Reach for one only when it removes real nesting or naming pain — none of them unlock behavior the default path lacks.
 
 | Shape                              | Reach for                                                            |
 | ---------------------------------- | -------------------------------------------------------------------- |
-| One or two sync steps              | `flatMap`, `map`, `match`                                            |
-| One or two async steps             | `ResultAsync.flatMap`, `asyncAfter`                                  |
-| Long async chain, value-first      | `pipe(ra, RA.map(...), RA.flatMap(...))` from `@onrails/result/async` |
 | Long sync chain, value-first        | `pipe(r, map(...), flatMap(...), ...)`                              |
+| Long async chain, value-first      | `pipe(ra, RA.map(...), RA.flatMap(...))` from `@onrails/result/async` |
 | Long sync chain, dot-style preferred | `fluent(r)` from `@onrails/result/fluent`                          |
 | Reusable composed function          | `flow(...)` from `@onrails/result/pipe`                             |
 | Several named sync/async steps     | `Railway.*` builder from `@onrails/result/railway`                   |
 | Linear sync with early-return feel | `tryGen` + `$` from `@onrails/result/try-gen`                        |
+
+Every transform is dual-form: data-first `flatMap(r, fn)` or curried `flatMap(fn)(r)` for `pipe` / `flow`.
+
+## Boundaries and collections
+
+These are not alternative syntaxes — they are the entry points into the railway.
+
+| Shape                              | Reach for                                                            |
+| ---------------------------------- | -------------------------------------------------------------------- |
 | Independent validations, accumulated failures | `validateAll` / `validateTuple` from `@onrails/result` |
 | Sync → async lift, keep error type | `fromResult`, `asyncAfter` (do **not** use `fromAsync` here)         |
 | `Promise<Result<…>>` boundary lift | `fromAsync` / `tryAsync`                                             |
@@ -100,6 +129,36 @@ type BotError =
 ```
 
 Helpers: `@onrails/result/extra` — `hasKind`, `mapErrKind`, `declareErrors`, `UnionErrors`, `AccumulateErrors`.
+
+### Literals stay narrow
+
+`ok` and `err` lock an inline literal instead of widening it, so a tagged error keeps its `kind` without `as const`:
+
+```ts
+err({ kind: "not_found", id });   // Result<never, { readonly kind: "not_found"; readonly id: string }>
+ok("ready");                      // Result<"ready", never>
+```
+
+Locking is inference-only — a value that already has a type is left alone (`ok(name)` where `name: string` is still `Result<string, never>`), and an array literal payload stays assignable to a mutable array (`ok([1, 2])` satisfies `Result<number[], E>`).
+
+Pass **both** type arguments to opt out. Generic code that has to produce `Result<T, E>` for an unresolved `T` needs that form:
+
+```ts
+const lift = <T, E>(value: T): Result<T, E> => ok<T, E>(value);
+```
+
+### Naming the error channel
+
+One explicit type argument on `err` names the **error**:
+
+```ts
+type AppError = { kind: "parse" } | { kind: "io" };
+
+err<AppError>({ kind: "io" });          // Result<never, AppError>
+err<number, AppError>({ kind: "io" });  // Result<number, AppError> — neverthrow's T, E order
+```
+
+The two-argument form keeps neverthrow's order. `errAsync` / `ResultAsync.err` behave the same way.
 
 ## Async interop — `fromAsync`
 
@@ -290,6 +349,23 @@ Both cap at **12 steps**. That cap is deliberate: a single recursive variadic si
 `@onrails/eslint-plugin` — warns on `Promise<Result<…>>` and `_unsafeUnwrap*`.
 
 ## Breaking changes
+
+### `ok` / `err` lock inline literals
+
+Inline literals no longer widen: `ok("a")` is `Result<"a", never>` and `err({ kind: "io" })` carries `{ readonly kind: "io" }`. Annotated values are unaffected. Two call shapes need a change:
+
+```ts
+// generic code — pass both type arguments to opt out of locking
+const lift = <T, E>(value: T): Result<T, E> => ok<T, E>(value);
+
+// a type-level assertion that expected the widened type
+expectType<TypeEqual<typeof ok(1), Result<number, never>>>(true);  // before
+expectType<TypeEqual<typeof value, Result<1, never>>>(true);       // after
+```
+
+### One type argument on `err` now names the error
+
+`err<AppError>(e)` used to set the *`Ok`* parameter and leave the error at `unknown`. It now returns `Result<never, AppError>`. Call sites that meant the old reading fail to compile; use `err<AppError, unknown>(e)` to restore it, or drop the argument and let inference lock the literal. The compat shim (`@onrails/result/compat/neverthrow`) is unchanged.
 
 ### `trySync` is now eager; the lazy form is `fromThrowable`
 

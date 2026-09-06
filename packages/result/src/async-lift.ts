@@ -20,7 +20,7 @@ import type { Result, UnexpectedError } from "./types.js";
  *
  * @example
  * ```ts
- * const r = okAsync(42);                  // ResultAsync<number, never>
+ * const r = okAsync(42);   // ResultAsync<42, never> — literal locked
  * ```
  */
 export const okAsync = ResultAsync.ok;

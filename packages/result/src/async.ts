@@ -1,5 +1,7 @@
+import { mkErr, mkOk } from "./internal/ctor.js";
 import type { InferErr, InferOk } from "./internal/infer.js";
-import { bimap, err, isErr, map, mapErr, ok } from "./result.js";
+import type { Locked } from "./internal/lock.js";
+import { bimap, isErr, map, mapErr } from "./result.js";
 import type { Result } from "./types.js";
 import { UnexpectedError } from "./types.js";
 
@@ -29,11 +31,11 @@ const sequenceSettled = (
   const values: unknown[] = [];
   for (const result of settled) {
     if (isErr(result)) {
-      return err(result.error);
+      return mkErr(result.error);
     }
     values.push(result.value);
   }
-  return ok(values);
+  return mkOk(values);
 };
 
 /**
@@ -96,9 +98,9 @@ export class ResultAsync<T, E> {
   ): ResultAsync<T, E> {
     return new ResultAsync(async () => {
       try {
-        return ok(await promise);
+        return mkOk(await promise);
       } catch (error) {
-        return err(onReject(error));
+        return mkErr(onReject(error));
       }
     });
   }
@@ -113,7 +115,7 @@ export class ResultAsync<T, E> {
    * ```
    */
   static fromSafePromise<T, E = never>(promise: PromiseLike<T>): ResultAsync<T, E> {
-    return new ResultAsync(async () => ok(await promise));
+    return new ResultAsync(async () => mkOk(await promise));
   }
 
   /**
@@ -140,20 +142,20 @@ export class ResultAsync<T, E> {
    * const r = ResultAsync.ok(42);   // ResultAsync<number, never>
    * ```
    */
-  static ok<T>(value: T): ResultAsync<T, never>;
+  static ok<const T>(value: T): ResultAsync<Locked<T>, never>;
   static ok<T, E>(value: T): ResultAsync<T, E>;
   static ok<T, E = never>(value: T): ResultAsync<T, E> {
-    return new ResultAsync(async () => ok(value));
+    return new ResultAsync(async () => mkOk(value));
   }
 
   /**
    * Fantasy Land `pure` — alias of {@link ResultAsync.ok}. One lift name
    * shared across the trio (`of` / `Maybe.of` / `ResultAsync.of`).
    */
-  static of<T>(value: T): ResultAsync<T, never>;
+  static of<const T>(value: T): ResultAsync<Locked<T>, never>;
   static of<T, E>(value: T): ResultAsync<T, E>;
   static of<T, E = never>(value: T): ResultAsync<T, E> {
-    return ResultAsync.ok(value);
+    return ResultAsync.ok<T, E>(value);
   }
 
   /**
@@ -164,8 +166,10 @@ export class ResultAsync<T, E> {
    * const r = ResultAsync.err({ kind: "not_found" as const });
    * ```
    */
+  static err<const E>(error: E): ResultAsync<never, Locked<E>>;
+  static err<T, E>(error: E): ResultAsync<T, E>;
   static err<T = never, E = unknown>(error: E): ResultAsync<T, E> {
-    return new ResultAsync(async () => err(error));
+    return new ResultAsync(async () => mkErr(error));
   }
 
   /**
@@ -188,7 +192,7 @@ export class ResultAsync<T, E> {
       try {
         return await promise;
       } catch (error) {
-        return err(mapDefect(error));
+        return mkErr(mapDefect(error));
       }
     });
   }
@@ -211,11 +215,11 @@ export class ResultAsync<T, E> {
       for (const ra of results) {
         const result = await ra.resolve();
         if (isErr(result)) {
-          return err(result.error);
+          return mkErr(result.error);
         }
         values.push(result.value);
       }
-      return ok(values);
+      return mkOk(values);
     });
   }
 

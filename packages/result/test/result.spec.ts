@@ -143,3 +143,14 @@ describe("sync Result: mapErr & recover", () => {
     expect(seen).toEqual(["ok:1", "err:bad", "curried:2", "curried-err:no"]);
   });
 });
+
+describe("sync Result: err type arguments", () => {
+  it("names the error channel from a single type argument", () => {
+    type AppError = { kind: "parse" } | { kind: "io" };
+    expect(err<AppError>({ kind: "io" })).toEqual({ _tag: "Err", error: { kind: "io" } });
+  });
+
+  it("still accepts neverthrow's T, E order", () => {
+    expect(err<number, string>("bad")).toEqual({ _tag: "Err", error: "bad" });
+  });
+});

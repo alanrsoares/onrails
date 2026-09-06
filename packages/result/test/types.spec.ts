@@ -1,7 +1,7 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
 import { ResultAsync } from "../src/async.js";
-import { asyncAfter, fromAsync, fromResult, tryAsync } from "../src/async-lift.js";
+import { asyncAfter, errAsync, fromAsync, fromResult, tryAsync } from "../src/async-lift.js";
 import { combine, combineTuple, validateAll, validateTuple } from "../src/collections.js";
 import type { ErrOf, OkOf, UnionErrors } from "../src/extra.js";
 import type { InferErr, InferOk } from "../src/internal/infer.js";
@@ -32,8 +32,8 @@ describe("Result sync types: core", () => {
   it("ok and err preserve type params", () => {
     const success = ok(1);
     const failure = err("x");
-    expectType<TypeEqual<typeof success, Result<number, never>>>(true);
-    expectType<TypeEqual<typeof failure, Result<never, string>>>(true);
+    expectType<TypeEqual<typeof success, Result<1, never>>>(true);
+    expectType<TypeEqual<typeof failure, Result<never, "x">>>(true);
   });
 
   it("isOk and isErr narrow", () => {
@@ -82,7 +82,7 @@ describe("Result sync types: mapping", () => {
     const r = flatMap(ok(1) as Result<number, "parse">, (n) =>
       n > 0 ? ok(String(n)) : err({ kind: "zero" as const }),
     );
-    expectType<TypeEqual<typeof r, Result<string, "parse" | { kind: "zero" }>>>(true);
+    expectType<TypeEqual<typeof r, Result<string, "parse" | { readonly kind: "zero" }>>>(true);
   });
 });
 
@@ -105,7 +105,7 @@ describe("Result sync types: match", () => {
 describe("Result sync types: unwrap and combine", () => {
   it("unwrapOr returns Ok type on success", () => {
     const v = unwrapOr(ok(1), 0);
-    expectType<TypeEqual<typeof v, number>>(true);
+    expectType<TypeEqual<typeof v, 1 | 0>>(true);
   });
 
   it("unwrapOr widens to T | U when the fallback differs from the Ok type", () => {
@@ -127,21 +127,21 @@ describe("Result sync types: unwrap and combine", () => {
 
   it("combine collects values or first Err", () => {
     const r = combine([ok(1), ok(2)]);
-    expectType<TypeEqual<typeof r, Result<number[], never>>>(true);
+    expectType<TypeEqual<typeof r, Result<(1 | 2)[], never>>>(true);
     const failed = combine([ok(1), err("x")]);
-    expectType<TypeEqual<typeof failed, Result<number[], string>>>(true);
+    expectType<TypeEqual<typeof failed, Result<1[], "x">>>(true);
   });
 
   it("combineTuple preserves tuple shape from inline literals", () => {
     // No `as const`, no hoisted intermediates: the parameter is a bare `R`, so
     // nothing contextually widens `ok()`'s defaulted `E = never`.
     const r = combineTuple([ok(1), ok("a")]);
-    expectType<TypeEqual<typeof r, Result<readonly [number, string], never>>>(true);
+    expectType<TypeEqual<typeof r, Result<readonly [1, "a"], never>>>(true);
   });
 
   it("combineTuple keeps both channels precise for a mixed inline tuple", () => {
     const r = combineTuple([ok(1), err("boom")]);
-    expectType<TypeEqual<typeof r, Result<readonly [number, never], string>>>(true);
+    expectType<TypeEqual<typeof r, Result<readonly [1, never], "boom">>>(true);
   });
 
   it("tuple combinators reject a non-Result element at the call site", () => {
@@ -176,7 +176,7 @@ describe("Result sync types: effects", () => {
     const r = recover(err("x") as Result<number, string>, (error) =>
       error.length > 0 ? ok(0) : err({ kind: "empty" as const }),
     );
-    expectType<TypeEqual<typeof r, Result<number, { kind: "empty" }>>>(true);
+    expectType<TypeEqual<typeof r, Result<number, { readonly kind: "empty" }>>>(true);
 
     const curried = recover((error: string) => ok(error.length))(
       err("x") as Result<number, string>,
@@ -201,8 +201,8 @@ describe("ResultAsync types", () => {
   it("ok and err static factories", () => {
     const ra = ResultAsync.ok(1);
     const rb = ResultAsync.err("x");
-    expectType<TypeEqual<typeof ra, ResultAsync<number, never>>>(true);
-    expectType<TypeEqual<typeof rb, ResultAsync<never, string>>>(true);
+    expectType<TypeEqual<typeof ra, ResultAsync<1, never>>>(true);
+    expectType<TypeEqual<typeof rb, ResultAsync<never, "x">>>(true);
   });
 
   it("fromPromise maps rejection", () => {
@@ -233,7 +233,7 @@ describe("ResultAsync types", () => {
     const ra = ResultAsync.ok(1).flatMap((n) =>
       n > 0 ? ok(String(n)) : err({ code: 1 as const }),
     );
-    expectType<TypeEqual<typeof ra, ResultAsync<string, { code: 1 }>>>(true);
+    expectType<TypeEqual<typeof ra, ResultAsync<string, { readonly code: 1 }>>>(true);
   });
 
   it("map changes success type", () => {
@@ -248,7 +248,7 @@ describe("ResultAsync types", () => {
     const tapped = ResultAsync.ok<number, string>(1).tap(() => undefined);
     const tappedErr = ResultAsync.err<number, string>("x").tapErr(() => undefined);
 
-    expectType<TypeEqual<typeof recovered, ResultAsync<number, { kind: "empty" }>>>(true);
+    expectType<TypeEqual<typeof recovered, ResultAsync<number, { readonly kind: "empty" }>>>(true);
     expectType<TypeEqual<typeof tapped, ResultAsync<number, string>>>(true);
     expectType<TypeEqual<typeof tappedErr, ResultAsync<number, string>>>(true);
   });
@@ -298,14 +298,12 @@ describe("Result extra types", () => {
 describe("Result validation types", () => {
   it("array validation accumulates errors", () => {
     const r = validateAll([ok(1), err("a" as const), err("b" as const)]);
-    expectType<TypeEqual<typeof r, Result<number[], readonly ("a" | "b")[]>>>(true);
+    expectType<TypeEqual<typeof r, Result<1[], readonly ("a" | "b")[]>>>(true);
   });
 
   it("tuple validation preserves tuple values and accumulates errors", () => {
     const r = validateTuple([ok(1), ok("x"), err("bad" as const)]);
-    expectType<TypeEqual<typeof r, Result<readonly [number, string, never], readonly "bad"[]>>>(
-      true,
-    );
+    expectType<TypeEqual<typeof r, Result<readonly [1, "x", never], readonly "bad"[]>>>(true);
   });
 });
 
@@ -437,5 +435,48 @@ describe("tryGen types", () => {
 
     expectType<Result<number, never>>(withName);
     expectType<Result<number, never>>(withAlias);
+  });
+});
+
+describe("literal locking and err.as", () => {
+  it("ok and err lock inline literals instead of widening", () => {
+    const value = ok("a");
+    const failure = err({ kind: "io" });
+    expectType<TypeEqual<typeof value, Result<"a", never>>>(true);
+    expectType<TypeEqual<typeof failure, Result<never, { readonly kind: "io" }>>>(true);
+  });
+
+  it("locking does not leak through an annotated value", () => {
+    const raw: string = "a";
+    const value = ok(raw);
+    expectType<TypeEqual<typeof value, Result<string, never>>>(true);
+  });
+
+  it("array literals stay assignable to a mutable array payload", () => {
+    const r = ok([1, 2]);
+    expectType<TypeEqual<typeof r, Result<[1, 2], never>>>(true);
+    const widened: Result<number[], never> = r;
+    expectType<TypeEqual<typeof widened, Result<number[], never>>>(true);
+  });
+
+  it("an unbounded readonly array payload is left as authored", () => {
+    const names: readonly string[] = ["a"];
+    const value = ok(names);
+    expectType<TypeEqual<typeof value, Result<readonly string[], never>>>(true);
+  });
+
+  it("a single type argument on err names the error channel", () => {
+    type AppError = { kind: "parse" } | { kind: "io" };
+    const failure = err<AppError>({ kind: "io" });
+    const asyncFailure = errAsync<AppError>({ kind: "io" });
+    expectType<TypeEqual<typeof failure, Result<never, AppError>>>(true);
+    expectType<TypeEqual<typeof asyncFailure, ResultAsync<never, AppError>>>(true);
+  });
+
+  it("both type arguments keep neverthrow's T, E order and opt out of locking", () => {
+    const value = ok<number, string>(1);
+    const failure = err<number, string>("bad");
+    expectType<TypeEqual<typeof value, Result<number, string>>>(true);
+    expectType<TypeEqual<typeof failure, Result<number, string>>>(true);
   });
 });

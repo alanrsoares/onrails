@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { asyncAfter, fromAsync, fromResult } from "../src/async-lift.js";
+import { asyncAfter, errAsync, fromAsync, fromResult } from "../src/async-lift.js";
 import type { InferErr, InferOk } from "../src/internal/infer.js";
 import { err, ok } from "../src/result.js";
 import type { Result } from "../src/types.js";
@@ -100,5 +100,13 @@ describe("asyncAfter", () => {
       const upstream: Result<number, "bad"> = err("bad");
       expect(await bind(upstream).resolve()).toEqual(err("bad"));
     });
+  });
+});
+
+describe("errAsync type arguments", () => {
+  it("names the error channel from a single type argument", async () => {
+    type AppError = { kind: "parse" } | { kind: "io" };
+    const failure = errAsync<AppError>({ kind: "parse" });
+    expect(await failure.resolve()).toEqual({ _tag: "Err", error: { kind: "parse" } });
   });
 });
