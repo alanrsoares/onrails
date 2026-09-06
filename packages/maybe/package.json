@@ -1,7 +1,7 @@
 {
   "name": "@onrails/maybe",
-  "version": "0.2.3",
-  "description": "Tagged Maybe for expected absence \u2014 pure tagged unions, Result interop, tree-shakeable",
+  "version": "0.2.4",
+  "description": "Tagged Maybe for expected absence — pure tagged unions, Result interop, tree-shakeable",
   "license": "MIT",
   "author": "Alan R. Soares",
   "homepage": "https://alanrsoares.github.io/onrails/modules/_onrails_maybe.html",

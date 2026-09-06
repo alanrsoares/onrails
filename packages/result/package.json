@@ -1,7 +1,7 @@
 {
   "name": "@onrails/result",
-  "version": "0.4.0",
-  "description": "Tagged Result / ResultAsync for railway-oriented TypeScript \u2014 pure tagged unions, neverthrow-shaped compat shim, FL-friendly",
+  "version": "0.4.1",
+  "description": "Tagged Result / ResultAsync for railway-oriented TypeScript — pure tagged unions, neverthrow-shaped compat shim, FL-friendly",
   "license": "MIT",
   "author": "Alan R. Soares",
   "homepage": "https://alanrsoares.github.io/onrails/modules/_onrails_result.html",
