@@ -9,7 +9,7 @@ export type NoneError = { readonly _tag: "None" };
 export const noneError = (): NoneError => ({ _tag: "None" });
 
 const toResultImpl = <T, E>(maybe: Maybe<T>, onNone: () => E): Result<T, E> =>
-  isSome(maybe) ? ok(maybe.value) : err(onNone());
+  isSome(maybe) ? ok<T, E>(maybe.value) : err<T, E>(onNone());
 
 /** Lift absence into a domain error. */
 export const toResult: {
