@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/alanrsoares/onrails/compare/result-v0.4.0...result-v0.4.1) (2026-09-06)
+
+
+### Features
+
+* **result:** lock literals in ok/err and name one default path ([#92](https://github.com/alanrsoares/onrails/issues/92)) ([8437db6](https://github.com/alanrsoares/onrails/commit/8437db6e20abad23632f55cf64ef7dca1ca4579d))
+
 ## [0.4.0](https://github.com/alanrsoares/onrails/compare/result-v0.3.1...result-v0.4.0) (2026-07-04)
 
 

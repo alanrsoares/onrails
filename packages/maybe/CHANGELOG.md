@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.4](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.3...maybe-v0.2.4) (2026-09-06)
+
+
+### Features
+
+* **result:** lock literals in ok/err and name one default path ([#92](https://github.com/alanrsoares/onrails/issues/92)) ([8437db6](https://github.com/alanrsoares/onrails/commit/8437db6e20abad23632f55cf64ef7dca1ca4579d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.4.1
+  * peerDependencies
+    * @onrails/result bumped to 0.4.1
+
 ## [0.2.3](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.2...maybe-v0.2.3) (2026-07-04)
 
 
