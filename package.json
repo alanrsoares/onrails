@@ -38,6 +38,7 @@
     "build:dependents": "bun run --filter '@onrails/maybe' --filter '@onrails/pattern' --filter '@onrails/twoslash' build && bun run --filter '@onrails/docgen' build",
     "clean": "bun run --filter './packages/*' clean",
     "check:packaging": "bun run scripts/check-packaging.ts",
+    "publish:packages": "bun run scripts/publish.ts",
     "lint": "biome check . --error-on-warnings",
     "lint:fix": "biome check --write . --error-on-warnings",
     "format": "biome format --write .",
