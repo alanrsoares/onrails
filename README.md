@@ -51,7 +51,7 @@ import { fromAsync, isOk, ok, err } from "@onrails/result";
 
 const fetchUser = fromAsync(async () => {
   const res = await fetch("/api/user");
-  return res.ok ? ok(await res.json()) : err({ kind: "http" as const, status: res.status });
+  return res.ok ? ok(await res.json()) : err({ kind: "http", status: res.status });
 });
 
 const r = await fetchUser();   // bare tagged Result

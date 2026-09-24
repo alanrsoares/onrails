@@ -21,7 +21,7 @@ import * as R from "@onrails/result";
 const result = R.pipe(
   R.ok(7),
   R.map((n) => n * 2),
-  R.flatMap((n) => (n < 100 ? R.ok(n) : R.err("too big" as const))),
+  R.flatMap((n) => (n < 100 ? R.ok(n) : R.err("too big"))),
 ); // Result<number, "too big">
 
 result;
@@ -73,7 +73,7 @@ import { flow, map, flatMap, ok, err } from "@onrails/result";
 // curried form composes point-free — value supplied later
 const validate = flow(
   map((n: number) => n + 1),
-  flatMap((n) => (n > 0 ? ok(n) : err("non-positive" as const))),
+  flatMap((n) => (n > 0 ? ok(n) : err("non-positive"))),
 );
 
 const checked = validate(ok(41));

@@ -1,6 +1,6 @@
 import { mkErr, mkOk } from "./internal/ctor.js";
 import { dual } from "./internal/dual.js";
-import type { Locked } from "./internal/lock.js";
+import type { Payload } from "./internal/payload.js";
 import { toError } from "./internal/to-error.js";
 import type { Err, Ok, Result } from "./types.js";
 
@@ -13,20 +13,20 @@ export type { Err, Ok, Result } from "./types.js";
  * ```ts
  * const r = ok(42);                          // Result<42, never> — literal locked
  * const typed: Result<number, "parse"> = ok(1);
- * const lift = <T, E>(v: T): Result<T, E> => ok<T, E>(v);  // explicit args opt out
+ * const lift = <T, E>(v: T): Result<T, E> => ok(v);         // generic T passes through
  * ```
  *
  * @remarks
  * An inline literal keeps its narrow type instead of widening (`ok("a")` is
- * `Result<"a", never>`, not `Result<string, never>`). Pass both type arguments
- * to opt out — generic code that must produce `Result<T, E>` for an unresolved
- * `T` needs that form.
+ * `Result<"a", never>`, not `Result<string, never>`), and an array literal
+ * stays a mutable tuple (`ok([1, 2])` satisfies `Result<number[], E>`). A
+ * generic `T` always comes back as `T`. Passing both type arguments opts out
+ * of locking entirely.
  */
-export function ok<const T>(value: T): Result<Locked<T>, never>;
+export function ok<const T extends Payload[]>(value: T): Result<T, never>;
+export function ok<const T>(value: T): Result<T, never>;
 export function ok<T, E>(value: T): Result<T, E>;
 export function ok<T>(value: T): Result<T, never> {
-  // Safe: `Locked<T>` only unwraps the readonly tuple that `const` inference
-  // adds; the runtime payload is the value the caller passed, unchanged.
   return mkOk(value);
 }
 
@@ -57,14 +57,13 @@ export const of = ok;
  * @remarks
  * One explicit type argument names the **error** channel, which is what the
  * call site almost always means. Both channels still take neverthrow's `T, E`
- * order, and that two-argument form is also the escape hatch for generic code:
- * inference-driven calls lock literals, so a generic `E` must be passed
- * explicitly to keep the error type from being rewritten.
+ * order. Inference locks literals the same way as {@link ok}, and a generic
+ * `E` always comes back as `E`.
  */
-export function err<const E>(error: E): Result<never, Locked<E>>;
+export function err<const E extends Payload[]>(error: E): Result<never, E>;
+export function err<const E>(error: E): Result<never, E>;
 export function err<T, E>(error: E): Result<T, E>;
 export function err<E>(error: E): Result<never, E> {
-  // Safe: see the note on `ok` — `Locked` is a type-level unwrap only.
   return mkErr(error);
 }
 

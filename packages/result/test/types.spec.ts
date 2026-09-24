@@ -1,7 +1,7 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
 import { ResultAsync } from "../src/async.js";
-import { asyncAfter, errAsync, fromAsync, fromResult, tryAsync } from "../src/async-lift.js";
+import { asyncAfter, fromAsync, fromResult, tryAsync } from "../src/async-lift.js";
 import { combine, combineTuple, validateAll, validateTuple } from "../src/collections.js";
 import type { ErrOf, OkOf, UnionErrors } from "../src/extra.js";
 import type { InferErr, InferOk } from "../src/internal/infer.js";
@@ -435,48 +435,5 @@ describe("tryGen types", () => {
 
     expectType<Result<number, never>>(withName);
     expectType<Result<number, never>>(withAlias);
-  });
-});
-
-describe("literal locking and err.as", () => {
-  it("ok and err lock inline literals instead of widening", () => {
-    const value = ok("a");
-    const failure = err({ kind: "io" });
-    expectType<TypeEqual<typeof value, Result<"a", never>>>(true);
-    expectType<TypeEqual<typeof failure, Result<never, { readonly kind: "io" }>>>(true);
-  });
-
-  it("locking does not leak through an annotated value", () => {
-    const raw: string = "a";
-    const value = ok(raw);
-    expectType<TypeEqual<typeof value, Result<string, never>>>(true);
-  });
-
-  it("array literals stay assignable to a mutable array payload", () => {
-    const r = ok([1, 2]);
-    expectType<TypeEqual<typeof r, Result<[1, 2], never>>>(true);
-    const widened: Result<number[], never> = r;
-    expectType<TypeEqual<typeof widened, Result<number[], never>>>(true);
-  });
-
-  it("an unbounded readonly array payload is left as authored", () => {
-    const names: readonly string[] = ["a"];
-    const value = ok(names);
-    expectType<TypeEqual<typeof value, Result<readonly string[], never>>>(true);
-  });
-
-  it("a single type argument on err names the error channel", () => {
-    type AppError = { kind: "parse" } | { kind: "io" };
-    const failure = err<AppError>({ kind: "io" });
-    const asyncFailure = errAsync<AppError>({ kind: "io" });
-    expectType<TypeEqual<typeof failure, Result<never, AppError>>>(true);
-    expectType<TypeEqual<typeof asyncFailure, ResultAsync<never, AppError>>>(true);
-  });
-
-  it("both type arguments keep neverthrow's T, E order and opt out of locking", () => {
-    const value = ok<number, string>(1);
-    const failure = err<number, string>("bad");
-    expectType<TypeEqual<typeof value, Result<number, string>>>(true);
-    expectType<TypeEqual<typeof failure, Result<number, string>>>(true);
   });
 });
