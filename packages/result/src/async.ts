@@ -1,6 +1,6 @@
 import { mkErr, mkOk } from "./internal/ctor.js";
 import type { InferErr, InferOk } from "./internal/infer.js";
-import type { Locked } from "./internal/lock.js";
+import type { Payload } from "./internal/payload.js";
 import { bimap, isErr, map, mapErr } from "./result.js";
 import type { Result } from "./types.js";
 import { UnexpectedError } from "./types.js";
@@ -142,7 +142,8 @@ export class ResultAsync<T, E> {
    * const r = ResultAsync.ok(42);   // ResultAsync<number, never>
    * ```
    */
-  static ok<const T>(value: T): ResultAsync<Locked<T>, never>;
+  static ok<const T extends Payload[]>(value: T): ResultAsync<T, never>;
+  static ok<const T>(value: T): ResultAsync<T, never>;
   static ok<T, E>(value: T): ResultAsync<T, E>;
   static ok<T, E = never>(value: T): ResultAsync<T, E> {
     return new ResultAsync(async () => mkOk(value));
@@ -152,7 +153,8 @@ export class ResultAsync<T, E> {
    * Fantasy Land `pure` — alias of {@link ResultAsync.ok}. One lift name
    * shared across the trio (`of` / `Maybe.of` / `ResultAsync.of`).
    */
-  static of<const T>(value: T): ResultAsync<Locked<T>, never>;
+  static of<const T extends Payload[]>(value: T): ResultAsync<T, never>;
+  static of<const T>(value: T): ResultAsync<T, never>;
   static of<T, E>(value: T): ResultAsync<T, E>;
   static of<T, E = never>(value: T): ResultAsync<T, E> {
     return ResultAsync.ok<T, E>(value);
@@ -166,7 +168,8 @@ export class ResultAsync<T, E> {
    * const r = ResultAsync.err({ kind: "not_found" as const });
    * ```
    */
-  static err<const E>(error: E): ResultAsync<never, Locked<E>>;
+  static err<const E extends Payload[]>(error: E): ResultAsync<never, E>;
+  static err<const E>(error: E): ResultAsync<never, E>;
   static err<T, E>(error: E): ResultAsync<T, E>;
   static err<T = never, E = unknown>(error: E): ResultAsync<T, E> {
     return new ResultAsync(async () => mkErr(error));

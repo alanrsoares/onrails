@@ -139,13 +139,19 @@ err({ kind: "not_found", id });   // Result<never, { readonly kind: "not_found";
 ok("ready");                      // Result<"ready", never>
 ```
 
-Locking is inference-only — a value that already has a type is left alone (`ok(name)` where `name: string` is still `Result<string, never>`), and an array literal payload stays assignable to a mutable array (`ok([1, 2])` satisfies `Result<number[], E>`).
+Locking is inference-only — a value that already has a type is left alone (`ok(name)` where `name: string` is still `Result<string, never>`), and an array literal payload stays assignable to a mutable array at every depth (`ok([1, 2])` satisfies `Result<number[], E>`).
 
-Pass **both** type arguments to opt out. Generic code that has to produce `Result<T, E>` for an unresolved `T` needs that form:
+Generic code needs no type arguments — an unresolved `T` passes through unchanged, whatever its constraint:
 
 ```ts
-const lift = <T, E>(value: T): Result<T, E> => ok<T, E>(value);
+const lift = <T, E>(value: T): Result<T, E> => ok(value);
+const toAsync = <T, E>(r: Result<T, E>): ResultAsync<T, E> =>
+  isErr(r) ? errAsync(r.error) : okAsync(r.value);
 ```
+
+Passing **both** type arguments (`ok<T, E>(value)`) opts out of locking.
+
+Array-literal locking needs TypeScript ≥ 5.3. Older compilers widen array literals (`ok([1, 2])` is `Result<number[], never>`) and lock every other literal as usual.
 
 ### Naming the error channel
 
@@ -352,12 +358,9 @@ Both cap at **12 steps**. That cap is deliberate: a single recursive variadic si
 
 ### `ok` / `err` lock inline literals
 
-Inline literals no longer widen: `ok("a")` is `Result<"a", never>` and `err({ kind: "io" })` carries `{ readonly kind: "io" }`. Annotated values are unaffected. Two call shapes need a change:
+Inline literals no longer widen: `ok("a")` is `Result<"a", never>` and `err({ kind: "io" })` carries `{ readonly kind: "io" }`. Annotated values and generic type parameters are unaffected. One call shape needs a change:
 
 ```ts
-// generic code — pass both type arguments to opt out of locking
-const lift = <T, E>(value: T): Result<T, E> => ok<T, E>(value);
-
 // a type-level assertion that expected the widened type
 expectType<TypeEqual<typeof ok(1), Result<number, never>>>(true);  // before
 expectType<TypeEqual<typeof value, Result<1, never>>>(true);       // after
