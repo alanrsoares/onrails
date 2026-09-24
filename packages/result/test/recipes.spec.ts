@@ -287,10 +287,10 @@ type CharsError = { kind: "chars"; bad: string };
 type TooShortError = { kind: "too_short"; min: number };
 
 const requireMin = (min: number) => (s: string) =>
-  s.length >= min ? ok(s) : err({ kind: "len" as const, min });
+  s.length >= min ? ok(s) : err({ kind: "len", min });
 
 const requireAscii = (s: string) =>
-  /^[\x20-\x7e]*$/.test(s) ? ok(s) : err({ kind: "chars" as const, bad: s });
+  /^[\x20-\x7e]*$/.test(s) ? ok(s) : err({ kind: "chars", bad: s });
 
 const validateUsername = flow(
   (raw: string) => ok(raw.trim()),
@@ -298,7 +298,7 @@ const validateUsername = flow(
   flatMap(requireAscii),
   recover(
     (e): Result<string, TooShortError | CharsError> =>
-      e.kind === "len" ? err({ kind: "too_short" as const, min: e.min }) : err(e),
+      e.kind === "len" ? err({ kind: "too_short", min: e.min }) : err(e),
   ),
 );
 

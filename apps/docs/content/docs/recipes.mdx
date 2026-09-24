@@ -45,14 +45,14 @@ declare const raw: string;
 const name = R.pipe(
   parseConfig(raw), // Result<Config, ParseError>
   R.map((cfg) => cfg.name),
-  R.flatMap((n) => (n ? R.ok(n) : R.err({ kind: "empty" as const }))),
+  R.flatMap((n) => (n ? R.ok(n) : R.err({ kind: "empty" }))),
 );
 
 // flow — define a reusable point-free function (no value yet)
 const parseName = R.flow(
   parseConfig,
   R.map((cfg) => cfg.name),
-  R.flatMap((n) => (n ? R.ok(n) : R.err({ kind: "empty" as const }))),
+  R.flatMap((n) => (n ? R.ok(n) : R.err({ kind: "empty" }))),
 );
 
 parseName(raw);
@@ -87,7 +87,7 @@ type CheckoutError = CartError | UserError | { kind: "inactive" };
 const checkout: Result<{ items: number; owner: string }, CheckoutError> = tryGen(() => {
   const cart = $(loadCart(userId)); // unwrap, or short-circuit with CartError
   const user = $(loadUser(userId)); // unwrap, or short-circuit with UserError
-  if (!user.active) return err({ kind: "inactive" as const });
+  if (!user.active) return err({ kind: "inactive" });
   return ok({ items: cart.items.length, owner: user.name });
 });
 ```
