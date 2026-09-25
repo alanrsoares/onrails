@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/alanrsoares/onrails/compare/result-v0.4.1...result-v0.4.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* **result:** pass generic T through ok/err ([#95](https://github.com/alanrsoares/onrails/issues/95)) ([83043ed](https://github.com/alanrsoares/onrails/commit/83043ed5c0b7a304b0256419ba6d75f8d3d2fb3e))
+
 ## [0.4.1](https://github.com/alanrsoares/onrails/compare/result-v0.4.0...result-v0.4.1) (2026-09-06)
 
 
