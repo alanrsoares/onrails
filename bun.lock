@@ -67,7 +67,7 @@
     },
     "packages/codemod": {
       "name": "@onrails/codemod",
-      "version": "0.2.6",
+      "version": "0.2.8",
       "bin": {
         "onrails-codemod-neverthrow": "./src/index.ts",
       },
@@ -81,7 +81,7 @@
     },
     "packages/docgen": {
       "name": "@onrails/docgen",
-      "version": "1.1.3",
+      "version": "1.1.5",
       "dependencies": {
         "@onrails/pattern": "workspace:^",
         "@onrails/result": "workspace:^",
@@ -118,7 +118,7 @@
     },
     "packages/maybe": {
       "name": "@onrails/maybe",
-      "version": "0.2.3",
+      "version": "0.2.5",
       "devDependencies": {
         "@onrails/result": "workspace:*",
         "fast-check": "catalog:",
@@ -134,7 +134,7 @@
     },
     "packages/pattern": {
       "name": "@onrails/pattern",
-      "version": "0.3.3",
+      "version": "0.3.5",
       "devDependencies": {
         "@onrails/result": "workspace:*",
         "ts-expect": "catalog:",
@@ -143,7 +143,7 @@
     },
     "packages/result": {
       "name": "@onrails/result",
-      "version": "0.4.0",
+      "version": "0.4.2",
       "devDependencies": {
         "fast-check": "catalog:",
         "ts-expect": "catalog:",
