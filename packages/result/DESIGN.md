@@ -102,7 +102,7 @@ Use `flatMap` for dependent checks where later checks need earlier successful va
 
 ## v1.0 gate
 
-- bun tests: core ops, FL functor/monad laws (sync), neverthrow-compat fixtures.
+- bun tests: core ops, functor/monad/error-functor laws on `Result` and `ResultAsync` (`test/result.laws.spec.ts`), JSON and `structuredClone` round-trips, and a neverthrow differential (`test/neverthrow-diff.spec.ts`): a surface diff against the installed package plus randomised op chains run through both libraries.
 - README with tagged-error guidance.
 - **Not** in v1.0: npm publish.
 
