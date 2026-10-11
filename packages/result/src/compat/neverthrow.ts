@@ -20,6 +20,11 @@ type AsyncTupleErr<R extends readonly CompatResultAsync<unknown, unknown>[]> = {
   [K in keyof R]: R[K] extends CompatResultAsync<unknown, infer F> ? F : never;
 }[number];
 
+/** Narrowed by {@link CompatResult.isOk} — exposes `value`. */
+export type CompatOk<T, E> = CompatResult<T, E> & { readonly value: T };
+/** Narrowed by {@link CompatResult.isErr} — exposes `error`. */
+export type CompatErr<T, E> = CompatResult<T, E> & { readonly error: E };
+
 export class CompatResult<T, E> {
   constructor(readonly inner: ResultType<T, E>) {}
 
@@ -39,19 +44,11 @@ export class CompatResult<T, E> {
     );
   }
 
-  get value(): T {
-    return this._unsafeUnwrap();
-  }
-
-  get error(): E {
-    return this._unsafeUnwrapErr();
-  }
-
-  isOk(): boolean {
+  isOk(): this is CompatOk<T, E> {
     return isOk(this.inner);
   }
 
-  isErr(): boolean {
+  isErr(): this is CompatErr<T, E> {
     return isErr(this.inner);
   }
 
@@ -108,6 +105,19 @@ export type Result<T, E> = CompatResult<T, E>;
 export const ok = <T, E = never>(value: T): CompatResult<T, E> => new CompatResult(coreOk(value));
 export const err = <T = never, E = unknown>(error: E): CompatResult<T, E> =>
   new CompatResult(coreErr(error));
+
+// `value` / `error` are installed on the prototype rather than declared in the class body so the
+// plain `CompatResult` type hides them until `isOk()` / `isErr()` narrows, as with neverthrow.
+Object.defineProperty(CompatResult.prototype, "value", {
+  get(this: CompatResult<unknown, unknown>) {
+    return this._unsafeUnwrap();
+  },
+});
+Object.defineProperty(CompatResult.prototype, "error", {
+  get(this: CompatResult<unknown, unknown>) {
+    return this._unsafeUnwrapErr();
+  },
+});
 
 /** `await` yields `CompatResult` so `.isOk()` / `.value` / `.match()` work without `.resolve()`. */
 export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> {
