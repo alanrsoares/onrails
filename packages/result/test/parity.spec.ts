@@ -68,7 +68,7 @@ const TABLE: readonly Row[] = [
     core: "tap",
     asyncFn: "tap",
     fluent: ["tap"],
-    compatSync: [],
+    compatSync: ["andTee"],
     compatAsync: ["andTee"],
   },
   {
@@ -76,7 +76,7 @@ const TABLE: readonly Row[] = [
     core: "tapErr",
     asyncFn: "tapErr",
     fluent: ["tapErr"],
-    compatSync: [],
+    compatSync: ["orTee"],
     compatAsync: ["orTee"],
   },
   {
@@ -169,8 +169,9 @@ const TABLE: readonly Row[] = [
 // compat members that exist ONLY to mirror neverthrow or bridge to core —
 // intentional, not drift
 const COMPAT_ONLY = {
-  sync: ["value", "error"], // throwing getters, neverthrow conformance
-  async: ["toCore", "then"], // core bridge + thenable protocol
+  // throwing getters + neverthrow-only operations with no core twin (safeUnwrap feeds safeTry)
+  sync: ["value", "error", "andThrough", "asyncAndThrough", "asyncMap", "safeUnwrap"],
+  async: ["toCore", "then", "andThrough", "safeUnwrap"], // core bridge + thenable protocol + nt-only ops
 } as const;
 
 // data-carrier prop on the fluent wrapper, not an operation
