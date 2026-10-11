@@ -466,19 +466,3 @@ export const fromSafePromise = CompatResultAsync.fromSafePromise;
 
 export const fromThrowable = CompatResult.fromThrowable;
 export const fromAsyncThrowable = CompatResultAsync.fromThrowable;
-
-export default {
-  Result: CompatResult,
-  ResultAsync: CompatResultAsync,
-  Ok,
-  Err,
-  ok,
-  err,
-  okAsync,
-  errAsync,
-  fromPromise,
-  fromSafePromise,
-  fromThrowable,
-  fromAsyncThrowable,
-  safeTry,
-};

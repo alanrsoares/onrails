@@ -14,7 +14,12 @@ const missing = (reference: object, candidate: object): string[] => {
 };
 
 const surfaces = [
-  { label: "module exports", missing: () => missing(nt, shim) },
+  // neverthrow's `default` bundle is skipped on purpose: a default export next to the named ones
+  // changes how CJS consumers resolve the shim (tsup warns), and every member is also named.
+  {
+    label: "module exports",
+    missing: () => missing(nt, shim).filter((name) => name !== "default"),
+  },
   {
     label: "Ok/Err instance members",
     missing: () => missing(Object.getPrototypeOf(nt.ok(1)), Object.getPrototypeOf(shim.ok(1))),
