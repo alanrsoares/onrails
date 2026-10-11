@@ -140,6 +140,7 @@
   },
   "devDependencies": {
     "fast-check": "catalog:",
+    "neverthrow": "^8.2.0",
     "ts-expect": "catalog:",
     "tsup": "catalog:"
   }
