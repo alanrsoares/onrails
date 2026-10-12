@@ -35,6 +35,18 @@ describe("match: basic patterns", () => {
       .exhaustive();
     expect(out).toBe("x");
   });
+
+  it("matches multi-key object patterns", () => {
+    type Point = { readonly x: number; readonly y: number };
+    const label = (p: Point) =>
+      match(p)
+        .with({ x: 0, y: 0 }, () => "origin")
+        .with({ x: 1, y: 0 }, () => "unit-x")
+        .otherwise(() => "other");
+    expect(label({ x: 0, y: 0 })).toBe("origin");
+    expect(label({ x: 1, y: 0 })).toBe("unit-x");
+    expect(label({ x: 1, y: 1 })).toBe("other");
+  });
 });
 
 describe("match: multi-pattern sugar", () => {

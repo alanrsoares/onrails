@@ -5,7 +5,7 @@
 
 ## Environment
 
-- date: 2026-10-12T02:14:35.611Z
+- date: 2026-10-12T02:25:26.960Z
 - bun: 1.4.2
 - platform: darwin/arm64
 
@@ -21,61 +21,65 @@
 
 | benchmark | avg |
 |---|---:|
-| `core.ok` | 3.53 ns |
-| `nt.ok` | 2.39 ns |
-| `compat.ok` | 5.68 ns |
-| `core.err` | 3.70 ns |
-| `nt.err` | 3.29 ns |
-| `compat.err` | 8.62 ns |
-| `core.map×1` | 10.54 ns |
-| `nt.map×1` | 9.06 ns |
-| `compat.map×1` | 13.51 ns |
-| `core.map×5` | 24.30 ns |
-| `nt.map×5` | 22.28 ns |
-| `compat.map×5` | 38.01 ns |
-| `core.map×20` | 81.82 ns |
-| `nt.map×20` | 75.19 ns |
-| `compat.map×20` | 115.20 ns |
-| `core.flatMap×1` | 12.64 ns |
-| `nt.andThen×1` | 8.09 ns |
-| `compat.andThen×1` | 19.65 ns |
-| `core.flatMap×5` | 32.16 ns |
-| `nt.andThen×5` | 19.67 ns |
-| `compat.andThen×5` | 70.94 ns |
-| `core.flatMap×20` | 114.21 ns |
-| `nt.andThen×20` | 77.78 ns |
-| `compat.andThen×20` | 292.26 ns |
-| `core.match.ok` | 2.31 ns |
-| `nt.match.ok` | 2.06 ns |
-| `compat.match.ok` | 3.04 ns |
-| `core.match.err` | 2.11 ns |
-| `nt.match.err` | 2.04 ns |
-| `compat.match.err` | 3.51 ns |
-| `core.combine×4` | 14.23 ns |
-| `nt.combine×4` | 26.61 ns |
-| `compat.combine×4` | 25.39 ns |
-| `core.combine×16` | 61.98 ns |
-| `nt.combine×16` | 102.64 ns |
-| `compat.combine×16` | 94.16 ns |
-| `core.async.chain` | 301.09 ns |
-| `nt.async.chain` | 426.13 ns |
-| `compat.async.chain` | 326.01 ns |
-| `pattern.disc4.first` | 114.82 ns |
-| `tsp.disc4.first` | 63.23 ns |
-| `pattern.disc4.mid` | 105.02 ns |
-| `tsp.disc4.mid` | 112.77 ns |
-| `pattern.disc4.last` | 111.84 ns |
-| `tsp.disc4.last` | 146.35 ns |
-| `pattern.disc8.last` | 194.08 ns |
-| `tsp.disc8.last` | 278.79 ns |
-| `pattern.literal` | 73.54 ns |
-| `tsp.literal` | 57.16 ns |
-| `pattern.when` | 40.64 ns |
-| `tsp.when` | 73.70 ns |
-| `pattern.matchTag.ok` | 3.21 ns |
-| `tsp.matchTag.ok` | 56.84 ns |
-| `pattern.matchTag.err` | 3.53 ns |
-| `tsp.matchTag.err` | 98.13 ns |
+| `core.ok` | 4.08 ns |
+| `nt.ok` | 2.59 ns |
+| `compat.ok` | 6.23 ns |
+| `core.err` | 4.01 ns |
+| `nt.err` | 3.26 ns |
+| `compat.err` | 6.66 ns |
+| `core.map×1` | 8.23 ns |
+| `nt.map×1` | 7.29 ns |
+| `compat.map×1` | 11.72 ns |
+| `core.map×5` | 21.89 ns |
+| `nt.map×5` | 21.36 ns |
+| `compat.map×5` | 36.39 ns |
+| `core.map×20` | 82.54 ns |
+| `nt.map×20` | 76.40 ns |
+| `compat.map×20` | 126.09 ns |
+| `core.flatMap×1` | 10.61 ns |
+| `nt.andThen×1` | 7.59 ns |
+| `compat.andThen×1` | 19.09 ns |
+| `core.flatMap×5` | 30.48 ns |
+| `nt.andThen×5` | 20.35 ns |
+| `compat.andThen×5` | 70.50 ns |
+| `core.flatMap×20` | 108.23 ns |
+| `nt.andThen×20` | 74.19 ns |
+| `compat.andThen×20` | 264.98 ns |
+| `core.match.ok` | 2.20 ns |
+| `nt.match.ok` | 1.70 ns |
+| `compat.match.ok` | 2.30 ns |
+| `core.match.err` | 2.24 ns |
+| `nt.match.err` | 3.02 ns |
+| `compat.match.err` | 4.12 ns |
+| `core.combine×4` | 15.19 ns |
+| `nt.combine×4` | 26.62 ns |
+| `compat.combine×4` | 25.36 ns |
+| `core.combine×16` | 62.56 ns |
+| `nt.combine×16` | 100.89 ns |
+| `compat.combine×16` | 91.33 ns |
+| `core.async.chain` | 290.59 ns |
+| `nt.async.chain` | 412.24 ns |
+| `compat.async.chain` | 316.02 ns |
+| `pattern.disc4.first` | 91.76 ns |
+| `tsp.disc4.first` | 64.39 ns |
+| `pattern.disc4.first.hoisted` | 5.15 ns |
+| `pattern.disc4.mid` | 89.90 ns |
+| `tsp.disc4.mid` | 128.62 ns |
+| `pattern.disc4.mid.hoisted` | 14.22 ns |
+| `pattern.disc4.last` | 75.67 ns |
+| `tsp.disc4.last` | 145.84 ns |
+| `pattern.disc4.last.hoisted` | 17.20 ns |
+| `pattern.disc8.last` | 152.10 ns |
+| `tsp.disc8.last` | 279.81 ns |
+| `pattern.literal` | 48.36 ns |
+| `tsp.literal` | 56.09 ns |
+| `pattern.literal.hoisted` | 10.38 ns |
+| `pattern.when` | 21.85 ns |
+| `tsp.when` | 74.18 ns |
+| `pattern.matchTag.ok` | 4.70 ns |
+| `tsp.matchTag.ok` | 58.26 ns |
+| `pattern.matchTag.err` | 4.94 ns |
+| `tsp.matchTag.err` | 99.77 ns |
 
 ## Bundle (fair import graphs)
 
@@ -83,7 +87,7 @@ Headline metric is **minify+gzip**. These are sizes of the listed import graphs,
 
 | import graph | minify | minify+gzip |
 |---|---:|---:|
-| `result-onrails` | 3,633 B | 1,095 B |
+| `result-onrails` | 3,609 B | 1,080 B |
 | `result-neverthrow` | 6,797 B | 2,030 B |
-| `pattern-onrails` | 1,549 B | 745 B |
+| `pattern-onrails` | 1,772 B | 827 B |
 | `pattern-ts-pattern` | 8,470 B | 2,805 B |

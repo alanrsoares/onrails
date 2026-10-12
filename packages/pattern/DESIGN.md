@@ -9,6 +9,10 @@ Lightweight matching for **owned** tagged unions and finite domain states. Inspi
 - **`matchTag`** for `_tag` unions (`Ok` / `Err`, `Some` / `None`, domain ADTs)
 - No `P.*` wildcard zoo in v1 — use `when(guard)` or `matchTag`
 
+## Builder lifetime
+
+`MatchBuilder` is **linear-only**: each `.with` / `.withOneOf` / `.returnType` mutates the same case list in place. Do not fork an intermediate builder into two chains — share a hoisted curried matcher or build two full matchers instead. Patterns are compiled once at `.with` time (single-key discriminants skip per-test `Object.keys`).
+
 ## Handler narrowing
 
 `.with(pattern, handler)` narrows the handler's input via `Narrow<T, P>`:

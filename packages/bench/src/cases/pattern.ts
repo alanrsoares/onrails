@@ -66,14 +66,24 @@ const foldEightTsp = (v: Eight): number =>
     .with({ type: "h" }, (x) => x.n)
     .exhaustive();
 
+const foldFourOnrailsHoisted = match<Four>()
+  .with({ type: "a" }, (x) => x.n + 1)
+  .with({ type: "b" }, (x) => x.n + 2)
+  .with({ type: "c" }, (x) => x.n + 3)
+  .with({ type: "d" }, (x) => x.n + 4)
+  .exhaustive();
+
 const registerDisc = (): void => {
   group("pattern-disc", () => {
     bench("pattern.disc4.first", () => blackbox(foldFourOnrails(fourFirst)));
     bench("tsp.disc4.first", () => blackbox(foldFourTsp(fourFirst)));
+    bench("pattern.disc4.first.hoisted", () => blackbox(foldFourOnrailsHoisted(fourFirst)));
     bench("pattern.disc4.mid", () => blackbox(foldFourOnrails(fourMid)));
     bench("tsp.disc4.mid", () => blackbox(foldFourTsp(fourMid)));
+    bench("pattern.disc4.mid.hoisted", () => blackbox(foldFourOnrailsHoisted(fourMid)));
     bench("pattern.disc4.last", () => blackbox(foldFourOnrails(fourLast)));
     bench("tsp.disc4.last", () => blackbox(foldFourTsp(fourLast)));
+    bench("pattern.disc4.last.hoisted", () => blackbox(foldFourOnrailsHoisted(fourLast)));
     bench("pattern.disc8.last", () => blackbox(foldEightOnrails(eightLast)));
     bench("tsp.disc8.last", () => blackbox(foldEightTsp(eightLast)));
   });
@@ -95,12 +105,19 @@ const foldLitTsp = (s: Lit): number =>
     .with("done", () => 2)
     .exhaustive();
 
+const foldLitOnrailsHoisted = match<Lit>()
+  .with("idle", () => 0)
+  .with("running", () => 1)
+  .with("done", () => 2)
+  .exhaustive();
+
 const lit: Lit = "running";
 
 const registerLiteral = (): void => {
   group("pattern-literal", () => {
     bench("pattern.literal", () => blackbox(foldLitOnrails(lit)));
     bench("tsp.literal", () => blackbox(foldLitTsp(lit)));
+    bench("pattern.literal.hoisted", () => blackbox(foldLitOnrailsHoisted(lit)));
   });
 };
 
