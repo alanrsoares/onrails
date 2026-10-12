@@ -18,7 +18,8 @@ Reference the rule files in `biome.json` plugins:
     "./node_modules/@onrails/biome-plugin/rules/no-promise-result.grit",
     "./node_modules/@onrails/biome-plugin/rules/no-unsafe-unwrap.grit",
     "./node_modules/@onrails/biome-plugin/rules/no-deprecated-synonyms.grit",
-    "./node_modules/@onrails/biome-plugin/rules/fluent-stays-local.grit"
+    "./node_modules/@onrails/biome-plugin/rules/fluent-stays-local.grit",
+    "./node_modules/@onrails/biome-plugin/rules/carrier-sinks-need-from.grit"
   ]
 }
 ```
@@ -31,6 +32,7 @@ Reference the rule files in `biome.json` plugins:
 | `no-unsafe-unwrap`  | `._unsafeUnwrap()` / `._unsafeUnwrapErr()` calls — use `match` / `resolve` / `yieldResult` instead (error) |
 | `no-deprecated-synonyms` | Deprecated synonyms (`chain`, `fold`, `getOrElse`, `of`, …) — use the canonical names (error, partly fixable) |
 | `fluent-stays-local` | Bare `FluentResult<…>` / `FluentMaybe<…>` type references — broader net than the ESLint rule, see `ENGINE_DIVERGENCES` (error) |
+| `carrier-sinks-need-from` | `JSON.parse` / `structuredClone` / `.json()` output cast to `Result<…>` / `Maybe<…>` without `Result.from` / `Maybe.from`; cast form only, see `ENGINE_DIVERGENCES` (error) |
 
 ## Fixes
 

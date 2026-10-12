@@ -40,7 +40,8 @@
     "./rules/no-promise-result.grit": "./rules/no-promise-result.grit",
     "./rules/no-unsafe-unwrap.grit": "./rules/no-unsafe-unwrap.grit",
     "./rules/no-deprecated-synonyms.grit": "./rules/no-deprecated-synonyms.grit",
-    "./rules/fluent-stays-local.grit": "./rules/fluent-stays-local.grit"
+    "./rules/fluent-stays-local.grit": "./rules/fluent-stays-local.grit",
+    "./rules/carrier-sinks-need-from.grit": "./rules/carrier-sinks-need-from.grit"
   },
   "scripts": {
     "typecheck": "echo 'noop (grit files only)'",

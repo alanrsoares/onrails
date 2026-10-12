@@ -30,6 +30,7 @@ const eslintSource = read("../../eslint-plugin/src/index.js");
 const gritUnsafeUnwrap = read("../../biome-plugin/rules/no-unsafe-unwrap.grit");
 const gritDeprecatedSynonyms = read("../../biome-plugin/rules/no-deprecated-synonyms.grit");
 const gritPromiseResult = read("../../biome-plugin/rules/no-promise-result.grit");
+const gritCarrierSinks = read("../../biome-plugin/rules/carrier-sinks-need-from.grit");
 const gritFluentStaysLocal = read("../../biome-plugin/rules/fluent-stays-local.grit");
 const biomePkg = JSON.parse(read("../../biome-plugin/package.json")) as {
   exports: Record<string, string>;
@@ -171,12 +172,48 @@ describe("carrier-sinks-need-from conformance (eslint)", () => {
   });
 });
 
+describe("carrier-sinks-need-from conformance (biome)", () => {
+  it("biome rule header names the rule id", () => {
+    expect(gritCarrierSinks).toContain(CARRIER_SINKS_NEED_FROM_RULE.id);
+  });
+
+  it.each(CARRIER_SINKS_NEED_FROM_RULE.carriers.map((name) => ({ label: name, name })))(
+    "biome flags the $label carrier type",
+    ({ name }) => {
+      expect(gritCarrierSinks).toContain(`as ${name}<`);
+    },
+  );
+
+  it.each(CARRIER_SINKS_NEED_FROM_RULE.sinks.map((name) => ({ label: name, name })))(
+    "biome flags the $label sink",
+    ({ name }) => {
+      expect(gritCarrierSinks).toContain(name.startsWith(".") ? `$_${name}` : name);
+    },
+  );
+
+  it("biome diagnostic carries the spec message verbatim", () => {
+    expect(gritCarrierSinks).toContain(CARRIER_SINKS_NEED_FROM_RULE.message);
+  });
+
+  it("biome's cast-form-only net is declared, not accidental", () => {
+    expect(
+      ENGINE_DIVERGENCES.some(
+        (d) =>
+          d.rule === CARRIER_SINKS_NEED_FROM_RULE.id &&
+          d.engine === "biome" &&
+          d.divergence === "cast-form-only",
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("biome-plugin packaging", () => {
   const ruleIds = [
     NO_PROMISE_RESULT_RULE.id,
     NO_UNSAFE_UNWRAP_RULE.id,
     NO_DEPRECATED_SYNONYMS_RULE.id,
     FLUENT_STAYS_LOCAL_RULE.id,
+    CARRIER_SINKS_NEED_FROM_RULE.id,
   ];
 
   it.each(ruleIds.map((id) => ({ label: id, id })))(
@@ -233,7 +270,7 @@ describe("declared divergences", () => {
   });
 
   it("no undeclared divergences exist in the spec", () => {
-    expect(ENGINE_DIVERGENCES).toHaveLength(3);
+    expect(ENGINE_DIVERGENCES).toHaveLength(4);
   });
 });
 

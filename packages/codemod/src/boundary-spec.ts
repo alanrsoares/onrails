@@ -222,4 +222,14 @@ export const ENGINE_DIVERGENCES: readonly EngineDivergence[] = [
       "cannot express the serialize/postMessage/cache argument heuristic at " +
       "all, since that needs expression-shape traversal, not a type pattern.",
   },
+  {
+    rule: CARRIER_SINKS_NEED_FROM_RULE.id,
+    engine: "biome",
+    divergence: "cast-form-only",
+    detail:
+      "The ESLint rule flags both `JSON.parse(x) as Result<T, E>` and " +
+      "`const r: Result<T, E> = JSON.parse(x)`. GritQL cannot relate a " +
+      "declarator's type annotation to its initializer, so the Biome rule " +
+      "only matches the `as` cast form.",
+  },
 ];
