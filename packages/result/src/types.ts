@@ -68,7 +68,8 @@ export type Result<T, E> = ResultData<T, E> & ResultMethods<T, E>;
  * deserialization sink (`JSON.parse`, `structuredClone`, `postMessage`,
  * IndexedDB, Redux rehydration), where the prototype and its methods are lost
  * while the type still claims them. It trusts the shape; validate untrusted
- * input first.
+ * input first. An unknown `_tag` is a defect and throws a `TypeError` rather
+ * than becoming a silent `Err(undefined)`.
  *
  * @example
  * ```ts
@@ -78,8 +79,11 @@ export type Result<T, E> = ResultData<T, E> & ResultMethods<T, E>;
  * ```
  */
 export const Result = {
-  from: <T, E>(data: ResultData<T, E>): Result<T, E> =>
-    data._tag === "Ok" ? mkOk<T, E>(data.value) : mkErr<T, E>(data.error),
+  from: <T, E>(data: ResultData<T, E>): Result<T, E> => {
+    if (data._tag === "Ok") return mkOk<T, E>(data.value);
+    if (data._tag === "Err") return mkErr<T, E>(data.error);
+    throw new TypeError(`Result.from: unknown _tag ${String((data as { _tag?: unknown })._tag)}`);
+  },
 } as const;
 
 /**
