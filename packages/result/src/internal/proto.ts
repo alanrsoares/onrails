@@ -1,6 +1,13 @@
 import type { Result, ResultMethods } from "../types.js";
 
 /**
+ * `util.inspect` / `Bun.inspect` / `console.log` hook: render `Ok(1)` instead of dumping the class
+ * name and every prototype method. Symbol-keyed, so it adds no enumerable field and JSON is unchanged.
+ */
+const INSPECT = Symbol.for("nodejs.util.inspect.custom");
+type Inspect = (value: unknown, options?: unknown) => string;
+
+/**
  * Live carrier classes. `_tag` and `value` / `error` are own enumerable
  * fields, so JSON and `structuredClone` see plain data; every method lives on
  * the prototype and is therefore non-enumerable.
@@ -16,6 +23,9 @@ class OkImpl<T, E> implements ResultMethods<T, E> {
   constructor(value: T) {
     this._tag = "Ok";
     this.value = value;
+  }
+  [INSPECT](_depth: number, options: unknown, inspect: Inspect): string {
+    return `Ok(${inspect(this.value, options)})`;
   }
   map<U>(fn: (value: T) => U): Result<U, E> {
     return new OkImpl<U, E>(fn(this.value));
@@ -53,6 +63,9 @@ class ErrImpl<T, E> implements ResultMethods<T, E> {
   constructor(error: E) {
     this._tag = "Err";
     this.error = error;
+  }
+  [INSPECT](_depth: number, options: unknown, inspect: Inspect): string {
+    return `Err(${inspect(this.error, options)})`;
   }
   map<U>(_fn: (value: T) => U): Result<U, E> {
     return new ErrImpl<U, E>(this.error);
