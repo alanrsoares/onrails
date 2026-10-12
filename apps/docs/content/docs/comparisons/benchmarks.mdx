@@ -1,0 +1,94 @@
+---
+title: Benchmarks
+description: Microbenchmarks of @onrails/result vs neverthrow and @onrails/pattern vs ts-pattern — method, limits, and a snapshot.
+---
+
+Microbenchmarks live in the private `@onrails/bench` package. They measure
+overlapping call shapes only. They are not application profiles.
+
+Full tables and regenerate instructions:
+[packages/bench/RESULTS.md](https://github.com/alanrsoares/onrails/blob/main/packages/bench/RESULTS.md).
+
+## Method
+
+- **Runtime:** [mitata](https://github.com/evanwashere/mitata) on Bun; sink via
+  `do_not_optimize`. Suites cover construct, `map` / `flatMap` depth, fold,
+  `combine`, a short async chain, and shallow pattern match (rebuild and
+  hoisted).
+- **Bundle:** minify + gzip of a fixed import graph (not whole-package weight).
+- **Lanes:** Result headline is core `@onrails/result` vs neverthrow. The
+  neverthrow-compat shim is measured separately as migration cost. Pattern
+  compares shallow `.with` / `when` / `matchTag` only — no `P.select` or deep
+  wildcards (not in `@onrails/pattern` v1).
+- **Versions** are pinned in `packages/bench/package.json` and recorded in the
+  snapshot header.
+
+Reproduce:
+
+```bash
+bun run build
+bun run bench:md
+```
+
+## Limits
+
+- One machine per snapshot (see RESULTS.md environment). Numbers move across
+  CPUs and Bun versions.
+- Nanosecond ops do not predict I/O-bound or allocation-heavy app paths.
+- Ok-path chains only for sync Result transforms (no mixed Err short-circuit
+  mix).
+- Pattern “rebuild” builds the matcher every call; “hoisted” builds once via
+  curried `match<T>()…exhaustive()`. Both are real usage; do not cite one
+  without the other.
+- Soft CI runs the harness for crashes only — it does not fail when a rival is
+  faster.
+
+## Snapshot (illustrative)
+
+From the committed RESULTS.md (Bun 1.4.2, darwin/arm64,
+`@onrails/result` 0.4.2, `@onrails/pattern` 0.3.5, neverthrow 8.2.0,
+ts-pattern 5.9.0). Prefer the file over this page if they disagree.
+
+### Bundle (minify+gzip of fair import graphs)
+
+| Import graph | minify+gzip |
+| --- | ---: |
+| `@onrails/result` (ok/map/flatMap/match/combine) | 1,080 B |
+| neverthrow (same surface) | 2,030 B |
+| `@onrails/pattern` (match/when/matchTag) | 827 B |
+| ts-pattern (same surface) | 2,805 B |
+
+### Result runtime (avg)
+
+| Case | `@onrails/result` | neverthrow |
+| --- | ---: | ---: |
+| `ok` | 4.1 ns | 2.6 ns |
+| `map` ×20 | 83 ns | 76 ns |
+| `flatMap` / `andThen` ×20 | 108 ns | 74 ns |
+| `combine` ×16 | 63 ns | 101 ns |
+| short `ResultAsync` chain | 291 ns | 412 ns |
+
+Sync map is near parity. neverthrow is ahead on deep `andThen`. onrails is ahead
+on `combine` and the short async chain in this run. Prefer core carriers over
+the compat shim on hot paths after migration.
+
+### Pattern runtime (avg)
+
+| Case | `@onrails/pattern` | ts-pattern |
+| --- | ---: | ---: |
+| disc4 first (rebuild) | 92 ns | 64 ns |
+| disc4 first (hoisted) | 5.2 ns | — |
+| disc4 last (rebuild) | 76 ns | 146 ns |
+| literal (rebuild) | 48 ns | 56 ns |
+| `when` | 22 ns | 74 ns |
+| `matchTag` (Ok) | 4.7 ns | 58 ns |
+
+ts-pattern wins first-branch rebuild in this run. Mid/last discriminant,
+literal, `when`, and especially `matchTag` favor onrails. Hoisted matchers
+remove builder cost; use curried `match<T>()` when the same match runs often.
+
+## Reading the numbers
+
+- Lead with **import-graph size** and API fit, not blanket “faster than X”.
+- For `_tag` ADTs, prefer `matchTag` over a general `match` builder.
+- Compat exists for migration; it is not the performance baseline.

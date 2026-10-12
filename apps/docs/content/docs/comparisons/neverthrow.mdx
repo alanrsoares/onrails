@@ -159,6 +159,14 @@ const parseConfig = (raw: string): Result<Config, ConfigError> =>
   ok(raw).andThen(decode).map(normalize);`}
 />
 
+## Performance
+
+Microbenchmarks (runtime + fair import-graph size) are documented under
+[Benchmarks](/docs/comparisons/benchmarks). Summary for this pairing: smaller
+import graph for a comparable Result surface; sync `map` near parity; neverthrow
+ahead on deep `andThen`; onrails ahead on `combine` and a short async chain in
+the committed snapshot. Prefer core carriers over the compat shim on hot paths.
+
 ## Choose neverthrow when
 
 - You only need `Result`, want the smallest possible surface, and prefer pure
