@@ -61,6 +61,10 @@ describe("prototype core: methods agree with the module functions", () => {
 });
 
 describe("prototype core: serialization boundary", () => {
+  it("Maybe.from rejects an unknown tag instead of inventing a None", () => {
+    expect(() => Maybe.from({ _tag: "Weird" } as never)).toThrow(TypeError);
+  });
+
   it("Maybe.from restores a working carrier from every plain-data route", () => {
     fc.assert(
       fc.property(arbMaybe, arbFn, (m, f) => {
