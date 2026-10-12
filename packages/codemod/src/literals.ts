@@ -1,5 +1,5 @@
 import ts from "typescript6";
-import { splitImportNames, stripInlineType, walkSource } from "./ast.js";
+import { walkSource } from "./ast.js";
 import { NATIVE_SPEC } from "./constants.js";
 
 const MAYBE_SPEC = "@onrails/maybe";
@@ -39,27 +39,66 @@ const tagOf = (props: readonly Prop[]): string | undefined => {
   return raw?.match(/^(["'])(\w+)\1$/)?.[2];
 };
 
-/** Names this file already binds to something other than the onrails exports. */
-const foreignBindings = (sf: ts.SourceFile): ReadonlySet<string> => {
-  const taken = new Set<string>();
-  for (const st of sf.statements) {
-    if (ts.isImportDeclaration(st)) {
-      const spec = ts.isStringLiteral(st.moduleSpecifier) ? st.moduleSpecifier.text : "";
-      if (spec === NATIVE_SPEC || spec === MAYBE_SPEC) continue;
-      const clause = st.importClause;
-      if (clause?.name) taken.add(clause.name.text);
-      const nb = clause?.namedBindings;
-      if (nb && ts.isNamespaceImport(nb)) taken.add(nb.name.text);
-      if (nb && ts.isNamedImports(nb)) for (const el of nb.elements) taken.add(el.name.text);
-    } else if ((ts.isFunctionDeclaration(st) || ts.isClassDeclaration(st)) && st.name) {
-      taken.add(st.name.text);
-    } else if (ts.isVariableStatement(st)) {
-      for (const d of st.declarationList.declarations) {
-        if (ts.isIdentifier(d.name)) taken.add(d.name.text);
-      }
+const bindingNames = (name: ts.BindingName): readonly string[] =>
+  ts.isIdentifier(name)
+    ? [name.text]
+    : name.elements.flatMap((el) => (ts.isOmittedExpression(el) ? [] : bindingNames(el.name)));
+
+const declaredIn = (statements: readonly ts.Statement[]): readonly string[] =>
+  statements.flatMap((st) => {
+    if ((ts.isFunctionDeclaration(st) || ts.isClassDeclaration(st)) && st.name)
+      return [st.name.text];
+    if (ts.isVariableStatement(st)) {
+      return st.declarationList.declarations.flatMap((d) => bindingNames(d.name));
     }
+    return [];
+  });
+
+const importedLocals = (sf: ts.SourceFile): readonly string[] =>
+  sf.statements.flatMap((st) => {
+    if (!ts.isImportDeclaration(st)) return [];
+    const spec = ts.isStringLiteral(st.moduleSpecifier) ? st.moduleSpecifier.text : "";
+    if (spec === NATIVE_SPEC || spec === MAYBE_SPEC) return [];
+    const clause = st.importClause;
+    const nb = clause?.namedBindings;
+    return [
+      ...(clause?.name ? [clause.name.text] : []),
+      ...(nb && ts.isNamespaceImport(nb) ? [nb.name.text] : []),
+      ...(nb && ts.isNamedImports(nb) ? nb.elements.map((el) => el.name.text) : []),
+    ];
+  });
+
+/** Names a single scope-creating node binds for the code inside it. */
+const boundBy = (node: ts.Node): readonly string[] => {
+  if (ts.isSourceFile(node)) return [...importedLocals(node), ...declaredIn(node.statements)];
+  if (ts.isBlock(node) || ts.isModuleBlock(node)) return declaredIn(node.statements);
+  if (ts.isCaseBlock(node)) return declaredIn(node.clauses.flatMap((c) => [...c.statements]));
+  if (ts.isCatchClause(node)) {
+    return node.variableDeclaration ? bindingNames(node.variableDeclaration.name) : [];
   }
-  return taken;
+  if (
+    (ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
+    node.initializer &&
+    ts.isVariableDeclarationList(node.initializer)
+  ) {
+    return node.initializer.declarations.flatMap((d) => bindingNames(d.name));
+  }
+  if (ts.isFunctionLike(node)) {
+    const own =
+      (ts.isFunctionExpression(node) || ts.isClassExpression(node)) && node.name
+        ? [node.name.text]
+        : [];
+    return [...own, ...node.parameters.flatMap((p) => bindingNames(p.name))];
+  }
+  return [];
+};
+
+/** True when `name` resolves to a non-onrails binding at `node` (walks every enclosing scope). */
+const isShadowed = (node: ts.Node, name: string): boolean => {
+  for (let cur: ts.Node | undefined = node.parent; cur; cur = cur.parent) {
+    if (boundBy(cur).includes(name)) return true;
+  }
+  return false;
 };
 
 /** The node to replace: the literal, widened over a trailing `as const` that the call makes redundant. */
@@ -72,16 +111,14 @@ const spanNode = (lit: ts.ObjectLiteralExpression): ts.Node =>
 
 const collectEdits = (src: string, jsx: boolean): readonly LiteralEdit[] => {
   const edits: LiteralEdit[] = [];
-  let taken: ReadonlySet<string> = new Set();
   walkSource(
     src,
     (node, sf) => {
-      if (node === sf) taken = foreignBindings(sf);
       if (!ts.isObjectLiteralExpression(node)) return false;
       const props = readProps(node);
       const tag = props && tagOf(props);
       const shape = tag ? SHAPES[tag] : undefined;
-      if (!props || !shape || taken.has(shape.fn)) return false;
+      if (!props || !shape || (shape && isShadowed(node, shape.fn))) return false;
       const wanted = shape.field === null ? ["_tag"] : ["_tag", shape.field];
       const keys = props.map((p) => p.key);
       if (keys.length !== wanted.length || !wanted.every((k) => keys.includes(k))) return false;
@@ -103,28 +140,36 @@ const collectEdits = (src: string, jsx: boolean): readonly LiteralEdit[] => {
   return edits;
 };
 
+const importName = (el: ts.ImportSpecifier): string => (el.propertyName ?? el.name).text;
+
+/** Merges `names` into the value import of `spec` (found through the parser), or inserts one after any shebang. */
 const addImports = (src: string, spec: string, names: readonly string[]): string => {
   const wanted = [...new Set(names)].sort();
   if (wanted.length === 0) return src;
-  const re = new RegExp(
-    String.raw`import\s+\{\s*([^}]*?)\s*\}\s+from\s+(['"])${spec.replaceAll("/", String.raw`\/`)}\2\s*;?`,
-  );
-  const m = re.exec(src);
-  if (!m) return `import { ${wanted.join(", ")} } from "${spec}";\n${src}`;
-  const merged = [
-    ...new Set([...splitImportNames(m[1] ?? "").map(stripInlineType), ...wanted]),
-  ].sort();
-  const quote = m[2];
-  return `${src.slice(0, m.index)}import { ${merged.join(", ")} } from ${quote}${spec}${quote};${src.slice(m.index + m[0].length)}`;
+  const sf = ts.createSourceFile("codemod.ts", src, ts.ScriptTarget.Latest, true);
+  for (const st of sf.statements) {
+    if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+    if (st.moduleSpecifier.text !== spec || st.importClause?.isTypeOnly) continue;
+    const nb = st.importClause?.namedBindings;
+    if (!nb || !ts.isNamedImports(nb)) continue;
+    // keep existing specifiers verbatim (`type X`, aliases) and only add what is missing
+    const have = new Set(nb.elements.filter((el) => !el.isTypeOnly).map(importName));
+    const extra = wanted.filter((n) => !have.has(n));
+    if (extra.length === 0) return src;
+    const texts = [...nb.elements.map((el) => el.getText(sf)), ...extra];
+    return `${src.slice(0, nb.getStart(sf))}{ ${texts.join(", ")} }${src.slice(nb.getEnd())}`;
+  }
+  const line = `import { ${wanted.join(", ")} } from "${spec}";\n`;
+  const shebang = /^#![^\n]*\n/.exec(src);
+  return shebang ? `${shebang[0]}${line}${src.slice(shebang[0].length)}` : `${line}${src}`;
 };
-
-const MAX_PASSES = 8;
 
 /** Rewrites `{ _tag: "Ok", value }` style literals to `ok(value)` etc. so carriers are built by constructors. */
 export function rewriteCarrierLiterals(src: string, jsx = false): string {
   let cur = src;
   const used = new Map<string, Set<string>>();
-  for (let pass = 0; pass < MAX_PASSES; pass++) {
+  // each pass rewrites the outermost literals and strictly shrinks the literal count, so this terminates
+  for (;;) {
     const edits = [...collectEdits(cur, jsx)].sort((a, b) => b.start - a.start);
     if (edits.length === 0) break;
     for (const e of edits) {
