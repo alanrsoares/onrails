@@ -331,7 +331,7 @@ export class ResultAsync<T, E> {
     return new ResultAsync<U, E | F>(async () => {
       const first = await this.resolve();
       if (isErr(first)) {
-        return first;
+        return mkErr(first.error);
       }
       const next = fn(first.value);
       return next instanceof ResultAsync ? next.resolve() : next;
@@ -365,7 +365,7 @@ export class ResultAsync<T, E> {
     return new ResultAsync<T, F>(async () => {
       const first = await this.resolve();
       if (!isErr(first)) {
-        return first;
+        return mkOk(first.value);
       }
       const next = fn(first.error);
       return next instanceof ResultAsync ? next.resolve() : next;

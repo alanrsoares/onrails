@@ -1,0 +1,35 @@
+// @onrails/biome-plugin: carrier-sinks-need-from
+//
+// Flag `JSON.parse(…)`, `structuredClone(…)` and `….json()` output cast to
+// `Result<…>` / `Maybe<…>`. Plain data from those sinks has no methods once
+// carriers keep them on a prototype, so the cast lies. Lift with
+// `Result.from` / `Maybe.from` instead.
+//
+// Limitation: matches the `as` cast form only. The ESLint rule also flags
+// `const r: Result<…> = JSON.parse(…)`; GritQL cannot relate a declarator's
+// annotation to its initializer. Declared in ENGINE_DIVERGENCES
+// (`carrier-sinks-need-from` / `cast-form-only`).
+
+engine biome(1.0)
+language js
+
+or {
+  `$sink as Result<$a, $b>`,
+  `$sink as Maybe<$a>`
+} as $t where {
+  // the sink call itself (optionally awaited / parenthesized), not any call nested inside it:
+  // `Result.from(JSON.parse(raw)) as Result<T, E>` is lifted and must stay quiet
+  $sink <: or {
+    `JSON.parse($_)`,
+    `structuredClone($_)`,
+    `$_.json()`,
+    `await $_.json()`,
+    `($_.json())`,
+    `(await $_.json())`
+  },
+  register_diagnostic(
+    span = $t,
+    message = "Data from JSON.parse/structuredClone/.json() is typed as Result/Maybe but carries no methods — lift it with Result.from / Maybe.from.",
+    severity = "error"
+  )
+}

@@ -2,6 +2,9 @@
 import { main } from "./cli.js";
 
 export {
+  CARRIER_SINK_NAMES,
+  CARRIER_SINKS_NEED_FROM_RULE,
+  CARRIER_TYPES,
   DEPRECATED_SYNONYM_RENAMES,
   DEPRECATED_SYNONYMS,
   type DeprecatedSynonym,
@@ -19,6 +22,7 @@ export { rewriteCompatMethodChainsToNative } from "./chains.js";
 export { main } from "./cli.js";
 export { computeFileChange } from "./file-change.js";
 export { rewriteCompatImportsToNative } from "./imports.js";
+export { rewriteCarrierLiterals } from "./literals.js";
 export { computePkgRewrite } from "./pkg.js";
 export { tersify } from "./tersify.js";
 export { collectNativeMigrationWarnings } from "./warnings.js";

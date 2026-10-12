@@ -5,7 +5,8 @@
     "../../rules/no-promise-result.grit",
     "../../rules/no-unsafe-unwrap.grit",
     "../../rules/no-deprecated-synonyms.grit",
-    "../../rules/fluent-stays-local.grit"
+    "../../rules/fluent-stays-local.grit",
+    "../../rules/carrier-sinks-need-from.grit"
   ],
   "linter": { "enabled": true, "rules": { "preset": "none" } },
   "formatter": { "enabled": false }

@@ -1,8 +1,14 @@
 type Tagged = { readonly _tag: string };
 
-type TagHandlers<T extends Tagged, R> = {
-  [K in T["_tag"]]: (value: Extract<T, { _tag: K }>) => R;
+type TagHandlers<T extends Tagged> = {
+  [K in T["_tag"]]: (value: Extract<T, { _tag: K }>) => unknown;
 };
+
+// Return type is read off the handlers, not inferred through a mapped type: with `R` as a type
+// parameter of `TagHandlers`, TypeScript 7 infers `unknown` for the result.
+type HandlerResult<Hs> = {
+  [K in keyof Hs]: Hs[K] extends (...args: never[]) => infer U ? U : never;
+}[keyof Hs];
 
 /**
  * Exhaustive match on `_tag` — for `@onrails/result` / `@onrails/maybe` style
@@ -26,8 +32,11 @@ type TagHandlers<T extends Tagged, R> = {
  * label(err("x")); // "err:x"
  * ```
  */
-export const matchTag = <T extends Tagged, R>(value: T, handlers: TagHandlers<T, R>): R => {
-  const tag = value._tag as T["_tag"];
-  const handler = handlers[tag] as (value: Extract<T, { _tag: typeof tag }>) => R;
-  return handler(value as Extract<T, { _tag: typeof tag }>);
+export const matchTag = <T extends Tagged, Hs extends TagHandlers<T>>(
+  value: T,
+  // Excess keys map to `never`, restoring the excess-property check lost by inferring `Hs`.
+  handlers: Hs & { [K in Exclude<keyof Hs, T["_tag"]>]: never },
+): HandlerResult<Hs> => {
+  const handler = handlers[value._tag as keyof Hs] as (value: T) => HandlerResult<Hs>;
+  return handler(value);
 };

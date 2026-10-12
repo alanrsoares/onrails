@@ -1,4 +1,4 @@
-export type Mode = "compat" | "native" | "tersify";
+export type Mode = "compat" | "native" | "tersify" | "literals";
 export type Args = { target: string; dry: boolean; onrails: string; mode: Mode };
 
 export type Warning = { line: number; label: string; text: string };

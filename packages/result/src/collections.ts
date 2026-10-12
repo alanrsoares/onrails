@@ -80,7 +80,8 @@ export const combineTuple = <const R extends readonly unknown[]>(
   ..._guard: TupleGuard<R>
 ): CombineTuple<R> =>
   // Runtime identical to combine; the cast restores per-index tuple types.
-  combine(results as readonly AnyResult[]) as CombineTuple<R>;
+  // `unknown` hop: the tuple type is computed from R, which TS cannot relate to the runtime array.
+  combine(results as readonly AnyResult[]) as unknown as CombineTuple<R>;
 
 /**
  * Accumulate independent validation failures. Returns `Ok<T[]>` only when

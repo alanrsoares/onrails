@@ -1,4 +1,4 @@
-export type { Maybe, None, Some } from "./maybe.js";
+export type { MaybeData, MaybeMethods, None, Some } from "./maybe.js";
 export {
   andThen,
   compact,
@@ -7,6 +7,7 @@ export {
   fromNullable,
   isNone,
   isSome,
+  Maybe,
   map,
   match,
   none,

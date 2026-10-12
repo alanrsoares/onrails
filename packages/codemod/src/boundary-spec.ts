@@ -148,6 +148,28 @@ export const FLUENT_STAYS_LOCAL_RULE = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Carrier sinks (prototype carriers)
+// ---------------------------------------------------------------------------
+
+/** Carrier types whose methods live on a prototype that plain-data routes drop. */
+export const CARRIER_TYPES = ["Result", "Maybe"] as const;
+
+/** Deserialization sinks whose output is plain data, whatever the cast claims. */
+export const CARRIER_SINK_NAMES = ["JSON.parse", "structuredClone", ".json()"] as const;
+
+/**
+ * Plain data from a deserialization sink typed as `Result` / `Maybe` without
+ * `Result.from` / `Maybe.from`: the type claims methods the value lacks.
+ */
+export const CARRIER_SINKS_NEED_FROM_RULE = {
+  id: "carrier-sinks-need-from",
+  carriers: CARRIER_TYPES,
+  sinks: CARRIER_SINK_NAMES,
+  message:
+    "Data from JSON.parse/structuredClone/.json() is typed as Result/Maybe but carries no methods — lift it with Result.from / Maybe.from.",
+} as const;
+
+// ---------------------------------------------------------------------------
 // Declared divergences
 // ---------------------------------------------------------------------------
 
@@ -199,5 +221,15 @@ export const ENGINE_DIVERGENCES: readonly EngineDivergence[] = [
       "that also catches local annotations the ESLint rule leaves alone — and " +
       "cannot express the serialize/postMessage/cache argument heuristic at " +
       "all, since that needs expression-shape traversal, not a type pattern.",
+  },
+  {
+    rule: CARRIER_SINKS_NEED_FROM_RULE.id,
+    engine: "biome",
+    divergence: "cast-form-only",
+    detail:
+      "The ESLint rule flags both `JSON.parse(x) as Result<T, E>` and " +
+      "`const r: Result<T, E> = JSON.parse(x)`. GritQL cannot relate a " +
+      "declarator's type annotation to its initializer, so the Biome rule " +
+      "only matches the `as` cast form.",
   },
 ];

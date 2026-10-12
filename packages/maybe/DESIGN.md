@@ -46,3 +46,7 @@ type Maybe<T> =
 ## Deferred
 
 - Fantasy Land instances.
+
+## Prototype carriers (breaking)
+
+`some` / `none` return live carriers with `map`, `flatMap`/`andThen`, `match`, `unwrapOr`, `tap` and `tapNone` on a shared non-enumerable prototype (`src/internal/proto.ts`); `_tag` and `value` stay own enumerable properties, so JSON output is unchanged. After `JSON.parse`, `structuredClone`, spread or `postMessage`, lift plain data with `Maybe.from` (`MaybeData<T>` is its input). Hand-written `{ _tag: "Some", value }` literals are no longer a `Maybe`; `onrails-codemod --literals` rewrites them. The same Redux/immer caveats as `@onrails/result` apply (see its DESIGN).

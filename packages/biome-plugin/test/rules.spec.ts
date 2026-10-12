@@ -84,6 +84,22 @@ describe("fluent-stays-local", () => {
   });
 });
 
+describe("carrier-sinks-need-from", () => {
+  test("flags sink output cast to Result/Maybe", () => {
+    const diags = diagnosticsFor("invalid/carrier-sinks.ts").filter((d) =>
+      messageOf(d).includes("Result.from / Maybe.from"),
+    );
+    expect(diags.length).toBe(3);
+  });
+
+  test("lifted or unrelated casts produce no diagnostics", () => {
+    const diags = diagnosticsFor("valid/carrier-sinks.ts").filter((d) =>
+      messageOf(d).includes("Result.from / Maybe.from"),
+    );
+    expect(diags).toEqual([]);
+  });
+});
+
 describe("exemptions", () => {
   test("ResultAsync return types produce no diagnostics", () => {
     const diags = diagnosticsFor("valid/result-async.ts");

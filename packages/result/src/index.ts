@@ -57,7 +57,8 @@ export {
 } from "./result.js";
 export { $, tryGen, yieldResult } from "./try-gen.js";
 
-export type { Err, Ok, Result } from "./types.js";
+export type { Err, Ok, ResultData } from "./types.js";
+// Result is both a type and the `Result.from` companion value.
 // UnexpectedError is a class — export the value (and its type), not type-only,
 // so consumers can construct and `instanceof` it.
-export { UnexpectedError } from "./types.js";
+export { Result, UnexpectedError } from "./types.js";

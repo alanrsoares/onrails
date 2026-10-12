@@ -7,6 +7,7 @@ import * as barrel from "../src/index.js";
  * type-only exports are guarded by test/types.spec.ts instead.
  */
 const PUBLIC_RUNTIME_EXPORTS = [
+  "Maybe",
   "andThen",
   "compact",
   "compactMap",

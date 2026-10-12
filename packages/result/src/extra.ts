@@ -3,6 +3,7 @@
  */
 
 import type { ResultAsync } from "./async.js";
+import { mkErr } from "./internal/ctor.js";
 import type { InferErr, InferOk } from "./internal/infer.js";
 import { isErr, isOk } from "./result.js";
 import type { Result } from "./types.js";
@@ -49,9 +50,7 @@ export const mapErrKind =
     fn: (error: Extract<E, { kind: K }>) => F,
   ) =>
   <T>(result: Result<T, E>): Result<T, E | F> =>
-    isErr(result) && hasKind(result.error, kind)
-      ? { _tag: "Err", error: fn(result.error) }
-      : result;
+    isErr(result) && hasKind(result.error, kind) ? mkErr(fn(result.error)) : result;
 
 /** True when no result is Err */
 export const allOk = <T, E>(results: readonly Result<T, E>[]): boolean => results.every(isOk);

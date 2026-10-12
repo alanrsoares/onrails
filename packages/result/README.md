@@ -356,6 +356,25 @@ Both cap at **12 steps**. That cap is deliberate: a single recursive variadic si
 
 ## Breaking changes
 
+### Carriers have methods; plain data needs `Result.from`
+
+`ok` / `err` (and `some` / `none` in `@onrails/maybe`) now return carriers with `map`, `mapErr`, `flatMap` / `andThen`, `recover`, `tap`, `tapErr`, `match` and `unwrapOr` on a non-enumerable prototype, so `ok(2).map(f).flatMap(g)` works with no wrapper. `_tag` and `value` / `error` are still the only own keys, and `JSON.stringify` output is byte-identical. The module functions (`map(r, f)`, `map(f)(r)`) are unchanged.
+
+| Before | After |
+|---|---|
+| `{ _tag: "Ok", value: x }` | `ok(x)` — run `onrails-codemod <dir> --literals` |
+| `{ _tag: "Err", error: e }` | `err(e)` |
+| `{ _tag: "Some", value: x }` / `{ _tag: "None" }` | `some(x)` / `none()` |
+| `JSON.parse(raw) as Result<T, E>` | `Result.from<T, E>(JSON.parse(raw))` |
+| `structuredClone(r)` used as a `Result` | `Result.from(structuredClone(r))` |
+| `if (isErr(r)) return r;` returning a different `T` | `if (isErr(r)) return err(r.error);` |
+
+`JSON.parse`, `structuredClone`, object spread, `postMessage` and IndexedDB hand back plain data without the methods, while the type still claims them. `Result.from` (and `Maybe.from`) lift it back; `ResultData<T, E>` / `MaybeData<T>` name the plain shape. `@onrails/eslint-plugin` and `@onrails/biome-plugin` ship `carrier-sinks-need-from` to flag the cast forms.
+
+**Redux Toolkit.** Carriers are not plain objects (their prototype is not `Object.prototype`), so the serializability middleware warns on them in actions and state. Keep `ResultData` / `MaybeData` in the store and call `Result.from` / `Maybe.from` in selectors,. Both are cheap: `from` is one allocation.
+
+**immer.** `produce` only drafts plain objects and arrays, so a carrier inside state is treated as an opaque value: replace it wholesale (`draft.user = ok(next)`), do not mutate through it. Carriers are never mutated by the library, so sharing them across drafts is safe.
+
 ### `ok` / `err` lock inline literals
 
 Inline literals no longer widen: `ok("a")` is `Result<"a", never>` and `err({ kind: "io" })` carries `{ readonly kind: "io" }`. Annotated values and generic type parameters are unaffected. One call shape needs a change:
@@ -405,7 +424,28 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 - `Result` / `ResultAsync` are class-shaped (`CompatResult` / `CompatResultAsync`).
 - `await ra` resolves to a `CompatResult<T, E>` (thenable), so `.isOk()`, `.value`, `.error`, `.match()`, `.unwrapOr()` all work without an extra `.resolve()` call.
 - `andThen` / `chain` / `flatMap` / `orElse` accept any of `CompatResultAsync` / `ResultAsync` / `CompatResult` / tagged `Result` returns and union the error type.
-- Supported: `andThen`, `asyncAndThen`, `chain`, `flatMap`, `map`, `mapErr`, `orElse`, `match`, `unwrapOr`, `isOk`, `isErr`, `andTee`, `orTee`, `Result.combine`, `Result.fromThrowable`, `ResultAsync.combine`, `ResultAsync.fromPromise`, `ResultAsync.fromSafePromise`, `ResultAsync.fromThrowable`, `_unsafeUnwrap` / `_unsafeUnwrapErr`.
+- Supported: every public member of neverthrow 8.x. `bun test` diffs the shim's surface against the real package (`test/neverthrow-diff.spec.ts`), so a new neverthrow member fails CI until it is covered.
+- Guards: `isOk()` / `isErr()` are type guards; `.value` / `.error` are visible only after narrowing, as in neverthrow. The `else` branch of an `isOk()` check is not narrowed to the error side (the shim is one class, not an `Ok | Err` union) — use `match` or `isErr()`.
+- `Ok` / `Err` support `new` and `instanceof`; `safeTry` accepts sync and async generators using `.safeUnwrap()`.
+
+#### Compat name to core name
+
+| neverthrow / compat | core (`@onrails/result`) | Notes |
+|---|---|---|
+| `r.map(f)` / `r.mapErr(f)` | `map(r, f)` / `mapErr(r, f)` | same |
+| `r.andThen(f)` / `chain` / `flatMap` | `flatMap(r, f)` | `flatMap` is canonical |
+| `r.orElse(f)` | `recover(r, f)` | |
+| `r.andTee(f)` / `r.orTee(f)` | `tap(r, f)` / `tapErr(r, f)` | `tap` takes a pure side effect; compat also swallows a throwing callback, core does not |
+| `r.andThrough(f)` | `flatMap(r, (v) => map(f(v), () => v))` | keeps the original `Ok` value, surfaces the callback's `Err` |
+| `r.asyncMap(f)` | `ResultAsync.fromResult(r).map(f)` | |
+| `r.match(ok, err)` | `match(r, ok, err)` | |
+| `r.unwrapOr(d)` | `unwrapOr(r, d)` | |
+| `r._unsafeUnwrap()` | `unwrapOk(r)` | assertion tier |
+| `Result.fromThrowable(f, h)` | `fromThrowable(f, h)` | |
+| `Result.combine` / `combineWithAllErrors` | `combineTuple` / `validateTuple` | |
+| `safeTry(function* () { ... })` | `tryGen(() => { ... })` | `yield* r.safeUnwrap()` becomes `$(r)`; `tryGen` is sync, use `ResultAsync` chains for async bodies |
+| `ok(1) instanceof Ok` | `isOk(r)` | |
+
 - Treat the compat surface as a migration step, not the destination — once a package migrates, switch its imports to `@onrails/result` and `@onrails/result/fluent`.
 
 ## Subpaths
