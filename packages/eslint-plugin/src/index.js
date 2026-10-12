@@ -348,6 +348,99 @@ const fluentStaysLocal = {
   },
 };
 
+/**
+ * Carrier types and deserialization sinks. Hand-copied from `@onrails/codemod`
+ * `src/boundary-spec.ts` (cross-package imports forbidden);
+ * `packages/codemod/test/boundary-conformance.spec.ts` keeps copies in sync.
+ */
+const CARRIER_TYPES = new Set(["Result", "Maybe"]);
+const CARRIER_SINKS = new Set(["JSON.parse", "structuredClone"]);
+const CARRIER_SINK_METHODS = new Set(["json"]);
+
+/**
+ * Loose expression shape for the sink walk (`await`, `as`, parens, calls).
+ *
+ * @typedef {object} LooseExpr
+ * @property {string} type
+ * @property {string} [name]
+ * @property {LooseExpr} [argument]
+ * @property {LooseExpr} [expression]
+ * @property {LooseExpr} [callee]
+ * @property {LooseExpr} [object]
+ * @property {LooseExpr} [property]
+ * @property {LooseExpr} [typeAnnotation]
+ * @property {LooseExpr} [typeName]
+ */
+
+/**
+ * True when the expression is a deserialization sink call, looking through
+ * `await` and `as` wrappers: `JSON.parse(x)`, `structuredClone(x)`, `res.json()`.
+ *
+ * @param {LooseExpr | null | undefined} node
+ * @returns {boolean}
+ */
+const isSinkCall = (node) => {
+  if (!node) return false;
+  if (node.type === "AwaitExpression") return isSinkCall(node.argument);
+  if (node.type === "TSAsExpression" || node.type === "TSNonNullExpression") {
+    return isSinkCall(node.expression);
+  }
+  if (node.type !== "CallExpression" || !node.callee) return false;
+  const callee = node.callee;
+  if (callee.type === "MemberExpression" && callee.property?.name) {
+    if (CARRIER_SINK_METHODS.has(callee.property.name)) return true;
+    return CARRIER_SINKS.has(`${callee.object?.name}.${callee.property.name}`);
+  }
+  return callee.type === "Identifier" && CARRIER_SINKS.has(callee.name ?? "");
+};
+
+/**
+ * @param {LooseExpr | null | undefined} typeNode
+ * @returns {boolean}
+ */
+const isCarrierType = (typeNode) =>
+  typeNode?.type === "TSTypeReference" &&
+  typeNode.typeName?.type === "Identifier" &&
+  CARRIER_TYPES.has(typeNode.typeName.name ?? "");
+
+/** @type {import('eslint').Rule.RuleModule} */
+const carrierSinksNeedFrom = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow plain data from JSON.parse/structuredClone/.json() being typed as Result/Maybe without Result.from/Maybe.from.",
+    },
+    schema: [],
+    messages: {
+      needsFrom:
+        "Data from JSON.parse/structuredClone/.json() is typed as Result/Maybe but carries no methods — lift it with Result.from / Maybe.from.",
+    },
+  },
+  create(context) {
+    return {
+      TSAsExpression(/** @type {import('eslint').Rule.Node} */ node) {
+        const expr = /** @type {LooseExpr} */ (/** @type {unknown} */ (node));
+        if (isCarrierType(expr.typeAnnotation) && isSinkCall(expr.expression)) {
+          context.report({ node, messageId: "needsFrom" });
+        }
+      },
+      VariableDeclarator(/** @type {import('eslint').Rule.Node} */ node) {
+        const decl =
+          /** @type {{ id: { typeAnnotation?: { typeAnnotation: LooseExpr } }; init?: LooseExpr | null }} */ (
+            /** @type {unknown} */ (node)
+          );
+        const annotated = decl.id.typeAnnotation?.typeAnnotation;
+        // a bare `as` initializer is already reported by the TSAsExpression visitor
+        if (decl.init?.type === "TSAsExpression") return;
+        if (isCarrierType(annotated) && isSinkCall(decl.init)) {
+          context.report({ node, messageId: "needsFrom" });
+        }
+      },
+    };
+  },
+};
+
 /** @type {import('eslint').ESLint.Plugin} */
 const plugin = {
   meta: {
@@ -359,6 +452,7 @@ const plugin = {
     "no-unsafe-unwrap": noUnsafeUnwrap,
     "no-deprecated-synonyms": noDeprecatedSynonyms,
     "fluent-stays-local": fluentStaysLocal,
+    "carrier-sinks-need-from": carrierSinksNeedFrom,
   },
 };
 
@@ -374,6 +468,7 @@ export const configs = {
       "@onrails/result/no-unsafe-unwrap": "warn",
       "@onrails/result/no-deprecated-synonyms": "warn",
       "@onrails/result/fluent-stays-local": "warn",
+      "@onrails/result/carrier-sinks-need-from": "warn",
     },
   },
 };

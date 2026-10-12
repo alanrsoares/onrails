@@ -2,6 +2,9 @@
 import { main } from "./cli.js";
 
 export {
+  CARRIER_SINK_NAMES,
+  CARRIER_SINKS_NEED_FROM_RULE,
+  CARRIER_TYPES,
   DEPRECATED_SYNONYM_RENAMES,
   DEPRECATED_SYNONYMS,
   type DeprecatedSynonym,

@@ -12,6 +12,7 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  CARRIER_SINKS_NEED_FROM_RULE,
   DEPRECATED_SYNONYMS,
   ENGINE_DIVERGENCES,
   FLUENT_STAYS_LOCAL_RULE,
@@ -142,6 +143,31 @@ describe("fluent-stays-local conformance", () => {
 
   it("biome diagnostic carries the spec message verbatim", () => {
     expect(gritFluentStaysLocal).toContain(FLUENT_STAYS_LOCAL_RULE.message);
+  });
+});
+
+describe("carrier-sinks-need-from conformance (eslint)", () => {
+  it("eslint registers the rule id", () => {
+    expect(eslintSource).toContain(`"${CARRIER_SINKS_NEED_FROM_RULE.id}"`);
+  });
+
+  it.each(CARRIER_SINKS_NEED_FROM_RULE.carriers.map((name) => ({ label: name, name })))(
+    "eslint flags the $label carrier type",
+    ({ name }) => {
+      expect(eslintSource).toContain(`"${name}"`);
+    },
+  );
+
+  it.each(CARRIER_SINKS_NEED_FROM_RULE.sinks.map((name) => ({ label: name, name })))(
+    "eslint flags the $label sink",
+    ({ name }) => {
+      // `.json()` is a method call; eslint matches the bare method name
+      expect(eslintSource).toContain(name.replace(/^\.|\(\)$/g, ""));
+    },
+  );
+
+  it("eslint carries the spec message verbatim", () => {
+    expect(eslintSource).toContain(CARRIER_SINKS_NEED_FROM_RULE.message);
   });
 });
 

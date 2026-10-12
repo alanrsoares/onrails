@@ -50,6 +50,7 @@ export default [
 | `@onrails/no-unsafe-unwrap` | Flags `_unsafeUnwrap*` outside test files |
 | `@onrails/no-deprecated-synonyms` | Flags deprecated synonyms (`chain`, `fold`, `getOrElse`, `of`, …) and suggests the canonical names |
 | `@onrails/fluent-stays-local` | Flags `FluentResult`/`FluentMaybe` escaping as a return type, an exported binding, a stored field, or a serialize/postMessage/cache argument |
+| `@onrails/carrier-sinks-need-from` | Flags `JSON.parse` / `structuredClone` / `.json()` output typed as `Result` / `Maybe` without `Result.from` / `Maybe.from` (plain data has no methods) |
 
 ## Caveats (v0)
 
