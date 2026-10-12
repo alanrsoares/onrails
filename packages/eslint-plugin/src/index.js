@@ -403,6 +403,92 @@ const isCarrierType = (typeNode) =>
   typeNode.typeName?.type === "Identifier" &&
   CARRIER_TYPES.has(typeNode.typeName.name ?? "");
 
+/**
+ * `Promise<Result<…>>` / `Promise<Maybe<…>>` or a bare carrier: what an `async` function annotated
+ * with a carrier return type looks like.
+ *
+ * @param {LooseExpr | null | undefined} typeNode
+ * @returns {boolean}
+ */
+const isCarrierReturn = (typeNode) => {
+  if (isCarrierType(typeNode)) return true;
+  if (typeNode?.type !== "TSTypeReference" || typeNode.typeName?.name !== "Promise") return false;
+  const args = /** @type {{ params?: LooseExpr[] }} */ (
+    /** @type {{ typeArguments?: unknown; typeParameters?: unknown }} */ (typeNode).typeArguments ??
+      /** @type {{ typeParameters?: unknown }} */ (typeNode).typeParameters
+  );
+  return isCarrierType(args?.params?.[0]);
+};
+
+/**
+ * The sink call, or an identifier that resolves to a `const` initialised from one:
+ * `const x = JSON.parse(s); return x;`.
+ *
+ * @param {import('eslint').Rule.RuleContext} context
+ * @param {LooseExpr | null | undefined} node
+ * @returns {boolean}
+ */
+const isSinkValue = (context, node) => {
+  if (isSinkCall(node)) return true;
+  if (node?.type !== "Identifier") return false;
+  for (
+    let scope = context.sourceCode.getScope(/** @type {never} */ (node));
+    scope;
+    scope = /** @type {typeof scope} */ (scope.upper)
+  ) {
+    const variable = scope.set.get(node.name ?? "");
+    if (!variable) continue;
+    const def = variable.defs[0];
+    const declarator =
+      /** @type {{ id?: LooseExpr; init?: LooseExpr | null; parent?: { kind?: string } } | undefined} */ (
+        def?.node
+      );
+    return (
+      def?.type === "Variable" &&
+      declarator?.parent?.kind === "const" &&
+      declarator.id?.type === "Identifier" &&
+      isSinkCall(declarator.init)
+    );
+  }
+  return false;
+};
+
+/** `res.json<Result<…>>()`: the carrier is named through the call's type argument. */
+const hasCarrierTypeArgument = (/** @type {LooseExpr} */ node) => {
+  const call =
+    /** @type {{ typeArguments?: { params?: LooseExpr[] }; typeParameters?: { params?: LooseExpr[] } }} */ (
+      /** @type {unknown} */ (node)
+    );
+  return isCarrierType((call.typeArguments ?? call.typeParameters)?.params?.[0]);
+};
+
+// an `as Result<…>` / `as Maybe<…>` expression is already reported by the TSAsExpression
+// visitor; any other cast (`as any`) must not hide the carrier type around it
+const isCarrierCast = (/** @type {LooseExpr | null | undefined} */ e) =>
+  e?.type === "TSAsExpression" && isCarrierType(e.typeAnnotation);
+
+/**
+ * Builds the check for a value flowing into a function's carrier-typed return.
+ *
+ * @param {import('eslint').Rule.RuleContext} context
+ * @param {(node: import('eslint').Rule.Node) => void} report
+ */
+const returnCheck =
+  (context, report) =>
+  /**
+   * @param {import('eslint').Rule.Node} fn
+   * @param {import('eslint').Rule.Node} at
+   * @param {LooseExpr | null | undefined} value
+   */
+  (fn, at, value) => {
+    const returnType = /** @type {{ returnType?: { typeAnnotation?: LooseExpr } }} */ (
+      /** @type {unknown} */ (fn)
+    ).returnType?.typeAnnotation;
+    if (isCarrierReturn(returnType) && !isCarrierCast(value) && isSinkValue(context, value)) {
+      report(at);
+    }
+  };
+
 /** @type {import('eslint').Rule.RuleModule} */
 const carrierSinksNeedFrom = {
   meta: {
@@ -418,11 +504,15 @@ const carrierSinksNeedFrom = {
     },
   },
   create(context) {
+    /** @param {import('eslint').Rule.Node} node */
+    const report = (node) => context.report({ node, messageId: "needsFrom" });
+    const checkReturn = returnCheck(context, report);
+
     return {
       TSAsExpression(/** @type {import('eslint').Rule.Node} */ node) {
         const expr = /** @type {LooseExpr} */ (/** @type {unknown} */ (node));
-        if (isCarrierType(expr.typeAnnotation) && isSinkCall(expr.expression)) {
-          context.report({ node, messageId: "needsFrom" });
+        if (isCarrierType(expr.typeAnnotation) && isSinkValue(context, expr.expression)) {
+          report(node);
         }
       },
       VariableDeclarator(/** @type {import('eslint').Rule.Node} */ node) {
@@ -430,13 +520,43 @@ const carrierSinksNeedFrom = {
           /** @type {{ id: { typeAnnotation?: { typeAnnotation: LooseExpr } }; init?: LooseExpr | null }} */ (
             /** @type {unknown} */ (node)
           );
-        const annotated = decl.id.typeAnnotation?.typeAnnotation;
-        // an `as Result<…>` / `as Maybe<…>` initializer is already reported by the TSAsExpression
-        // visitor; any other cast (`as any`) must not hide an annotated carrier declaration
-        if (decl.init?.type === "TSAsExpression" && isCarrierType(decl.init.typeAnnotation)) return;
-        if (isCarrierType(annotated) && isSinkCall(decl.init)) {
-          context.report({ node, messageId: "needsFrom" });
+        if (isCarrierCast(decl.init)) return;
+        if (
+          isCarrierType(decl.id.typeAnnotation?.typeAnnotation) &&
+          isSinkValue(context, decl.init)
+        ) {
+          report(node);
         }
+      },
+      AssignmentPattern(/** @type {import('eslint').Rule.Node} */ node) {
+        const pattern =
+          /** @type {{ left: { typeAnnotation?: { typeAnnotation: LooseExpr } }; right: LooseExpr }} */ (
+            /** @type {unknown} */ (node)
+          );
+        if (isCarrierCast(pattern.right)) return;
+        if (
+          isCarrierType(pattern.left.typeAnnotation?.typeAnnotation) &&
+          isSinkValue(context, pattern.right)
+        ) {
+          report(node);
+        }
+      },
+      ReturnStatement(/** @type {import('eslint').Rule.Node} */ node) {
+        const stmt = /** @type {{ argument?: LooseExpr | null }} */ (/** @type {unknown} */ (node));
+        const fn = context.sourceCode
+          .getAncestors(node)
+          .filter((a) => /Function/.test(a.type))
+          .pop();
+        // getAncestors is typed with estree nodes; every ancestor of a visited node is a rule node
+        if (fn) checkReturn(/** @type {import('eslint').Rule.Node} */ (fn), node, stmt.argument);
+      },
+      ArrowFunctionExpression(/** @type {import('eslint').Rule.Node} */ node) {
+        const arrow = /** @type {{ body: LooseExpr }} */ (/** @type {unknown} */ (node));
+        if (arrow.body.type !== "BlockStatement") checkReturn(node, node, arrow.body);
+      },
+      CallExpression(/** @type {import('eslint').Rule.Node} */ node) {
+        const call = /** @type {LooseExpr} */ (/** @type {unknown} */ (node));
+        if (isSinkCall(call) && hasCarrierTypeArgument(call)) report(node);
       },
     };
   },
