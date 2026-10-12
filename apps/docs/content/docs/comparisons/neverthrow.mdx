@@ -87,12 +87,15 @@ fluent(parseJson(raw)).andThen(validate).map(normalize).match(onOk, onErr);
 
 ## Key differences
 
-### Data model: tagged union vs class instance
+### Data model: class hierarchy vs tagged data
 
-A neverthrow `Result` is an instance of an `Ok`/`Err` class. An onrails `Result`
-is a plain object — `{ _tag: "Ok", value }` / `{ _tag: "Err", error }`. That
-means onrails values are **structurally serializable** (cross `postMessage`, a
-queue, `JSON.stringify`), inspectable, and directly **pattern-matchable**:
+A neverthrow `Result` is an instance of an `Ok`/`Err` class tree. An onrails
+`Result` is a tagged object — `{ _tag: "Ok", value }` / `{ _tag: "Err", error }`
+— whose own fields are plain data, with the methods on a non-enumerable
+prototype. That means onrails values **serialize to the tagged shape**
+(`JSON.stringify`, a queue), are inspectable, and directly
+**pattern-matchable**. (Data that crossed `JSON.parse` / `structuredClone` /
+`postMessage` has lost its methods; lift it with `Result.from`.)
 
 ```ts
 import { match } from "@onrails/pattern";

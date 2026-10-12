@@ -362,7 +362,7 @@ Since ROP maps multiple failure states to a unified error union, testing HTTP or
 
 ```ts title="http-mapping.spec.ts"
 import { expect, it } from "bun:test";
-import { match } from "@onrails/result";
+import { err, match } from "@onrails/result";
 
 type DomainError = 
   | { kind: "invalid_input"; field: string }
@@ -377,11 +377,11 @@ const cases = [
   { label: "maps fatal errors to 500", err: { kind: "fatal" as const, reason: "disk full" }, expected: 500 },
 ] as const;
 
-it.each(cases)("$label", ({ err, expected }) => {
+it.each(cases)("$label", ({ err: error, expected }) => {
   // Translate domain errors to HTTP statuses via exhaustive match
   const status = match(
     // We pass a mock Result containing our test error
-    { _tag: "Err" as const, error: err },
+    err<DomainError>(error),
     () => 200,
     (e: DomainError) => {
       switch (e.kind) {

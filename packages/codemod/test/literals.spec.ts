@@ -61,7 +61,21 @@ describe("rewriteCarrierLiterals", () => {
       label: "local binding shadows the constructor name",
       src: `import { ok } from "./mine";\nconst a = { _tag: "Ok", value: 1 };`,
     },
+    {
+      label: "ts-pattern .with pattern",
+      src: `m.with({ _tag: "Ok", value: P.number }, (x) => x.value);`,
+    },
+    {
+      label: "nested inside a .with pattern",
+      src: `m.with({ r: { _tag: "Err", error: P.string } }, () => 0);`,
+    },
+    { label: "isMatching pattern", src: `isMatching({ _tag: "None" }, x);` },
   ];
+
+  it("still rewrites literals inside a .with handler body", () => {
+    const src = `m.with(P.any, () => ({ _tag: "Ok", value: 1 }));`;
+    expect(rewriteCarrierLiterals(src)).toBe(`${OK}m.with(P.any, () => (ok(1)));`);
+  });
 
   it.each(untouched)("leaves alone: $label", ({ src }) => {
     expect(rewriteCarrierLiterals(src)).toBe(src);

@@ -145,6 +145,10 @@ describe("prototype core: serialization boundary", () => {
     );
   });
 
+  it("Result.from rejects an unknown tag instead of inventing an Err", () => {
+    expect(() => Result.from({ _tag: "Weird" } as never)).toThrow(TypeError);
+  });
+
   it("Result.from accepts an already-live carrier", () => {
     expect(toData(Result.from(ok(1)))).toEqual({ _tag: "Ok", value: 1 });
   });

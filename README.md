@@ -22,7 +22,7 @@ Tagged `Result` / `ResultAsync` + railway-oriented utilities for TypeScript. Pur
 
 [Railway-oriented programming](https://fsharpforfunandprofit.com/rop/) — encode failure as values, chain ok/err down two parallel tracks, never throw across a public boundary.
 
-`@onrails/result` is a small, tagged-union take on this pattern. The data is `{ _tag: "Ok"; value }` / `{ _tag: "Err"; error }` — no class wrapper, tree-shake friendly, Fantasy Land-aware. `@onrails/maybe` models expected absence (`Some` / `None`). `@onrails/pattern` exhaustively matches owned unions. A drop-in `compat/neverthrow` shim makes migration a regex search-and-replace.
+`@onrails/result` is a small, tagged-union take on this pattern. The data is `{ _tag: "Ok"; value }` / `{ _tag: "Err"; error }` — methods on a non-enumerable prototype so JSON stays plain, tree-shake friendly, Fantasy Land-aware. `@onrails/maybe` models expected absence (`Some` / `None`). `@onrails/pattern` exhaustively matches owned unions. A drop-in `compat/neverthrow` shim makes migration a regex search-and-replace.
 
 ## Quick start
 

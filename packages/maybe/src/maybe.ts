@@ -84,7 +84,9 @@ export const none = <T = never>(): Maybe<T> => newNone<T>();
 /**
  * Value-side companion of the {@link Maybe} type. `from` lifts plain data back
  * into a live `Maybe` at every deserialization sink (`JSON.parse`,
- * `structuredClone`, `postMessage`, Redux rehydration). It trusts the shape.
+ * `structuredClone`, `postMessage`, Redux rehydration). It trusts the shape,
+ * but an unknown `_tag` is a defect and throws a `TypeError` rather than
+ * silently becoming `None`.
  *
  * @example
  * ```ts
@@ -93,8 +95,11 @@ export const none = <T = never>(): Maybe<T> => newNone<T>();
  * ```
  */
 export const Maybe = {
-  from: <T>(data: MaybeData<T>): Maybe<T> =>
-    data._tag === "Some" ? newSome(data.value) : newNone<T>(),
+  from: <T>(data: MaybeData<T>): Maybe<T> => {
+    if (data._tag === "Some") return newSome(data.value);
+    if (data._tag === "None") return newNone<T>();
+    throw new TypeError(`Maybe.from: unknown _tag ${String((data as { _tag?: unknown })._tag)}`);
+  },
 } as const;
 
 /**
