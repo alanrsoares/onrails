@@ -41,6 +41,13 @@ describe("extractExports", () => {
     expect(isOk(extracted)).toBe(true);
   });
 
+  it("documents a type and a same-named const as one type entry", () => {
+    const tagged = byName.get("Tagged");
+    expect(tagged?.kind).toBe("type");
+    expect(tagged?.signature).toContain("export type Tagged<T>");
+    expect(tagged?.signature).toContain("const Tagged:");
+  });
+
   it("extracts exported symbols with kinds", () => {
     expect(byName.get("add")?.kind).toBe("function");
     expect(byName.get("Pair")?.kind).toBe("type");

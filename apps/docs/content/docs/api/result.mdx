@@ -426,6 +426,19 @@ recover(networkResult, (e) =>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
+### ResultData <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+Plain-data shape of a [Result](#result-type): what `JSON.parse`, `structuredClone`
+and `postMessage` hand back. It has no methods; lift it with `Result.from`.
+
+```typescript
+export type ResultData<T, E> =
+  | { readonly _tag: "Ok"; readonly value: T }
+  | { readonly _tag: "Err"; readonly error: E };
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
 ### show <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Debug printer — renders a result as `Ok(…)` / `Err(…)` for logs. Payloads
@@ -1738,14 +1751,28 @@ export type Ok<T, E = never> = Extract<Result<T, E>, { _tag: "Ok" }>;
 ### Result <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 The core railway type: a tagged union carrying either a success value
-(`Ok<T>`) or a failure value (`Err<E>`). It is a plain discriminated union
-on `_tag` — no classes — so it is immutable and tree-shake friendly. Narrow
-with [isOk](#isok-ƒ) / [isErr](#iserr-ƒ) to read `.value` / `.error`.
+(`Ok<T>`) or a failure value (`Err<E>`), discriminated on `_tag`. Carriers
+are plain data (`_tag` plus `value` / `error` as own enumerable properties)
+with [ResultMethods](#resultmethods) on a shared non-enumerable prototype, so
+`JSON.stringify` output is unchanged. Narrow on `_tag` to read
+`.value` / `.error`.
+
+Build carriers with `ok` / `err`; a hand-written `{ _tag: "Ok", value }`
+literal has no methods and is not a `Result`. Data that crossed a
+serialization boundary is lifted back with `Result.from`.
+Value-side companion of the [Result](#result-type) type.
+
+`from` lifts plain data back into a live `Result`. Use it at every
+deserialization sink (`JSON.parse`, `structuredClone`, `postMessage`,
+IndexedDB, Redux rehydration), where the prototype and its methods are lost
+while the type still claims them. It trusts the shape; validate untrusted
+input first. An unknown `_tag` is a defect and throws a `TypeError` rather
+than becoming a silent `Err(undefined)`.
 
 ```typescript
-export type Result<T, E> =
-  | { readonly _tag: "Ok"; readonly value: T }
-  | { readonly _tag: "Err"; readonly error: E };
+export type Result<T, E> = ResultData<T, E> & ResultMethods<T, E>;
+
+const Result: { readonly from: <T, E>(data: ResultData<T, E>) => Result<T, E>; }
 ```
 
 #### Example
@@ -1755,6 +1782,13 @@ function parse(raw: string): Result<number, "nan"> {
   const n = Number(raw);
   return Number.isNaN(n) ? err("nan") : ok(n);
 }
+parse("1").map((n) => n + 1);
+```
+
+```ts
+const wire = JSON.parse(JSON.stringify(ok(1)));   // plain data, no methods
+const live = Result.from<number, string>(wire);   // Result<number, string>
+live.map((n) => n + 1);
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />

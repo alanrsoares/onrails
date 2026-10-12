@@ -69,3 +69,25 @@ describe("Maybe tap types", () => {
     expectType<TypeEqual<typeof run, (maybe: Maybe<number>) => Maybe<number>>>(true);
   });
 });
+
+describe("Maybe unwrapOr types", () => {
+  it("same-type default stays T", () => {
+    const v = unwrapOr(some(1), 0);
+    expectType<TypeEqual<typeof v, number>>(true);
+  });
+
+  it("data-first widens to T | U", () => {
+    const v = unwrapOr(some(1), null);
+    expectType<TypeEqual<typeof v, number | null>>(true);
+  });
+
+  it("curried widens to T | U", () => {
+    const v = unwrapOr("none" as const)(some(1));
+    expectType<TypeEqual<typeof v, number | "none">>(true);
+  });
+
+  it("method widens to T | U", () => {
+    const v = some(1).unwrapOr(undefined);
+    expectType<TypeEqual<typeof v, number | undefined>>(true);
+  });
+});

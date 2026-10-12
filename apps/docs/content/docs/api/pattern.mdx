@@ -73,7 +73,7 @@ const describe = match<Event>()
 ### new MatchBuilder <span className="inline-flex items-center rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">constructor</span>
 
 ```typescript
-constructor<T, R = never, HasInput extends boolean = false, Handled extends readonly unknown[] = [], Locked extends boolean = false>(cases: readonly Case<T, unknown>[], input: T | typeof NO_INPUT, _handled?: Handled): MatchBuilder<T, R, HasInput, Handled, Locked>
+constructor<T, R = never, HasInput extends boolean = false, Handled extends readonly unknown[] = [], Locked extends boolean = false>(cases: Case<T, unknown>[], input: T | typeof NO_INPUT, _handled?: Handled): MatchBuilder<T, R, HasInput, Handled, Locked>
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -337,7 +337,7 @@ unions. The `handlers` object must supply one branch per `_tag`, and each
 handler receives the member narrowed to its tag.
 
 ```typescript
-function matchTag<T extends Tagged, R>(value: T, handlers: TagHandlers<T, R>): R
+function matchTag<T extends Tagged, Hs extends TagHandlers<T>>(value: T, handlers: Hs & { [K in Exclude<keyof Hs, T["_tag"]>]: never; }): HandlerResult<Hs>
 ```
 
 #### Parameters
@@ -345,7 +345,7 @@ function matchTag<T extends Tagged, R>(value: T, handlers: TagHandlers<T, R>): R
 | Parameter | Type | Description |
 |---|---|---|
 | `value` | `T` | - a tagged union value to dispatch on |
-| `handlers` | `TagHandlers<T, R>` | - one handler per `_tag`, keyed by tag |
+| `handlers` | `Hs & { [K in Exclude<keyof Hs, T["_tag"]>]: never; }` | - one handler per `_tag`, keyed by tag |
 
 #### Returns
 

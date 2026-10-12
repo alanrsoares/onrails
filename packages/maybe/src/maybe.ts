@@ -36,7 +36,7 @@ export interface MaybeMethods<T> {
   /** Fold both branches into one value. */
   match<U>(onSome: (value: T) => U, onNone: () => U): U;
   /** The `Some` value, or `defaultValue` on `None`. */
-  unwrapOr(defaultValue: T): T;
+  unwrapOr<U>(defaultValue: U): T | U;
   /** Observe the `Some` value, pass the maybe through. */
   tap(fn: (value: T) => void): Maybe<T>;
   /** Observe `None`, pass the maybe through. */
@@ -220,12 +220,12 @@ export const match: {
   <T, U>(onSome: (value: T) => U, onNone: () => U): (maybe: Maybe<T>) => U;
 } = dual(3, matchImpl);
 
-const unwrapOrImpl = <T>(maybe: Maybe<T>, defaultValue: T): T =>
+const unwrapOrImpl = <T, U>(maybe: Maybe<T>, defaultValue: U): T | U =>
   isSome(maybe) ? maybe.value : defaultValue;
 
 export const unwrapOr: {
-  <T>(maybe: Maybe<T>, defaultValue: T): T;
-  <T>(defaultValue: T): (maybe: Maybe<T>) => T;
+  <T, U>(maybe: Maybe<T>, defaultValue: U): T | U;
+  <U>(defaultValue: U): <T>(maybe: Maybe<T>) => T | U;
 } = dual(2, unwrapOrImpl);
 
 /**
