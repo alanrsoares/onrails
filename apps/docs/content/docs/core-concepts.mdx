@@ -136,11 +136,14 @@ exactly those four escape points.
 
 ## The one hard constraint: serializable data
 
-A `Result` is a plain tagged union — `{ _tag: "Ok"; value }` or
-`{ _tag: "Err"; error }` — not a class instance. The same for `Maybe`. That's
-deliberate and non-negotiable: the data crosses process and network boundaries
-(RSC payloads, workers, queues) and survives `structuredClone` and JSON. The
-*helpers* are functions; the *data* is inert.
+A `Result` is a tagged union — `{ _tag: "Ok"; value }` or
+`{ _tag: "Err"; error }` — whose own enumerable fields are plain data. The
+methods (`map`, `flatMap`, `match`, …) live on a shared non-enumerable
+prototype, so `JSON.stringify` output is exactly the tagged shape. The same
+for `Maybe`. That's deliberate and non-negotiable: the data crosses process and
+network boundaries (RSC payloads, workers, queues) and survives JSON. After
+`JSON.parse`, `structuredClone` or `postMessage` the prototype is gone, so lift
+the data back with `Result.from` / `Maybe.from`.
 
 <Callout title="Why it matters">
   Ergonomics are tuned freely, but serializability is the line we don't cross. A
