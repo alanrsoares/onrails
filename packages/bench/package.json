@@ -1,0 +1,25 @@
+{
+  "name": "@onrails/bench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Microbenchmarks: @onrails/result vs neverthrow, @onrails/pattern vs ts-pattern. Not published.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "bench": "bun run scripts/run.ts",
+    "bench:md": "bun run scripts/run.ts -- --markdown",
+    "test": "bun -e 'process.exit(0)'",
+    "check": "bun typecheck"
+  },
+  "dependencies": {
+    "@onrails/pattern": "workspace:*",
+    "@onrails/result": "workspace:*"
+  },
+  "devDependencies": {
+    "mitata": "1.0.34",
+    "neverthrow": "8.2.0",
+    "ts-expect": "catalog:",
+    "ts-pattern": "5.9.0",
+    "typescript": "catalog:"
+  }
+}

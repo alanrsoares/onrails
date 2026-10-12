@@ -83,4 +83,8 @@ const show = <T, E>(r: Result<T, E>) =>
 | `@onrails/pattern` | `match`, `when`, `assertNever`, `MatchBuilder` |
 | `@onrails/pattern/tag` | `matchTag` |
 
+## Benchmarks
+
+Runtime + fair import-graph size vs `ts-pattern` (overlapping shallow surface only): see [`../bench/RESULTS.md`](../bench/RESULTS.md). Regenerated with `bun run bench:md` from the repo root.
+
 See [DESIGN.md](./DESIGN.md).

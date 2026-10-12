@@ -461,4 +461,8 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |
 | `@onrails/result/compat/neverthrow` | Migration shim |
 
+## Benchmarks
+
+Runtime + fair import-graph size vs `neverthrow`: see [`../bench/RESULTS.md`](../bench/RESULTS.md). Regenerated with `bun run bench:md` from the repo root.
+
 See [DESIGN.md](./DESIGN.md).

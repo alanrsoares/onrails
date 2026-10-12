@@ -46,6 +46,8 @@
     "check:loc": "bun run scripts/check-loc.ts",
     "check:examples": "bun run scripts/check-api-examples.ts",
     "check": "bun run check:loc && bun run lint && bun run build && bun run typecheck && bun run check:examples && bun run test && bun run check:packaging",
+    "bench": "bun run packages/bench/scripts/run.ts",
+    "bench:md": "bun run packages/bench/scripts/run.ts --markdown",
     "docs": "bun run --filter '@onrails/docs' dev",
     "docs:build": "bun run --filter '@onrails/docs' build",
     "docs:generate": "bun run scripts/generate-api-docs.ts",
