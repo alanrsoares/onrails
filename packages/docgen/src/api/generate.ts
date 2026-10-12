@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { fromThrowable, isErr, ok, type Result } from "@onrails/result";
+import { err, fromThrowable, isErr, ok, type Result } from "@onrails/result";
 import { type Categorize, defaultCategorize, extractExports } from "./extract.js";
 import { defaultCompilerHost } from "./host.js";
 import { renderPackageMdx } from "./render.js";
@@ -30,7 +30,7 @@ export const generateApiDocs = (
   const parsed: { pkg: ApiPackage; symbols: DocSymbol[] }[] = [];
   for (const pkg of packages) {
     const extracted = extractExports(pkg.entry, pkg.name, categorize, host);
-    if (isErr(extracted)) return extracted;
+    if (isErr(extracted)) return err(extracted.error);
     parsed.push({ pkg, symbols: extracted.value });
   }
 
@@ -59,7 +59,7 @@ export const generateApiDocs = (
   const written: string[] = [];
   for (const { pkg, symbols } of parsed) {
     const result = writeMdx(pkg.out, renderPackageMdx(pkg.name, symbols, exports, opts));
-    if (isErr(result)) return result;
+    if (isErr(result)) return err(result.error);
     written.push(pkg.out);
   }
 

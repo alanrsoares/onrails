@@ -48,15 +48,17 @@ export class CompatResult<T, E> {
     results: R,
   ): CompatResult<TupleOk<R>, TupleErr<R>> {
     return new CompatResult(
-      combineTuple(results.map((r) => r.inner)) as ResultType<TupleOk<R>, TupleErr<R>>,
+      combineTuple(results.map((r) => r.inner)) as unknown as ResultType<TupleOk<R>, TupleErr<R>>,
     );
   }
 
+  // The `as unknown as` casts below restore per-index tuple types computed from R, which TS cannot
+  // relate to the runtime arrays.
   static combineWithAllErrors<const R extends readonly CompatResult<unknown, unknown>[]>(
     results: R,
   ): CompatResult<TupleOk<R>, TupleErr<R>[]> {
     return new CompatResult(
-      validateAll(results.map((r) => r.inner)) as ResultType<TupleOk<R>, TupleErr<R>[]>,
+      validateAll(results.map((r) => r.inner)) as unknown as ResultType<TupleOk<R>, TupleErr<R>[]>,
     );
   }
 
@@ -89,7 +91,9 @@ export class CompatResult<T, E> {
   }
 
   orElse<F>(fn: (error: E) => CompatResult<T, F>): CompatResult<T, F> {
-    return isOk(this.inner) ? new CompatResult<T, F>(this.inner) : fn(this.inner.error);
+    return isOk(this.inner)
+      ? new CompatResult<T, F>(coreOk(this.inner.value))
+      : fn(this.inner.error);
   }
 
   match<U1, U2 = U1>(onOk: (value: T) => U1, onErr: (error: E) => U2): U1 | U2 {
@@ -268,7 +272,7 @@ export class CompatResultAsync<T, E> implements PromiseLike<CompatResult<T, E>> 
     return new CompatResultAsync(
       CoreResultAsync.defer(
         async () =>
-          validateAll(await Promise.all(results.map((r) => r.resolve()))) as ResultType<
+          validateAll(await Promise.all(results.map((r) => r.resolve()))) as unknown as ResultType<
             AsyncTupleOk<R>,
             AsyncTupleErr<R>[]
           >,

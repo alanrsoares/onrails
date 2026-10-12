@@ -107,6 +107,6 @@ describe("errAsync type arguments", () => {
   it("names the error channel from a single type argument", async () => {
     type AppError = { kind: "parse" } | { kind: "io" };
     const failure = errAsync<AppError>({ kind: "parse" });
-    expect(await failure.resolve()).toEqual({ _tag: "Err", error: { kind: "parse" } });
+    expect(await failure.resolve()).toEqual(err({ kind: "parse" }));
   });
 });

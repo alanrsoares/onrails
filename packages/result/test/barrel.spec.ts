@@ -10,6 +10,7 @@ import * as barrel from "../src/index.js";
  */
 const PUBLIC_RUNTIME_EXPORTS = [
   "$",
+  "Result",
   "ResultAsync",
   "UnexpectedError",
   "asyncAfter",
