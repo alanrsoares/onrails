@@ -78,6 +78,16 @@ it("folds Ok and Err into a status code", () => {
 
 ---
 
+### Equality matchers
+
+Carriers keep their methods on a prototype, so `toEqual` against another carrier
+or against the plain tagged shape passes. `toStrictEqual` also compares the
+prototype and fails against a plain `{ _tag, value }` object; compare against
+`ok(...)` / `err(...)`, or assert on `isOk` plus `unwrapOk`. Failure output
+prints `Ok(42)` / `Err('x')`.
+
+---
+
 ## 2. Testing Workflow Short-Circuiting
 
 A core behavior of any railway pipeline is that it executes all steps on the happy path, but short-circuits on the very first error (the sad path). To test a workflow, you should verify both paths by feeding inputs that succeed or fail at specific boundaries.

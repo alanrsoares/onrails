@@ -145,6 +145,11 @@ describe("prototype core: serialization boundary", () => {
     );
   });
 
+  it("inspect renders Ok(...) / Err(...) without prototype noise", () => {
+    expect(Bun.inspect(ok({ a: 1 }))).toBe("Ok({ a: 1 })");
+    expect(Bun.inspect(err("x"))).toBe("Err('x')");
+  });
+
   it("Result.from rejects an unknown tag instead of inventing an Err", () => {
     expect(() => Result.from({ _tag: "Weird" } as never)).toThrow(TypeError);
   });

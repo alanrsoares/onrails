@@ -61,6 +61,11 @@ describe("prototype core: methods agree with the module functions", () => {
 });
 
 describe("prototype core: serialization boundary", () => {
+  it("inspect renders Some(...) / None without prototype noise", () => {
+    expect(Bun.inspect(some({ a: 1 }))).toBe("Some({ a: 1 })");
+    expect(Bun.inspect(none())).toBe("None");
+  });
+
   it("Maybe.from rejects an unknown tag instead of inventing a None", () => {
     expect(() => Maybe.from({ _tag: "Weird" } as never)).toThrow(TypeError);
   });
