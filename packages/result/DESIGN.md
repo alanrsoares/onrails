@@ -37,6 +37,7 @@ type Result<T, E> =
 - **Literals:** a hand-written `{ _tag: "Ok", value }` is no longer a `Result` (it lacks the methods). `onrails-codemod --literals` rewrites them to `ok` / `err`.
 - **Narrowed branches:** `Err<T, E>` now carries `T` through its methods, so returning a narrowed `Err` as a `Result` with a different `T` needs `err(r.error)` (the same as neverthrow).
 - **Redux, immer:** carriers are not plain objects (prototype is not `Object.prototype`). Redux Toolkit's serializability check flags them, and immer will not draft them. Store `ResultData` (or call `Result.from` on read) and convert at the edge.
+- **Compat shim:** `CompatResult` still wraps a core carrier (`inner`) and now delegates `map`, `mapErr`, `andThen` and `unwrapOr` to the prototype methods. It cannot collapse into the core carrier: its semantics differ by design (`orElse` widens, `andTee` swallows throws, `value` / `error` getters throw), and the differential suite (`neverthrow-diff.spec.ts`) pins exactly that.
 - **Packages:** `result` does not know `maybe`. `Maybe` has the mirrored prototype and `Maybe.from`; `toResult` / `fromResult` stay in `@onrails/maybe/interop`.
 
 ## Sync / async interop

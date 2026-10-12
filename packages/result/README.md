@@ -356,6 +356,25 @@ Both cap at **12 steps**. That cap is deliberate: a single recursive variadic si
 
 ## Breaking changes
 
+### Carriers have methods; plain data needs `Result.from`
+
+`ok` / `err` (and `some` / `none` in `@onrails/maybe`) now return carriers with `map`, `mapErr`, `flatMap` / `andThen`, `recover`, `tap`, `tapErr`, `match` and `unwrapOr` on a non-enumerable prototype, so `ok(2).map(f).flatMap(g)` works with no wrapper. `_tag` and `value` / `error` are still the only own keys, and `JSON.stringify` output is byte-identical. The module functions (`map(r, f)`, `map(f)(r)`) are unchanged.
+
+| Before | After |
+|---|---|
+| `{ _tag: "Ok", value: x }` | `ok(x)` — run `onrails-codemod <dir> --literals` |
+| `{ _tag: "Err", error: e }` | `err(e)` |
+| `{ _tag: "Some", value: x }` / `{ _tag: "None" }` | `some(x)` / `none()` |
+| `JSON.parse(raw) as Result<T, E>` | `Result.from<T, E>(JSON.parse(raw))` |
+| `structuredClone(r)` used as a `Result` | `Result.from(structuredClone(r))` |
+| `if (isErr(r)) return r;` returning a different `T` | `if (isErr(r)) return err(r.error);` |
+
+`JSON.parse`, `structuredClone`, object spread, `postMessage` and IndexedDB hand back plain data without the methods, while the type still claims them. `Result.from` (and `Maybe.from`) lift it back; `ResultData<T, E>` / `MaybeData<T>` name the plain shape. `@onrails/eslint-plugin` and `@onrails/biome-plugin` ship `carrier-sinks-need-from` to flag the cast forms.
+
+**Redux Toolkit.** Carriers are not plain objects (their prototype is not `Object.prototype`), so the serializability middleware warns on them in actions and state. Keep `ResultData` / `MaybeData` in the store and call `Result.from` / `Maybe.from` in selectors,. Both are cheap: `from` is one allocation.
+
+**immer.** `produce` only drafts plain objects and arrays, so a carrier inside state is treated as an opaque value: replace it wholesale (`draft.user = ok(next)`), do not mutate through it. Carriers are never mutated by the library, so sharing them across drafts is safe.
+
 ### `ok` / `err` lock inline literals
 
 Inline literals no longer widen: `ok("a")` is `Result<"a", never>` and `err({ kind: "io" })` carries `{ readonly kind: "io" }`. Annotated values and generic type parameters are unaffected. One call shape needs a change:
