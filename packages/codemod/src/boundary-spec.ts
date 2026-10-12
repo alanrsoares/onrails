@@ -227,9 +227,12 @@ export const ENGINE_DIVERGENCES: readonly EngineDivergence[] = [
     engine: "biome",
     divergence: "cast-form-only",
     detail:
-      "The ESLint rule flags both `JSON.parse(x) as Result<T, E>` and " +
-      "`const r: Result<T, E> = JSON.parse(x)`. GritQL cannot relate a " +
-      "declarator's type annotation to its initializer, so the Biome rule " +
-      "only matches the `as` cast form.",
+      "The ESLint rule flags `JSON.parse(x) as Result<T, E>` and also the " +
+      "flow forms: `const r: Result<T, E> = JSON.parse(x)`, `return JSON.parse(x)` " +
+      "from a function annotated to return a carrier (or Promise of one), a " +
+      "carrier-typed parameter default, a `const` holding a sink result that is " +
+      "later cast, annotated or returned, and `res.json<Result<T, E>>()`. GritQL " +
+      "cannot relate a declarator, return type or binding to its use, so the " +
+      "Biome rule only matches the direct `as` cast form.",
   },
 ];
