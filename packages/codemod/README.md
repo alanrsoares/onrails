@@ -46,6 +46,9 @@ bunx @onrails/codemod /path/to/target-repo \
 # stage 2: compat shim -> native imports
 bunx @onrails/codemod /path/to/target-repo --to-native --dry
 bunx @onrails/codemod /path/to/target-repo --to-native
+
+# optional: build carriers with constructors instead of object literals
+bunx @onrails/codemod /path/to/target-repo --literals --dry
 ```
 
 After applying:
@@ -57,6 +60,24 @@ bun install
 bun typecheck
 bun test
 ```
+
+## Literal rewrite
+
+`--literals` rewrites hand-built carrier literals to constructor calls, so the
+code keeps working if carriers ever stop being plain objects:
+
+| Before | After |
+|---|---|
+| `{ _tag: "Ok", value: x }` | `ok(x)` |
+| `{ _tag: "Err", error: e }` | `err(e)` |
+| `{ _tag: "Some", value: x }` | `some(x)` (`@onrails/maybe`) |
+| `{ _tag: "None" }` | `none()` (`@onrails/maybe`) |
+
+Only exact shapes are touched. Literals with extra keys, spreads, computed keys
+or a non-literal `_tag` are left alone, as are files that already bind `ok`,
+`err`, `some` or `none` to something else. A trailing `as const` is dropped
+with the literal. Imports are added or merged. It works against the current
+API, so it can run before any breaking release.
 
 ## Native migration
 

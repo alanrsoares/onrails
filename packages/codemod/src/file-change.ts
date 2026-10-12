@@ -3,6 +3,7 @@ import { countOccurrences } from "./ast.js";
 import { rewriteCompatMethodChainsToNative } from "./chains.js";
 import { COMPAT_SPEC, IMPORT_RE, NATIVE_SPEC } from "./constants.js";
 import { rewriteCompatImportsToNative } from "./imports.js";
+import { rewriteCarrierLiterals } from "./literals.js";
 import { tersify } from "./tersify.js";
 import type { ComputedChange, FileChange, Mode, ModeStrategy, Warning } from "./types.js";
 import {
@@ -40,6 +41,13 @@ const MODES: Record<Mode, ModeStrategy> = {
     countBefore: () => 0,
     earlyExit: () => false,
     transform: tersify,
+    warnings: () => [],
+    countAfter: () => 0,
+  },
+  literals: {
+    countBefore: (src) => countOccurrences(src, "_tag"),
+    earlyExit: (_src, before) => before === 0,
+    transform: rewriteCarrierLiterals,
     warnings: () => [],
     countAfter: () => 0,
   },
