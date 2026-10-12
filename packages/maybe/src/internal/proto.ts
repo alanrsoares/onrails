@@ -1,6 +1,13 @@
 import type { Maybe, MaybeMethods } from "../maybe.js";
 
 /**
+ * `util.inspect` / `Bun.inspect` / `console.log` hook: render `Ok(1)` instead of dumping the class
+ * name and every prototype method. Symbol-keyed, so it adds no enumerable field and JSON is unchanged.
+ */
+const INSPECT = Symbol.for("nodejs.util.inspect.custom");
+type Inspect = (value: unknown, options?: unknown) => string;
+
+/**
  * Live carrier classes. `_tag` and `value` are own enumerable fields, so JSON
  * and `structuredClone` see plain data; every method lives on the prototype
  * and is therefore non-enumerable. Internal only: build carriers with
@@ -13,6 +20,9 @@ class SomeImpl<T> implements MaybeMethods<T> {
   constructor(value: T) {
     this._tag = "Some";
     this.value = value;
+  }
+  [INSPECT](_depth: number, options: unknown, inspect: Inspect): string {
+    return `Some(${inspect(this.value, options)})`;
   }
   map<U>(fn: (value: T) => U): Maybe<U> {
     return new SomeImpl(fn(this.value));
@@ -42,6 +52,9 @@ class NoneImpl<T> implements MaybeMethods<T> {
   readonly _tag: "None";
   constructor() {
     this._tag = "None";
+  }
+  [INSPECT](): string {
+    return "None";
   }
   map<U>(_fn: (value: T) => U): Maybe<U> {
     return new NoneImpl<U>();
