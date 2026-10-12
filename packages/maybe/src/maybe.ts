@@ -1,4 +1,5 @@
 import { dual } from "./internal/dual.js";
+import { newNone, newSome } from "./internal/proto.js";
 
 /**
  * Tagged optional value — a discriminated union over `_tag` where absence
@@ -13,7 +14,34 @@ import { dual } from "./internal/dual.js";
  * }
  * ```
  */
-export type Maybe<T> = { readonly _tag: "Some"; readonly value: T } | { readonly _tag: "None" };
+export type Maybe<T> = MaybeData<T> & MaybeMethods<T>;
+
+/**
+ * Plain-data shape of a {@link Maybe}: what `JSON.parse`, `structuredClone`
+ * and `postMessage` hand back. It has no methods; lift it with `Maybe.from`.
+ */
+export type MaybeData<T> = { readonly _tag: "Some"; readonly value: T } | { readonly _tag: "None" };
+
+/**
+ * Methods every live {@link Maybe} carries on its (non-enumerable) prototype.
+ * Core semantics, mirroring `ResultMethods`: `tap` does not swallow throws.
+ */
+export interface MaybeMethods<T> {
+  /** Transform the `Some` value; `None` passes through. */
+  map<U>(fn: (value: T) => U): Maybe<U>;
+  /** Canonical bind; short-circuits on `None`. */
+  flatMap<U>(fn: (value: T) => Maybe<U>): Maybe<U>;
+  /** Alias of {@link MaybeMethods.flatMap}. */
+  andThen<U>(fn: (value: T) => Maybe<U>): Maybe<U>;
+  /** Fold both branches into one value. */
+  match<U>(onSome: (value: T) => U, onNone: () => U): U;
+  /** The `Some` value, or `defaultValue` on `None`. */
+  unwrapOr(defaultValue: T): T;
+  /** Observe the `Some` value, pass the maybe through. */
+  tap(fn: (value: T) => void): Maybe<T>;
+  /** Observe `None`, pass the maybe through. */
+  tapNone(fn: () => void): Maybe<T>;
+}
 
 /** The `Some` branch of a {@link Maybe} — a present value tagged `"Some"`. */
 export type Some<T> = Extract<Maybe<T>, { _tag: "Some" }>;
@@ -29,7 +57,7 @@ export type None = Extract<Maybe<never>, { _tag: "None" }>;
  * const m = some(1);   // Maybe<number>
  * ```
  */
-export const some = <T>(value: T): Maybe<T> => ({ _tag: "Some", value });
+export const some = <T>(value: T): Maybe<T> => newSome(value);
 
 /**
  * Fantasy Land `pure` — alias of {@link some}. One lift name shared across
@@ -51,7 +79,23 @@ export const of = some;
  * const cached: Maybe<User> = cache.has(id) ? some(cache.get(id)) : none();
  * ```
  */
-export const none = <T = never>(): Maybe<T> => ({ _tag: "None" });
+export const none = <T = never>(): Maybe<T> => newNone<T>();
+
+/**
+ * Value-side companion of the {@link Maybe} type. `from` lifts plain data back
+ * into a live `Maybe` at every deserialization sink (`JSON.parse`,
+ * `structuredClone`, `postMessage`, Redux rehydration). It trusts the shape.
+ *
+ * @example
+ * ```ts
+ * const live = Maybe.from<number>(JSON.parse(JSON.stringify(some(1))));
+ * live.map((n) => n + 1);
+ * ```
+ */
+export const Maybe = {
+  from: <T>(data: MaybeData<T>): Maybe<T> =>
+    data._tag === "Some" ? newSome(data.value) : newNone<T>(),
+} as const;
 
 /**
  * Type-narrowing predicate: returns `true` when the value is `Some`.
@@ -191,7 +235,7 @@ export const unwrapOr: {
  * ```
  */
 export const unwrap = <T>(maybe: Maybe<T>): T => {
-  if (isNone(maybe)) {
+  if (maybe._tag === "None") {
     throw new Error("Called unwrap on None");
   }
   return maybe.value;
