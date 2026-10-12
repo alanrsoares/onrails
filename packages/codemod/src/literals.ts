@@ -132,6 +132,28 @@ const isShadowed = (node: ts.Node, name: string): boolean => {
   return false;
 };
 
+const PATTERN_CALLS = new Set(["with", "withEither", "when", "isMatching"]);
+
+/**
+ * True when the literal is (part of) a pattern argument of a ts-pattern style call. A pattern is
+ * not a value: `ok(P.number)` would be a carrier where a matcher is expected. Stops at function
+ * boundaries so literals inside a handler body are still rewritten.
+ */
+const isPatternPosition = (node: ts.Node): boolean => {
+  for (let cur: ts.Node | undefined = node.parent; cur; cur = cur.parent) {
+    if (ts.isFunctionLike(cur)) return false;
+    if (!ts.isCallExpression(cur)) continue;
+    const callee = cur.expression;
+    const name = ts.isPropertyAccessExpression(callee)
+      ? callee.name.text
+      : ts.isIdentifier(callee)
+        ? callee.text
+        : "";
+    if (PATTERN_CALLS.has(name)) return true;
+  }
+  return false;
+};
+
 /** The node to replace: the literal, widened over a trailing `as const` that the call makes redundant. */
 const spanNode = (lit: ts.ObjectLiteralExpression): ts.Node =>
   ts.isAsExpression(lit.parent) &&
@@ -149,7 +171,7 @@ const collectEdits = (src: string, jsx: boolean): readonly LiteralEdit[] => {
       const props = readProps(node);
       const tag = props && tagOf(props);
       const shape = tag ? SHAPES[tag] : undefined;
-      if (!props || !shape || (shape && isShadowed(node, shape.fn))) return false;
+      if (!props || !shape || isShadowed(node, shape.fn) || isPatternPosition(node)) return false;
       const wanted = shape.field === null ? ["_tag"] : ["_tag", shape.field];
       const keys = props.map((p) => p.key);
       if (keys.length !== wanted.length || !wanted.every((k) => keys.includes(k))) return false;
