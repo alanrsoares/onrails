@@ -182,6 +182,15 @@ const extractDocSymbol = (
     classFields = classMembers(checker, decl, name, packageName, categorize);
   } else if (ts.isVariableDeclaration(decl)) {
     signature = `const ${name}: ${checker.typeToString(declaredType)}`;
+    // A type and a const sharing a name (`type Result` + `const Result = { from }`)
+    // are one export: document the type first, then the value-side companion.
+    const typeDecl = symbol.declarations?.find(
+      (d) => ts.isInterfaceDeclaration(d) || ts.isTypeAliasDeclaration(d),
+    );
+    if (typeDecl) {
+      kind = "type";
+      signature = `${typeDecl.getText()}\n\n${signature}`;
+    }
   }
 
   return {

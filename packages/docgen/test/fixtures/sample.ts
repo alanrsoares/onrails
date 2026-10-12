@@ -14,3 +14,9 @@ export const add = (a: number, b: number): number => a + b;
 export const greeting = "hello";
 
 export type Pair = { left: number; right: number };
+
+/** Plain data lifted into a live {@link Tagged}. */
+export type Tagged<T> = { readonly tag: string; readonly value: T };
+
+/** Value-side companion of the {@link Tagged} type. */
+export const Tagged = { of: <T>(value: T): Tagged<T> => ({ tag: "t", value }) } as const;

@@ -210,7 +210,7 @@ const greeting = match(
 
 ### MaybeData <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-Plain-data shape of a [Maybe](#maybe-other): what `JSON.parse`, `structuredClone`
+Plain-data shape of a [Maybe](#maybe-type): what `JSON.parse`, `structuredClone`
 and `postMessage` hand back. It has no methods; lift it with `Maybe.from`.
 
 ```typescript
@@ -221,7 +221,7 @@ export type MaybeData<T> = { readonly _tag: "Some"; readonly value: T } | { read
 
 ### MaybeMethods <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-Methods every live [Maybe](#maybe-other) carries on its (non-enumerable) prototype.
+Methods every live [Maybe](#maybe-type) carries on its (non-enumerable) prototype.
 Core semantics, mirroring `ResultMethods`: `tap` does not swallow throws.
 
 ```typescript
@@ -484,19 +484,21 @@ optional(rawId, (id) => fromNullable(cache.get(id)));
 
 ## Types
 
-### Maybe <span className="inline-flex items-center rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">other</span>
+### Maybe <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
 Tagged optional value — a discriminated union over `_tag` where absence
 (`None`) is an expected outcome, not a failure. Construct with [some](#some-ƒ) /
 [none](#none-ƒ), narrow with [isSome](#issome-ƒ) / [isNone](#isnone-ƒ), and collapse with
 [match](./result#match-ƒ).
-Value-side companion of the [Maybe](#maybe-other) type. `from` lifts plain data back
+Value-side companion of the [Maybe](#maybe-type) type. `from` lifts plain data back
 into a live `Maybe` at every deserialization sink (`JSON.parse`,
 `structuredClone`, `postMessage`, Redux rehydration). It trusts the shape,
 but an unknown `_tag` is a defect and throws a `TypeError` rather than
 silently becoming `None`.
 
 ```typescript
+export type Maybe<T> = MaybeData<T> & MaybeMethods<T>;
+
 const Maybe: { readonly from: <T>(data: MaybeData<T>) => Maybe<T>; }
 ```
 
@@ -517,7 +519,7 @@ live.map((n) => n + 1);
 
 ### None <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-The `None` branch of a [Maybe](#maybe-other) — expected absence, tagged `"None"`.
+The `None` branch of a [Maybe](#maybe-type) — expected absence, tagged `"None"`.
 
 ```typescript
 export type None = Extract<Maybe<never>, { _tag: "None" }>;
@@ -527,7 +529,7 @@ export type None = Extract<Maybe<never>, { _tag: "None" }>;
 
 ### Some <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
 
-The `Some` branch of a [Maybe](#maybe-other) — a present value tagged `"Some"`.
+The `Some` branch of a [Maybe](#maybe-type) — a present value tagged `"Some"`.
 
 ```typescript
 export type Some<T> = Extract<Maybe<T>, { _tag: "Some" }>;
