@@ -3,15 +3,7 @@ import { ResultAsync as CoreResultAsync } from "../async.js";
 import { combineTuple, validateAll } from "../collections.js";
 import { mkErr as coreErr, mkOk as coreOk } from "../internal/ctor.js";
 import type { InferErr, InferOk } from "../internal/infer.js";
-import {
-  fromThrowable as coreFromThrowable,
-  flatMap,
-  isErr,
-  isOk,
-  map,
-  mapErr,
-  unwrapOr,
-} from "../result.js";
+import { fromThrowable as coreFromThrowable, isErr, isOk } from "../result.js";
 import type { Result as ResultType } from "../types.js";
 
 type TupleOk<R extends readonly CompatResult<unknown, unknown>[]> = {
@@ -71,15 +63,15 @@ export class CompatResult<T, E> {
   }
 
   map<U>(fn: (value: T) => U): CompatResult<U, E> {
-    return new CompatResult(map(this.inner, fn));
+    return new CompatResult(this.inner.map(fn));
   }
 
   mapErr<F>(fn: (error: E) => F): CompatResult<T, F> {
-    return new CompatResult(mapErr(this.inner, fn));
+    return new CompatResult(this.inner.mapErr(fn));
   }
 
   andThen<U, F = E>(fn: (value: T) => CompatResult<U, F>): CompatResult<U, E | F> {
-    return new CompatResult(flatMap(this.inner, (value) => fn(value).inner));
+    return new CompatResult(this.inner.flatMap((value) => fn(value).inner));
   }
 
   asyncAndThen<U, F = E>(
@@ -101,7 +93,7 @@ export class CompatResult<T, E> {
   }
 
   unwrapOr<U>(defaultValue: U): T | U {
-    return unwrapOr(this.inner as ResultType<T | U, E>, defaultValue);
+    return this.inner.unwrapOr(defaultValue);
   }
 
   andTee(fn: (value: T) => unknown): CompatResult<T, E> {
