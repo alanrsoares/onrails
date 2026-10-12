@@ -60,6 +60,10 @@ if (isOk(r)) console.log(r.value);
 
 For composition patterns (`pipe`, `flow`, dual-form transforms, point-free pipelines) see [`packages/result/RECIPES.md`](./packages/result/RECIPES.md).
 
+## Benchmarks
+
+Microbenchmarks vs `neverthrow` / `ts-pattern` (runtime + fair import-graph minify+gzip): [`packages/bench`](./packages/bench) — snapshot in [`packages/bench/RESULTS.md`](./packages/bench/RESULTS.md). Run locally with `bun run build && bun run bench` (or `bun run bench:md` to refresh the snapshot). Soft CI smoke only fails on harness errors, never because a rival is faster.
+
 ## House style
 
 `import * as R from "@onrails/result"` (and `Maybe`, `P` for `@onrails/pattern`) is the documented house style once a file pulls in more than a handful of names or mixes carriers — `R.` autocompletes the whole module surface and sidesteps collisions like `match` from `ts-pattern`. Named imports (`import { map } from "@onrails/result"`) are fine for small, single-carrier files.

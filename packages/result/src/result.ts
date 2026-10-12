@@ -1,6 +1,7 @@
 import { mkErr, mkOk } from "./internal/ctor.js";
 import { dual } from "./internal/dual.js";
 import type { Payload } from "./internal/payload.js";
+import { newErr, newOk } from "./internal/proto.js";
 import { toError } from "./internal/to-error.js";
 import type { Err, Ok, Result } from "./types.js";
 
@@ -27,7 +28,8 @@ export function ok<const T extends Payload[]>(value: T): Result<T, never>;
 export function ok<const T>(value: T): Result<T, never>;
 export function ok<T, E>(value: T): Result<T, E>;
 export function ok<T>(value: T): Result<T, never> {
-  return mkOk(value);
+  // Direct carrier construct — skip the unlocked `mkOk` alias hop on the hot path.
+  return newOk(value);
 }
 
 /**
@@ -64,7 +66,8 @@ export function err<const E extends Payload[]>(error: E): Result<never, E>;
 export function err<const E>(error: E): Result<never, E>;
 export function err<T, E>(error: E): Result<T, E>;
 export function err<E>(error: E): Result<never, E> {
-  return mkErr(error);
+  // Direct carrier construct — skip the unlocked `mkErr` alias hop on the hot path.
+  return newErr(error);
 }
 
 /**

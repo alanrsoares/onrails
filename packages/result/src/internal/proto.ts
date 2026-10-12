@@ -5,7 +5,8 @@ import type { Result, ResultMethods } from "../types.js";
  * fields, so JSON and `structuredClone` see plain data; every method lives on
  * the prototype and is therefore non-enumerable.
  *
- * Internal only: reach carriers through `mkOk` / `mkErr` or the public
+ * Internal only: reach carriers through {@link newOk} / {@link newErr}
+ * (aliased as `mkOk` / `mkErr` for unlocked internals) or the public
  * `ok` / `err`.
  */
 class OkImpl<T, E> implements ResultMethods<T, E> {

@@ -39,24 +39,39 @@ const isGuard = <T>(pattern: Pattern<T>): pattern is PatternGuard<T> =>
 const isPatternObject = (pattern: unknown): pattern is Record<string, unknown> =>
   typeof pattern === "object" && pattern !== null;
 
-const matches = <T>(input: T, pattern: Pattern<T>): boolean => {
-  if (isGuard(pattern)) {
-    return pattern(input);
-  }
+/**
+ * Compile a pattern into a reusable predicate once at `.with` time.
+ * Single-key object patterns (the common discriminant shape) skip
+ * `Object.keys` on every test.
+ */
+const compileTest = <T>(pattern: Pattern<T>): ((input: T) => boolean) => {
+  if (isGuard(pattern)) return pattern;
   if (!isPatternObject(pattern)) {
-    return input === pattern;
+    return (input) => input === pattern;
   }
-  if (typeof input !== "object" || input === null) {
-    return false;
-  }
-  const record = input as Record<string, unknown>;
   const patternRecord = pattern as Record<string, unknown>;
-  for (const key of Object.keys(patternRecord)) {
-    if (record[key] !== patternRecord[key]) {
-      return false;
-    }
+  const keys = Object.keys(patternRecord);
+  if (keys.length === 0) {
+    return (input) => typeof input === "object" && input !== null;
   }
-  return true;
+  if (keys.length === 1) {
+    const key = keys[0] as string;
+    const expected = patternRecord[key];
+    return (input) => {
+      if (typeof input !== "object" || input === null) return false;
+      return (input as Record<string, unknown>)[key] === expected;
+    };
+  }
+  const pairs: readonly (readonly [string, unknown])[] = keys.map((k) => [k, patternRecord[k]]);
+  return (input) => {
+    if (typeof input !== "object" || input === null) return false;
+    const record = input as Record<string, unknown>;
+    for (let i = 0; i < pairs.length; i++) {
+      const pair = pairs[i] as readonly [string, unknown];
+      if (record[pair[0]] !== pair[1]) return false;
+    }
+    return true;
+  };
 };
 
 // Sentinel for "curried matcher, no captured input". Distinct from a
@@ -81,10 +96,18 @@ const findCase = <T, R>(input: T, cases: readonly Case<T, R>[]): Case<T, R> | nu
 const caseForPatterns = <T, R>(
   patterns: readonly Pattern<T>[],
   handler: (input: T) => R,
-): Case<T, R> => ({
-  test: (input) => patterns.some((pattern) => matches(input, pattern)),
-  run: handler,
-});
+): Case<T, R> => {
+  const tests = patterns.map(compileTest);
+  return {
+    test: (input) => {
+      for (let i = 0; i < tests.length; i++) {
+        if ((tests[i] as (input: T) => boolean)(input)) return true;
+      }
+      return false;
+    },
+    run: handler,
+  };
+};
 
 // Result-type accumulator: stays at `R` when the result type is locked
 // (after `returnType<R>()`), otherwise widens with each `.with`.
@@ -124,7 +147,9 @@ export class MatchBuilder<
    * the optional captured `input`, and the phantom `_handled` tuple.
    */
   constructor(
-    private readonly cases: readonly Case<T, unknown>[],
+    // Mutable: linear `.with` chains push in place. Forking an intermediate
+    // builder shares the case list — builders are not fork-safe by design.
+    private readonly cases: Case<T, unknown>[],
     // No default: `= NO_INPUT` would swallow a data-first `undefined` input,
     // because JS applies parameter defaults to explicitly-passed undefined.
     private readonly input: T | NoInput,
@@ -136,12 +161,15 @@ export class MatchBuilder<
   private addCase<R2, H>(
     next: Case<T, unknown>,
   ): MatchBuilder<T, NextResult<Locked, R, R2>, HasInput, readonly [...Handled, H], Locked> {
-    return new MatchBuilder(
-      [...this.cases, next],
-      this.input,
-      // Safe: _handled is a phantom tuple — only its type-level contents matter.
-      this._handled as unknown as readonly [...Handled, H],
-    );
+    this.cases.push(next);
+    // Safe: same instance; only phantom type params change (`_handled` is compile-time only).
+    return this as unknown as MatchBuilder<
+      T,
+      NextResult<Locked, R, R2>,
+      HasInput,
+      readonly [...Handled, H],
+      Locked
+    >;
   }
 
   /**
@@ -180,7 +208,8 @@ export class MatchBuilder<
     Locked
   > {
     return this.addCase<R2, ExhaustMatched<T, P>>({
-      test: (input) => matches(input, pattern),
+      // Safe: P extends Pattern<T>; compiled predicate accepts the wider input T.
+      test: compileTest(pattern) as (input: T) => boolean,
       run: handler as (input: T) => unknown,
     });
   }
@@ -274,7 +303,8 @@ export class MatchBuilder<
    * ```
    */
   returnType<R2>(): MatchBuilder<T, R2, HasInput, Handled, true> {
-    return new MatchBuilder<T, R2, HasInput, Handled, true>(this.cases, this.input, this._handled);
+    // Safe: same instance; only the Locked phantom + result type change.
+    return this as unknown as MatchBuilder<T, R2, HasInput, Handled, true>;
   }
 
   /**
