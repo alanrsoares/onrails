@@ -10,7 +10,7 @@ export type FluentMaybe<T> = {
   tapNone(fn: () => void): FluentMaybe<T>;
   match<U>(onSome: (value: T) => U, onNone: () => U): U;
 
-  unwrapOr(defaultValue: T): T;
+  unwrapOr<U>(defaultValue: U): T | U;
   /** Exit the wrapper — hand back the canonical plain-data maybe. */
   toMaybe(): Maybe<T>;
   /** Debug terminal — `Some(…)` / `None`, same output as {@link show}. */

@@ -36,7 +36,7 @@ class SomeImpl<T> implements MaybeMethods<T> {
   match<U>(onSome: (value: T) => U, _onNone: () => U): U {
     return onSome(this.value);
   }
-  unwrapOr(_defaultValue: T): T {
+  unwrapOr<U>(_defaultValue: U): T | U {
     return this.value;
   }
   tap(fn: (value: T) => void): Maybe<T> {
@@ -68,7 +68,7 @@ class NoneImpl<T> implements MaybeMethods<T> {
   match<U>(_onSome: (value: T) => U, onNone: () => U): U {
     return onNone();
   }
-  unwrapOr(defaultValue: T): T {
+  unwrapOr<U>(defaultValue: U): T | U {
     return defaultValue;
   }
   tap(_fn: (value: T) => void): Maybe<T> {
