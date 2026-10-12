@@ -5,9 +5,10 @@
 // carriers keep them on a prototype, so the cast lies. Lift with
 // `Result.from` / `Maybe.from` instead.
 //
-// Limitation: matches the `as` cast form only. The ESLint rule also flags
-// `const r: Result<…> = JSON.parse(…)`; GritQL cannot relate a declarator's
-// annotation to its initializer. Declared in ENGINE_DIVERGENCES
+// Limitation: matches the direct `as` cast form only. The ESLint rule also
+// follows annotated declarators, carrier-typed returns and parameter defaults,
+// `const` bindings of a sink result, and `res.json<Result<…>>()`; GritQL cannot
+// relate a declarator, return type or binding to its use. Declared in ENGINE_DIVERGENCES
 // (`carrier-sinks-need-from` / `cast-form-only`).
 
 engine biome(1.0)
