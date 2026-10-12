@@ -71,6 +71,28 @@ describe("rewriteCarrierLiterals", () => {
 describe("rewriteCarrierLiterals: shadowing", () => {
   it.each([
     {
+      label: "var hoisted out of a nested block",
+      src: `function f() { if (c) { var ok = fn; } return { _tag: "Ok", value: 1 }; }`,
+    },
+    {
+      label: "top-level var inside a block",
+      src: `if (c) { var err = fn; }\nconst a = { _tag: "Err", error: 1 };`,
+    },
+    {
+      label: "aliased onrails import binding the constructor name",
+      src: `import { other as ok } from "@onrails/result";\nconst a = { _tag: "Ok", value: 1 };`,
+    },
+  ])("leaves alone: $label", ({ src }) => {
+    expect(rewriteCarrierLiterals(src)).toBe(src);
+  });
+
+  it("a let in a nested block does not shadow siblings outside it", () => {
+    const src = `function f() { if (c) { let ok = 1; use(ok); } return { _tag: "Ok", value: 1 }; }`;
+    expect(rewriteCarrierLiterals(src)).toContain("return ok(1)");
+  });
+
+  it.each([
+    {
       label: "parameter",
       src: `function f(ok: (n: number) => number) { return { _tag: "Ok", value: 1 }; }`,
     },
@@ -105,6 +127,18 @@ describe("rewriteCarrierLiterals: import handling", () => {
     expect(rewriteCarrierLiterals(src)).toBe(
       `${OK}const note = 'import { map } from "@onrails/result";';\nconst a = ok(1);`,
     );
+  });
+
+  it("an aliased import of the constructor does not count as the local name", () => {
+    const src = `import { ok as renamed } from "@onrails/result";\nconst a = { _tag: "Ok", value: 1 };`;
+    expect(rewriteCarrierLiterals(src)).toBe(
+      `import { ok as renamed, ok } from "@onrails/result";\nconst a = ok(1);`,
+    );
+  });
+
+  it("does not duplicate a name another declaration of the same module already imports", () => {
+    const src = `import { ok } from "@onrails/result";\nimport { map } from "@onrails/result";\nconst a = { _tag: "Ok", value: 1 };`;
+    expect(rewriteCarrierLiterals(src)).toBe(src.replace('{ _tag: "Ok", value: 1 }', "ok(1)"));
   });
 
   it("inserts the import after a shebang", () => {

@@ -17,10 +17,15 @@ or {
   `$sink as Result<$a, $b>`,
   `$sink as Maybe<$a>`
 } as $t where {
+  // the sink call itself (optionally awaited / parenthesized), not any call nested inside it:
+  // `Result.from(JSON.parse(raw)) as Result<T, E>` is lifted and must stay quiet
   $sink <: or {
-    contains `JSON.parse($_)`,
-    contains `structuredClone($_)`,
-    contains `$_.json()`
+    `JSON.parse($_)`,
+    `structuredClone($_)`,
+    `$_.json()`,
+    `await $_.json()`,
+    `($_.json())`,
+    `(await $_.json())`
   },
   register_diagnostic(
     span = $t,

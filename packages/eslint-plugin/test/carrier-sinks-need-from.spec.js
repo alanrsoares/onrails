@@ -29,6 +29,9 @@ tester.run("carrier-sinks-need-from", plugin.rules["carrier-sinks-need-from"], {
     "const body = (await res.json()) as Body;",
   ],
   invalid: [
+    // a non-carrier cast must not hide an annotated carrier declaration
+    { code: "const r: Result<number, string> = JSON.parse(raw) as any;", errors: [{ messageId: "needsFrom" }] },
+    { code: "const m: Maybe<number> = (await res.json()) as unknown;", errors: [{ messageId: "needsFrom" }] },
     { code: "const r = JSON.parse(raw) as Result<number, string>;", errors: [{ messageId: "needsFrom" }] },
     { code: "const m = structuredClone(x) as Maybe<number>;", errors: [{ messageId: "needsFrom" }] },
     {

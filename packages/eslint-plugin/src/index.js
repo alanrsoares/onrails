@@ -431,8 +431,9 @@ const carrierSinksNeedFrom = {
             /** @type {unknown} */ (node)
           );
         const annotated = decl.id.typeAnnotation?.typeAnnotation;
-        // a bare `as` initializer is already reported by the TSAsExpression visitor
-        if (decl.init?.type === "TSAsExpression") return;
+        // an `as Result<…>` / `as Maybe<…>` initializer is already reported by the TSAsExpression
+        // visitor; any other cast (`as any`) must not hide an annotated carrier declaration
+        if (decl.init?.type === "TSAsExpression" && isCarrierType(decl.init.typeAnnotation)) return;
         if (isCarrierType(annotated) && isSinkCall(decl.init)) {
           context.report({ node, messageId: "needsFrom" });
         }
