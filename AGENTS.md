@@ -58,7 +58,7 @@ The lib eats its own dogfood:
 
 - `Result<T, E>` / `ResultAsync<T, E>` at every fallible boundary.
 - `Maybe<T>` for expected absence (cache miss, optional relation, no match). Not for failure.
-- Tagged unions over classes — `{ readonly _tag: "Ok"; readonly value }` / `{ readonly _tag: "Err"; readonly error }`. `readonly` everywhere.
+- Tagged unions, not class hierarchies — `{ readonly _tag: "Ok"; readonly value }` / `{ readonly _tag: "Err"; readonly error }`. `readonly` everywhere. Carriers are plain data (own enumerable `_tag` / `value` / `error`) with methods on a shared non-enumerable prototype, so `JSON.stringify` is unchanged. Build them with `ok` / `err` / `some` / `none`; never hand-write a literal. Plain data from `JSON.parse` / `structuredClone` / `postMessage` is lifted with `Result.from` / `Maybe.from`.
 - `flatMap` is canonical. Class methods expose `.andThen` for neverthrow muscle memory.
 - Module-function default; `/fluent` subpath is optional sugar. Every transform (`map`, `flatMap`, `match`, …) is **dual-form**: `map(r, fn)` data-first or `map(fn)(r)` curried.
 - Subpath exports only — no deep `src/*` imports from consumers, no relative cross-package imports.
