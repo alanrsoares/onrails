@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.2.0](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.4...eslint-plugin-v0.2.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **result:** Result and Maybe carriers are now objects with methods on a non-enumerable prototype. ok(), err(), some() and none() return them; the _tag / value / error fields are unchanged and JSON.stringify output is the same. Hand-written { _tag: "Ok", value }, { _tag: "Err", error }, { _tag: "Some", value } and { _tag: "None" } literals are no longer Result or Maybe; run onrails-codemod --literals to rewrite them to ok() / err() / some() / none(). Data that went through JSON.parse, structuredClone, postMessage, spread or a Redux / IndexedDB round-trip has lost its methods; lift it with Result.from(data) or Maybe.from(data). Result methods follow core semantics: tap does not swallow throws and recover keeps the Ok type. The carrier-sinks-need-from lint rule (ESLint and Biome) flags JSON.parse, structuredClone and .json() output typed as Result / Maybe without from(); the Biome rule only matches the as cast form.
+
+### Features
+
+* **biome-plugin:** add carrier-sinks-need-from rule ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **codemod:** rewrite carrier literals to constructors ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **eslint-plugin:** add carrier-sinks-need-from rule ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **result:** prototype carriers, neverthrow parity ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+
+
+### Bug Fixes
+
+* **eslint-plugin:** follow carrier sinks through flow ([#106](https://github.com/alanrsoares/onrails/issues/106)) ([ee9d171](https://github.com/alanrsoares/onrails/commit/ee9d17198f9944fb1f5904d0f009e169d0deaf18))
+
 ## [0.1.4](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.3...eslint-plugin-v0.1.4) (2026-07-04)
 
 

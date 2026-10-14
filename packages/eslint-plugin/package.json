@@ -1,7 +1,7 @@
 {
   "name": "@onrails/eslint-plugin",
-  "version": "0.1.4",
-  "description": "ESLint rules for @onrails/result boundaries \u2014 flags Promise<Result<\u2026>> in public APIs and _unsafeUnwrap*. Replaces unmaintained eslint-plugin-neverthrow.",
+  "version": "0.2.0",
+  "description": "ESLint rules for @onrails/result boundaries — flags Promise<Result<…>> in public APIs and _unsafeUnwrap*. Replaces unmaintained eslint-plugin-neverthrow.",
   "license": "MIT",
   "author": "Alan R. Soares",
   "homepage": "https://github.com/alanrsoares/onrails/tree/main/packages/eslint-plugin#readme",
