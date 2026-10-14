@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.5.0](https://github.com/alanrsoares/onrails/compare/result-v0.4.2...result-v0.5.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **result:** Result and Maybe carriers are now objects with methods on a non-enumerable prototype. ok(), err(), some() and none() return them; the _tag / value / error fields are unchanged and JSON.stringify output is the same. Hand-written { _tag: "Ok", value }, { _tag: "Err", error }, { _tag: "Some", value } and { _tag: "None" } literals are no longer Result or Maybe; run onrails-codemod --literals to rewrite them to ok() / err() / some() / none(). Data that went through JSON.parse, structuredClone, postMessage, spread or a Redux / IndexedDB round-trip has lost its methods; lift it with Result.from(data) or Maybe.from(data). Result methods follow core semantics: tap does not swallow throws and recover keeps the Ok type. The carrier-sinks-need-from lint rule (ESLint and Biome) flags JSON.parse, structuredClone and .json() output typed as Result / Maybe without from(); the Biome rule only matches the as cast form.
+
+### Features
+
+* **biome-plugin:** add carrier-sinks-need-from rule ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **codemod:** rewrite carrier literals to constructors ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **eslint-plugin:** add carrier-sinks-need-from rule ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **result:** prototype carriers, neverthrow parity ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+
+
+### Bug Fixes
+
+* **result:** render Ok/Err in inspect output ([#105](https://github.com/alanrsoares/onrails/issues/105)) ([fbdde0a](https://github.com/alanrsoares/onrails/commit/fbdde0a40b6eb87a318635e3f3a47c6614ebf08a))
+* **result:** throw on unknown tag in from ([#102](https://github.com/alanrsoares/onrails/issues/102)) ([47c0416](https://github.com/alanrsoares/onrails/commit/47c04160d20018223eb116032c51dba1ea38ff08))
+
+
+### Performance Improvements
+
+* **pattern:** compile match tests; linearize builder ([#103](https://github.com/alanrsoares/onrails/issues/103)) ([a2fd26f](https://github.com/alanrsoares/onrails/commit/a2fd26f3fa56925988a8d98504ef0606d5a3246d))
+
 ## [0.4.2](https://github.com/alanrsoares/onrails/compare/result-v0.4.1...result-v0.4.2) (2026-09-24)
 
 

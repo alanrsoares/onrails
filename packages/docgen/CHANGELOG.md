@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.0.0](https://github.com/alanrsoares/onrails/compare/docgen-v1.1.5...docgen-v2.0.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **result:** Result and Maybe carriers are now objects with methods on a non-enumerable prototype. ok(), err(), some() and none() return them; the _tag / value / error fields are unchanged and JSON.stringify output is the same. Hand-written { _tag: "Ok", value }, { _tag: "Err", error }, { _tag: "Some", value } and { _tag: "None" } literals are no longer Result or Maybe; run onrails-codemod --literals to rewrite them to ok() / err() / some() / none(). Data that went through JSON.parse, structuredClone, postMessage, spread or a Redux / IndexedDB round-trip has lost its methods; lift it with Result.from(data) or Maybe.from(data). Result methods follow core semantics: tap does not swallow throws and recover keeps the Ok type. The carrier-sinks-need-from lint rule (ESLint and Biome) flags JSON.parse, structuredClone and .json() output typed as Result / Maybe without from(); the Biome rule only matches the as cast form.
+
+### Features
+
+* **biome-plugin:** add carrier-sinks-need-from rule ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **codemod:** rewrite carrier literals to constructors ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **eslint-plugin:** add carrier-sinks-need-from rule ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+* **maybe:** widen unwrapOr default to T | U ([#108](https://github.com/alanrsoares/onrails/issues/108)) ([aad6cb9](https://github.com/alanrsoares/onrails/commit/aad6cb90cc505bee2a075f4e88f20648de6737f4))
+* **result:** prototype carriers, neverthrow parity ([92097e9](https://github.com/alanrsoares/onrails/commit/92097e9baa2d7b39858a718b41033b8d25bb97dd))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/pattern bumped to 0.4.0
+    * @onrails/result bumped to 0.5.0
+
 ## [1.1.5](https://github.com/alanrsoares/onrails/compare/docgen-v1.1.4...docgen-v1.1.5) (2026-09-24)
 
 
