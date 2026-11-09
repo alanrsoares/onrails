@@ -123,7 +123,11 @@ function tryTersifyNoSubstitutionTemplateLiteral(node: ts.Node, sf: ts.SourceFil
       return none();
     }
     const rawText = node.getText(sf);
-    const content = rawText.slice(1, -1);
+    // "\`" and "\$" are template-only escapes. In a "..." string they are useless.
+    // Match escapes as pairs so that an escaped backslash ("\\") stays intact.
+    const content = rawText
+      .slice(1, -1)
+      .replace(/\\([\s\S])/g, (pair, ch: string) => (ch === "`" || ch === "$" ? ch : pair));
     if (!content.includes("\n") && !content.includes("\r") && !content.includes('"')) {
       return some(spanEdit(node, sf, edit(`"${content}"`)));
     }

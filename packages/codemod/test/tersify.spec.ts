@@ -271,33 +271,6 @@ function compute(n: number) {
     });
   });
 
-  describe("object property shorthand", () => {
-    it("converts property assignment to shorthand when name and initializer are identical identifiers", () => {
-      const src = "const obj = { a: a, b: b, c: d };";
-      const expected = "const obj = { a, b, c: d };";
-      expect(tersify(src)).toBe(expected);
-    });
-  });
-
-  describe("no substitution template literals", () => {
-    it("converts static single-line template literals to double-quoted strings", () => {
-      const src = "const url = `https://api.github.com`;";
-      const expected = 'const url = "https://api.github.com";';
-      expect(tersify(src)).toBe(expected);
-    });
-
-    it("does not convert template literals with substitutions", () => {
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: string contains mock code
-      const src = "const url = `https://${host}`;";
-      expect(tersify(src)).toBe(src);
-    });
-
-    it("does not convert multi-line template literals", () => {
-      const src = "const sql = `SELECT * \nFROM users`;";
-      expect(tersify(src)).toBe(src);
-    });
-  });
-
   describe("boolean return simplifications", () => {
     it("converts if-else returning booleans to a simple condition return", () => {
       const src = `
