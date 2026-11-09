@@ -52,8 +52,11 @@ export const mapErrKind =
   <T>(result: Result<T, E>): Result<T, E | F> =>
     isErr(result) && hasKind(result.error, kind) ? mkErr(fn(result.error)) : result;
 
-/** True when no result is Err */
-export const allOk = <T, E>(results: readonly Result<T, E>[]): boolean => results.every(isOk);
+/** True when no result is Err. Stops at the first `Err`. */
+export const allOk = <T, E>(results: Iterable<Result<T, E>>): boolean => {
+  for (const result of results) if (isErr(result)) return false;
+  return true;
+};
 
 /**
  * The exit to promise-based libraries that expect a rejecting `Promise`

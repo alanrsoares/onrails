@@ -25,6 +25,7 @@ import {
   unwrapOk,
   unwrapOr,
 } from "../src/result.js";
+import { foldSeq, type SeqFailure, traverseSeq } from "../src/sequence.js";
 import { $, tryGen, yieldResult } from "../src/try-gen.js";
 import type { Err, Ok, Result, UnexpectedError } from "../src/types.js";
 
@@ -452,5 +453,44 @@ describe("tryGen types", () => {
 
     expectType<Result<number, never>>(withName);
     expectType<Result<number, never>>(withAlias);
+  });
+});
+
+describe("sequence types", () => {
+  type MoveError = { kind: "refused" };
+  const move = (_id: number): ResultAsync<"moved", MoveError> => ResultAsync.ok("moved");
+
+  it("traverseSeq infers ok, item and error types", () => {
+    const ra = traverseSeq([1, 2], move);
+    expectType<
+      TypeEqual<
+        typeof ra,
+        ResultAsync<
+          {
+            readonly ok: readonly "moved"[];
+            readonly failed: readonly SeqFailure<number, MoveError>[];
+          },
+          never
+        >
+      >
+    >(true);
+  });
+
+  it("foldSeq infers the state from init", () => {
+    const ra = foldSeq(["a"], 0, (n, s: string) => ResultAsync.ok<number, "e">(n + s.length));
+    expectType<
+      TypeEqual<
+        typeof ra,
+        ResultAsync<
+          { readonly state: number; readonly failed: readonly SeqFailure<string, "e">[] },
+          never
+        >
+      >
+    >(true);
+  });
+
+  it("combine accepts a Set", () => {
+    const r = combine(new Set([ok<number, string>(1)]));
+    expectType<TypeEqual<typeof r, Result<number[], string>>>(true);
   });
 });

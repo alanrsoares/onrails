@@ -14,9 +14,9 @@ import { isErr } from "./result.js";
 import type { Result } from "./types.js";
 
 /**
- * Combines a homogeneous array of results into a single result holding an
+ * Combines a homogeneous iterable of results into a single result holding an
  * array of the `Ok` values, in input order. Short-circuits on the first `Err`
- * (first failure wins). For heterogeneous tuples that preserve per-index
+ * (first failure wins) and stops pulling from the source there. For heterogeneous tuples that preserve per-index
  * types, use {@link combineTuple}.
  *
  * @example
@@ -25,7 +25,7 @@ import type { Result } from "./types.js";
  * combine([ok(1), err("e")]);     // Err("e")
  * ```
  */
-export const combine = <T, E>(results: readonly Result<T, E>[]): Result<T[], E> => {
+export const combine = <T, E>(results: Iterable<Result<T, E>>): Result<T[], E> => {
   const values: T[] = [];
   for (const result of results) {
     if (isErr(result)) return mkErr(result.error);
@@ -102,13 +102,13 @@ export const combineTuple = <const R extends readonly unknown[]>(
  * // Result<string[], string[]>
  * ```
  */
-export function validateAll<T, E>(results: readonly Result<T, E>[]): Result<T[], readonly E[]>;
+export function validateAll<T, E>(results: Iterable<Result<T, E>>): Result<T[], readonly E[]>;
 export function validateAll<T, E>(
-  results: readonly Result<T, E>[],
+  results: Iterable<Result<T, E>>,
   combineErrors: (left: E, right: E) => E,
 ): Result<T[], E>;
 export function validateAll<T, E>(
-  results: readonly Result<T, E>[],
+  results: Iterable<Result<T, E>>,
   combineErrors?: (left: E, right: E) => E,
 ): Result<T[], E | readonly E[]> {
   const values: T[] = [];
