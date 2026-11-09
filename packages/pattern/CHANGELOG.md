@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.1](https://github.com/alanrsoares/onrails/compare/pattern-v0.4.0...pattern-v0.4.1) (2026-11-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.5.1
+
 ## [0.4.0](https://github.com/alanrsoares/onrails/compare/pattern-v0.3.5...pattern-v0.4.0) (2026-10-14)
 
 

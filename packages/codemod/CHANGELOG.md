@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.1](https://github.com/alanrsoares/onrails/compare/codemod-v0.3.0...codemod-v0.3.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **codemod:** drop template escapes in tersify ([#113](https://github.com/alanrsoares/onrails/issues/113)) ([8a972ab](https://github.com/alanrsoares/onrails/commit/8a972abc9921782222e09459f190916ce34abdd2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @onrails/maybe bumped to 0.3.1
+    * @onrails/pattern bumped to 0.4.1
+    * @onrails/result bumped to 0.5.1
+
 ## [0.3.0](https://github.com/alanrsoares/onrails/compare/codemod-v0.2.8...codemod-v0.3.0) (2026-10-14)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.2.0...eslint-plugin-v0.2.1) (2026-11-09)
+
+
+### Features
+
+* **result:** add rejectOnErr, traverseSeq, foldSeq ([#119](https://github.com/alanrsoares/onrails/issues/119)) ([a55478c](https://github.com/alanrsoares/onrails/commit/a55478cd71fc54db4e7857472b33994c74f7391c))
+
 ## [0.2.0](https://github.com/alanrsoares/onrails/compare/eslint-plugin-v0.1.4...eslint-plugin-v0.2.0) (2026-10-14)
 
 
