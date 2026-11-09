@@ -109,6 +109,6 @@ Subject ≤ 50 chars. Body explains *why* when non-obvious. No `body-max-line-le
 
 ## Releases
 
-Automated by [release-please](https://github.com/googleapis/release-please-action). A `feat`/`fix` on `main` opens a per-package release PR; merging publishes each new version: `bun pm pack`, then `npm publish` through npm trusted publishing (OIDC, no token) with provenance. To retry a failed publish, run the Release workflow manually (`gh workflow run release.yml`); it publishes every version not yet on npm. Do not bump versions manually.
+Automated by [release-please](https://github.com/googleapis/release-please-action). A `feat`/`fix` on `main` opens a per-package release PR; merging publishes each new version: `bun pm pack`, then `npm publish` through npm trusted publishing (OIDC, no token) with provenance. To retry a failed publish, run the Release workflow manually (`gh workflow run release.yml`); it publishes every version not yet on npm. Local fallback (no provenance): `bun run release:all` on a clean, up-to-date `main` after `npm login` (`-- --otp=<code>` for 2FA, `-- --dry-run` to rehearse). Do not bump versions manually.
 
 **Squash merges classify on the PR title, not the commits.** release-please reads only the squash commit header (= the PR title), so a PR whose body carries a `feat`/`fix` but is *titled* `chore` ships nothing. Title every PR with the highest releasable type it contains (a `feat(maybe)` inside → title it `feat(maybe): …`), or the release is silently skipped.
