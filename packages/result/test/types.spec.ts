@@ -254,6 +254,18 @@ describe("ResultAsync types", () => {
   });
 });
 
+describe("tryAsync function types", () => {
+  it("tryAsync infers function success and error types", () => {
+    const ra = tryAsync(() => Promise.resolve(1));
+    const rb = tryAsync(
+      () => Promise.resolve(1),
+      (e) => String(e),
+    );
+    expectType<TypeEqual<typeof ra, ResultAsync<number, Error>>>(true);
+    expectType<TypeEqual<typeof rb, ResultAsync<number, string>>>(true);
+  });
+});
+
 describe("Result interop types", () => {
   const returnsResult = async (s: string): Promise<Result<string, number>> =>
     s.length > 0 ? ok(s) : err(1);

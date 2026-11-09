@@ -9,6 +9,7 @@ import { ResultAsync } from "./async.js";
 import { dual } from "./internal/dual.js";
 import type { InferErr, InferOk } from "./internal/infer.js";
 import { toError } from "./internal/to-error.js";
+import { err, ok } from "./result.js";
 import type { Result, UnexpectedError } from "./types.js";
 
 // The bare renames below detach statics from the class. Safe: every
@@ -122,11 +123,14 @@ export const fromAsync =
  * Convenience wrapper over {@link fromPromise} with default `Error`
  * normalization. Call without `onReject` to get `ResultAsync<T, Error>`,
  * or pass a custom mapper for a typed error.
+ * Pass a function to also catch a synchronous throw before the promise exists.
+ * The function runs once, when the async result is first resolved.
  *
  * @example
  * ```ts
  * // Default: rejection → Err(Error)
  * const a = tryAsync(db.users.insert(row));
+ * const guarded = tryAsync(() => db.users.insert(row));
  *
  * // Custom: typed error
  * const b = tryAsync(db.users.insert(row), (e): DbError => ({
@@ -136,14 +140,28 @@ export const fromAsync =
  * ```
  */
 export function tryAsync<T>(promise: PromiseLike<T>): ResultAsync<T, Error>;
+export function tryAsync<T>(run: () => PromiseLike<T>): ResultAsync<T, Error>;
+export function tryAsync<T, E>(
+  run: () => PromiseLike<T>,
+  onReject: (error: unknown) => E,
+): ResultAsync<T, E>;
 export function tryAsync<T, E>(
   promise: PromiseLike<T>,
   onReject: (error: unknown) => E,
 ): ResultAsync<T, E>;
 export function tryAsync<T, E>(
-  promise: PromiseLike<T>,
+  promise: PromiseLike<T> | (() => PromiseLike<T>),
   onReject?: (error: unknown) => E,
 ): ResultAsync<T, E | Error> {
+  if (typeof promise === "function") {
+    return ResultAsync.defer<T, E | Error>(async () => {
+      try {
+        return ok(await promise());
+      } catch (error) {
+        return err(onReject ? onReject(error) : toError(error));
+      }
+    });
+  }
   return onReject
     ? ResultAsync.fromPromise(promise, onReject)
     : ResultAsync.fromPromise(promise, toError);
