@@ -1,12 +1,16 @@
 export type { MaybeData, MaybeMethods, None, Some } from "./maybe.js";
 export {
   andThen,
+  at,
   compact,
   compactMap,
+  find,
   flatMap,
   fromNullable,
+  head,
   isNone,
   isSome,
+  last,
   Maybe,
   map,
   match,

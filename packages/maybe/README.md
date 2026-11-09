@@ -22,6 +22,19 @@ const name = match(
 );
 ```
 
+## Iterables
+
+`compact` and `compactMap` accept any `Iterable`. Lookups that can miss return `Maybe` instead of `T | undefined`:
+
+| Function | Returns |
+| --- | --- |
+| `head(items)` | first element; pulls one element only |
+| `last(items)` | last element |
+| `at(items, index)` | element at `index`; a negative index counts from the end |
+| `find(items, pred)` | first match; a type-guard predicate narrows the result |
+
+`at` and `find` are dual-form: `find(items, pred)` or `find(pred)(items)`.
+
 ## Side effects
 
 `tap` runs an effect on the `Some` value, `tapNone` on absence — both pass the

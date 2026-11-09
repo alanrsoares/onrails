@@ -7,7 +7,7 @@ import * as core from "../src/maybe.js";
  * Core ↔ fluent surface contract. Rows declare which core transforms the
  * fluent wrapper mirrors; the reverse guard fails when fluent grows an
  * undeclared member. Constructors (some/none/fromNullable/optional),
- * guards (isSome/isNone), array ops (compact/compactMap) and the
+ * guards (isSome/isNone), iterable ops (compact/compactMap/head/last/at/find) and the
  * assertion-tier unwrap are deliberately core-only.
  */
 const TABLE = [
