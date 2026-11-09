@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.1](https://github.com/alanrsoares/onrails/compare/maybe-v0.3.0...maybe-v0.3.1) (2026-11-09)
+
+
+### Features
+
+* **result:** add rejectOnErr, traverseSeq, foldSeq ([#119](https://github.com/alanrsoares/onrails/issues/119)) ([a55478c](https://github.com/alanrsoares/onrails/commit/a55478cd71fc54db4e7857472b33994c74f7391c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @onrails/result bumped to 0.5.1
+  * peerDependencies
+    * @onrails/result bumped to 0.5.1
+
 ## [0.3.0](https://github.com/alanrsoares/onrails/compare/maybe-v0.2.5...maybe-v0.3.0) (2026-10-14)
 
 

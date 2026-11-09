@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/alanrsoares/onrails/compare/result-v0.5.0...result-v0.5.1) (2026-11-09)
+
+
+### Features
+
+* **result:** accept a function in tryAsync ([#116](https://github.com/alanrsoares/onrails/issues/116)) ([615bb10](https://github.com/alanrsoares/onrails/commit/615bb10a45df9fc831ed8821e8195e434ddcda9c))
+* **result:** add rejectOnErr, traverseSeq, foldSeq ([#119](https://github.com/alanrsoares/onrails/issues/119)) ([a55478c](https://github.com/alanrsoares/onrails/commit/a55478cd71fc54db4e7857472b33994c74f7391c))
+
 ## [0.5.0](https://github.com/alanrsoares/onrails/compare/result-v0.4.2...result-v0.5.0) (2026-10-14)
 
 
