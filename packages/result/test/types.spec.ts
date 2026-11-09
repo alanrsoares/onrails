@@ -254,6 +254,18 @@ describe("ResultAsync types", () => {
   });
 });
 
+describe("tryAsync function form types", () => {
+  it("tryAsync function form infers T from the returned promise", () => {
+    const ra = tryAsync(() => Promise.resolve(1));
+    const rb = tryAsync(
+      async () => "x",
+      (e) => String(e),
+    );
+    expectType<TypeEqual<typeof ra, ResultAsync<number, Error>>>(true);
+    expectType<TypeEqual<typeof rb, ResultAsync<string, string>>>(true);
+  });
+});
+
 describe("Result interop types", () => {
   const returnsResult = async (s: string): Promise<Result<string, number>> =>
     s.length > 0 ? ok(s) : err(1);

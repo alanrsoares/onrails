@@ -73,7 +73,7 @@ These are not alternative syntaxes — they are the entry points into the railwa
 | Independent validations, accumulated failures | `validateAll` / `validateTuple` from `@onrails/result` |
 | Sync → async lift, keep error type | `fromResult`, `asyncAfter` (do **not** use `fromAsync` here)         |
 | `Promise<Result<…>>` boundary lift | `fromAsync` / `tryAsync`                                             |
-| Throwing sync call, run it now     | `trySync(() => f())` — mirrors `tryAsync(promise)`                   |
+| Throwing sync call, run it now     | `trySync(() => f())` — mirrors `tryAsync(() => promise)`             |
 | Throwing sync function, reusable   | `fromThrowable(f, onThrow)` — neverthrow's `Result.fromThrowable`    |
 
 Rule of thumb: pick the smallest tool that removes nesting. Reach for `Railway` only when named context replaces positional tuple plumbing.
@@ -116,6 +116,12 @@ const status = tryAsync(fetch(url), (error) => ({
   kind: "network" as const,
   message: String(error),
 }));
+```
+
+Pass a function instead of a promise when the call can throw before it returns its promise (a bad argument, a getter, a non-`async` function that validates first). `tryAsync` calls it at once, and a sync throw goes through the same `onReject` as a rejection:
+
+```ts
+const plain = tryAsync(() => crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce }, key, data));
 ```
 
 ## Tagged error style
