@@ -1,9 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { errAsync, okAsync } from "../src/async-lift.js";
 import {
   type AccumulateErrors,
   declareErrors,
   hasKind,
   mapErrKind,
+  rejectOnErr,
   type UnionErrors,
 } from "../src/extra.js";
 import { err } from "../src/result.js";
@@ -47,5 +49,16 @@ describe("extra error helpers", () => {
     const d = declareErrors<ParseError | NetError>();
     const r = d.annotate(err({ kind: "timeout" }));
     expect(r._tag).toBe("Err");
+  });
+});
+
+describe("rejectOnErr", () => {
+  it("resolves with the Ok value", async () => {
+    expect(await rejectOnErr(okAsync<number, NetError>(42))).toBe(42);
+  });
+
+  it("rejects with the Err value as-is", async () => {
+    const error: NetError = { kind: "timeout" };
+    await expect(rejectOnErr(errAsync<number, NetError>(error))).rejects.toBe(error);
   });
 });

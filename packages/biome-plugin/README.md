@@ -29,7 +29,7 @@ Reference the rule files in `biome.json` plugins:
 | Rule | What it catches |
 |------|------------------|
 | `no-promise-result` | `Promise<Result<T, E>>` in any type position — return `ResultAsync<T, E>` and use `fromAsync` / `tryAsync` at the boundary (error) |
-| `no-unsafe-unwrap`  | `._unsafeUnwrap()` / `._unsafeUnwrapErr()` calls — use `match` / `resolve` / `yieldResult` instead (error) |
+| `no-unsafe-unwrap`  | `._unsafeUnwrap()` / `._unsafeUnwrapErr()` calls — use `match` / `resolve` / `yieldResult` instead; for a library that needs a rejecting `Promise` (TanStack Query), use `rejectOnErr` from `@onrails/result/extra`, which is not flagged (error) |
 | `no-deprecated-synonyms` | Deprecated synonyms (`chain`, `fold`, `getOrElse`, `of`, …) — use the canonical names (error, partly fixable) |
 | `fluent-stays-local` | Bare `FluentResult<…>` / `FluentMaybe<…>` type references — broader net than the ESLint rule, see `ENGINE_DIVERGENCES` (error) |
 | `carrier-sinks-need-from` | `JSON.parse` / `structuredClone` / `.json()` output cast to `Result<…>` / `Maybe<…>` without `Result.from` / `Maybe.from`; cast form only, see `ENGINE_DIVERGENCES` (error) |

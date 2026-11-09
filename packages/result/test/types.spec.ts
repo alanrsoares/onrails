@@ -3,7 +3,7 @@ import { expectType, type TypeEqual } from "ts-expect";
 import { ResultAsync } from "../src/async.js";
 import { asyncAfter, fromAsync, fromResult, tryAsync } from "../src/async-lift.js";
 import { combine, combineTuple, validateAll, validateTuple } from "../src/collections.js";
-import type { ErrOf, OkOf, UnionErrors } from "../src/extra.js";
+import { type ErrOf, type OkOf, rejectOnErr, type UnionErrors } from "../src/extra.js";
 import type { InferErr, InferOk } from "../src/internal/infer.js";
 import { Railway } from "../src/railway.js";
 import {
@@ -295,6 +295,11 @@ describe("Result interop types", () => {
 });
 
 describe("Result extra types", () => {
+  it("rejectOnErr returns a Promise of the Ok type", () => {
+    const p = rejectOnErr(ResultAsync.ok<number, "x">(1));
+    expectType<TypeEqual<typeof p, Promise<number>>>(true);
+  });
+
   it("OkOf and ErrOf extract from Result", () => {
     type R = Result<number, { kind: "fail" }>;
     expectType<TypeEqual<OkOf<R>, number>>(true);

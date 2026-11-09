@@ -134,7 +134,7 @@ type BotError =
   | { kind: "network"; message: string };
 ```
 
-Helpers: `@onrails/result/extra` — `hasKind`, `mapErrKind`, `declareErrors`, `UnionErrors`, `AccumulateErrors`.
+Helpers: `@onrails/result/extra` — `hasKind`, `mapErrKind`, `declareErrors`, `UnionErrors`, `AccumulateErrors`, and `rejectOnErr` (hand-off to libraries that expect a rejecting `Promise`, such as TanStack Query; see [RECIPES.md §14](./RECIPES.md#14-hand-off-to-tanstack-query-rejecting-promise)).
 
 ### Literals stay narrow
 
@@ -461,7 +461,7 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result` | Core + interop exports |
 | `@onrails/result/async` | Data-last twins of the `ResultAsync` methods (for `pipe` / `flow`) |
 | `@onrails/result/fluent` | `fluent()` |
-| `@onrails/result/extra` | Error-type utilities |
+| `@onrails/result/extra` | Error-type utilities, `rejectOnErr` |
 | `@onrails/result/pipe` | `pipe` (value-first) and `flow` (point-free), up to 12 steps |
 | `@onrails/result/railway` | `Railway` named-context workflow builder |
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |

@@ -462,6 +462,37 @@ Every step reads name-first (`fromSync("id", …)`, `fromPromise("profile", …)
 
 ---
 
+## 14. Hand-off to TanStack Query (rejecting `Promise`)
+
+TanStack Query, SWR and React Router loaders expect a `Promise` that **rejects** on failure. `await ra` never rejects, so use `rejectOnErr` from `@onrails/result/extra` as the one exit from the railway. Call it in the `queryFn` / `mutationFn` only, not inside your domain functions.
+
+
+```ts
+import { type ResultAsync } from "@onrails/result";
+import { rejectOnErr } from "@onrails/result/extra";
+
+type User = { id: string; name: string };
+type LoadError = { kind: "not_found" } | { kind: "network"; cause: unknown };
+
+declare const loadUser: (id: string) => ResultAsync<User, LoadError>;
+declare const saveUser: (user: User) => ResultAsync<User, LoadError>;
+declare const useQuery: <T, E>(opts: { queryKey: unknown[]; queryFn: () => Promise<T> }) => { data?: T; error: E | null };
+declare const useMutation: <T, V>(opts: { mutationFn: (v: V) => Promise<T> }) => unknown;
+
+const query = useQuery<User, LoadError>({
+  queryKey: ["user", "u1"],
+  queryFn: () => rejectOnErr(loadUser("u1")),
+});
+// query.error: LoadError | null — the Err value, unchanged
+
+useMutation({ mutationFn: (user: User) => rejectOnErr(saveUser(user)) });
+```
+
+
+The `Err` value becomes the rejection reason as-is, so `query.error` is your tagged error, not a wrapped `Error`. TanStack Query types `error` as `Error` by default. Pass `E` as the second type argument (as above), or register it globally with `Register.defaultError`. `rejectOnErr` is not an `unwrap*` call, so the `no-unsafe-unwrap` lint rules do not flag it.
+
+---
+
 ## When NOT to go point-free
 
 Pipelines should read top-to-bottom and each step should do one obvious thing. Reach for `pipe` when:
