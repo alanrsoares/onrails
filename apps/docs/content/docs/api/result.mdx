@@ -1433,16 +1433,20 @@ Convenience wrapper over [fromPromise](#frompromise-ƒ) with default `Error`
 normalization. Call without `onReject` to get `ResultAsync<T, Error>`,
 or pass a custom mapper for a typed error.
 
+Pass a function that returns the promise when the call can throw before
+the promise exists. `tryAsync` calls it at once. A sync throw and a
+rejection both go through `onReject`.
+
 ```typescript
-function tryAsync<T>(promise: PromiseLike<T>): ResultAsync<T, Error>
-function tryAsync<T, E>(promise: PromiseLike<T>, onReject: (error: unknown) => E): ResultAsync<T, E>
+function tryAsync<T>(source: PromiseLike<T> | (() => PromiseLike<T>)): ResultAsync<T, Error>
+function tryAsync<T, E>(source: PromiseLike<T> | (() => PromiseLike<T>), onReject: (error: unknown) => E): ResultAsync<T, E>
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `promise` | `PromiseLike<T>` |  |
+| `source` | `PromiseLike<T> \| (() => PromiseLike<T>)` |  |
 
 #### Example
 
@@ -1455,6 +1459,9 @@ const b = tryAsync(db.users.insert(row), (e): DbError => ({
   kind: "db",
   cause: e,
 }));
+
+// Function form: a sync throw (bad argument) also becomes Err
+const c = tryAsync(() => crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce }, key, data));
 ```
 
 

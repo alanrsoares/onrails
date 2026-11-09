@@ -46,6 +46,46 @@ describe("ResultAsync: construction", () => {
   });
 });
 
+describe("tryAsync function form", () => {
+  const boom = new Error("boom");
+  const toMessage = (e: unknown) => (e instanceof Error ? `mapped:${e.message}` : "unknown");
+
+  it.each([
+    { label: "resolve", run: () => Promise.resolve(1), expected: ok(1) },
+    { label: "reject", run: () => Promise.reject(boom), expected: err("mapped:boom") },
+    {
+      label: "sync throw",
+      run: (): Promise<number> => {
+        throw boom;
+      },
+      expected: err("mapped:boom"),
+    },
+  ])("$label goes through onReject", async ({ run, expected }) => {
+    expect(await tryAsync(run, toMessage).resolve()).toEqual(expected);
+  });
+
+  it.each([
+    { label: "reject", run: () => Promise.reject("boom") },
+    {
+      label: "sync throw",
+      run: (): Promise<number> => {
+        throw "boom";
+      },
+    },
+  ])("$label normalizes to Error by default", async ({ run }) => {
+    expect(await tryAsync(run).resolve()).toEqual(err(new Error("boom")));
+  });
+
+  it("calls the function at once, not on resolve", () => {
+    let calls = 0;
+    tryAsync(() => {
+      calls += 1;
+      return Promise.resolve(1);
+    });
+    expect(calls).toBe(1);
+  });
+});
+
 describe("ResultAsync: bimap mirrors the sync surface", () => {
   const onOk = (n: number) => n * 2;
   const onErr = (e: string) => ({ kind: "wrapped" as const, cause: e });

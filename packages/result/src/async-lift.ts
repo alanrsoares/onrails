@@ -123,6 +123,10 @@ export const fromAsync =
  * normalization. Call without `onReject` to get `ResultAsync<T, Error>`,
  * or pass a custom mapper for a typed error.
  *
+ * Pass a function that returns the promise when the call can throw before
+ * the promise exists. `tryAsync` calls it at once. A sync throw and a
+ * rejection both go through `onReject`.
+ *
  * @example
  * ```ts
  * // Default: rejection → Err(Error)
@@ -133,18 +137,29 @@ export const fromAsync =
  *   kind: "db",
  *   cause: e,
  * }));
+ *
+ * // Function form: a sync throw (bad argument) also becomes Err
+ * const c = tryAsync(() => crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce }, key, data));
  * ```
  */
-export function tryAsync<T>(promise: PromiseLike<T>): ResultAsync<T, Error>;
+export function tryAsync<T>(source: PromiseLike<T> | (() => PromiseLike<T>)): ResultAsync<T, Error>;
 export function tryAsync<T, E>(
-  promise: PromiseLike<T>,
+  source: PromiseLike<T> | (() => PromiseLike<T>),
   onReject: (error: unknown) => E,
 ): ResultAsync<T, E>;
 export function tryAsync<T, E>(
-  promise: PromiseLike<T>,
+  source: PromiseLike<T> | (() => PromiseLike<T>),
   onReject?: (error: unknown) => E,
 ): ResultAsync<T, E | Error> {
-  return onReject
-    ? ResultAsync.fromPromise(promise, onReject)
-    : ResultAsync.fromPromise(promise, toError);
+  const mapError: (error: unknown) => E | Error = onReject ?? toError;
+  if (typeof source !== "function") return ResultAsync.fromPromise(source, mapError);
+  // Called now, not on resolve: same timing as the promise form. A sync
+  // throw takes the rejection path, so both go through `mapError`.
+  let promise: PromiseLike<T>;
+  try {
+    promise = source();
+  } catch (error) {
+    promise = Promise.reject(error);
+  }
+  return ResultAsync.fromPromise(promise, mapError);
 }
