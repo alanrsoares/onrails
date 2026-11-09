@@ -71,10 +71,14 @@ These are not alternative syntaxes — they are the entry points into the railwa
 | Shape                              | Reach for                                                            |
 | ---------------------------------- | -------------------------------------------------------------------- |
 | Independent validations, accumulated failures | `validateAll` / `validateTuple` from `@onrails/result` |
+| Async steps in turn, keep going on `Err` | `traverseSeq` / `foldSeq` (sync or async iterables; see [RECIPES.md §15](./RECIPES.md#15-one-step-at-a-time-keep-going-on-failure-traverseseq--foldseq)) |
+| Hand-off to a library that needs a rejecting `Promise` | `rejectOnErr` from `@onrails/result/extra` |
 | Sync → async lift, keep error type | `fromResult`, `asyncAfter` (do **not** use `fromAsync` here)         |
 | `Promise<Result<…>>` boundary lift | `fromAsync` / `tryAsync`                                             |
 | Throwing sync call, run it now     | `trySync(() => f())` — mirrors `tryAsync(() => promise)`             |
 | Throwing sync function, reusable   | `fromThrowable(f, onThrow)` — neverthrow's `Result.fromThrowable`    |
+
+`combine`, `validateAll` and `allOk` accept any `Iterable` (generators, `Set`, `Map` iterators), not only arrays.
 
 Rule of thumb: pick the smallest tool that removes nesting. Reach for `Railway` only when named context replaces positional tuple plumbing.
 
@@ -134,7 +138,7 @@ type BotError =
   | { kind: "network"; message: string };
 ```
 
-Helpers: `@onrails/result/extra` — `hasKind`, `mapErrKind`, `declareErrors`, `UnionErrors`, `AccumulateErrors`.
+Helpers: `@onrails/result/extra` — `hasKind`, `mapErrKind`, `declareErrors`, `UnionErrors`, `AccumulateErrors`, and `rejectOnErr` (hand-off to libraries that expect a rejecting `Promise`, such as TanStack Query; see [RECIPES.md §14](./RECIPES.md#14-hand-off-to-tanstack-query-rejecting-promise)).
 
 ### Literals stay narrow
 
@@ -461,7 +465,7 @@ import { ResultAsync, Result, ok, err, okAsync, errAsync } from "@onrails/result
 | `@onrails/result` | Core + interop exports |
 | `@onrails/result/async` | Data-last twins of the `ResultAsync` methods (for `pipe` / `flow`) |
 | `@onrails/result/fluent` | `fluent()` |
-| `@onrails/result/extra` | Error-type utilities |
+| `@onrails/result/extra` | Error-type utilities, `rejectOnErr` |
 | `@onrails/result/pipe` | `pipe` (value-first) and `flow` (point-free), up to 12 steps |
 | `@onrails/result/railway` | `Railway` named-context workflow builder |
 | `@onrails/result/try-gen` | `tryGen`, `yieldResult`, `$` |

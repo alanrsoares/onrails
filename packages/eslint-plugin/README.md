@@ -47,7 +47,7 @@ export default [
 | Rule | What it does |
 |---|---|
 | `@onrails/no-promise-result` | Flags `Promise<Result<…>>` in source — public APIs should return `ResultAsync` |
-| `@onrails/no-unsafe-unwrap` | Flags `_unsafeUnwrap*` outside test files |
+| `@onrails/no-unsafe-unwrap` | Flags `_unsafeUnwrap*` outside test files. For a library that needs a rejecting `Promise` (TanStack Query), use `rejectOnErr` from `@onrails/result/extra`, which is not flagged |
 | `@onrails/no-deprecated-synonyms` | Flags deprecated synonyms (`chain`, `fold`, `getOrElse`, `of`, …) and suggests the canonical names |
 | `@onrails/fluent-stays-local` | Flags `FluentResult`/`FluentMaybe` escaping as a return type, an exported binding, a stored field, or a serialize/postMessage/cache argument |
 | `@onrails/carrier-sinks-need-from` | Flags `JSON.parse` / `structuredClone` / `.json()` output typed as `Result` / `Maybe` without `Result.from` / `Maybe.from` (plain data has no methods) |

@@ -52,5 +52,27 @@ export const mapErrKind =
   <T>(result: Result<T, E>): Result<T, E | F> =>
     isErr(result) && hasKind(result.error, kind) ? mkErr(fn(result.error)) : result;
 
-/** True when no result is Err */
-export const allOk = <T, E>(results: readonly Result<T, E>[]): boolean => results.every(isOk);
+/** True when no result is Err. Stops at the first `Err`. */
+export const allOk = <T, E>(results: Iterable<Result<T, E>>): boolean => {
+  for (const result of results) if (isErr(result)) return false;
+  return true;
+};
+
+/**
+ * The exit to promise-based libraries that expect a rejecting `Promise`
+ * (TanStack Query `queryFn` / `mutationFn`, SWR fetchers, React Router
+ * loaders). `Ok` resolves to its value; `Err` rejects with the error as-is.
+ *
+ * This is the one permitted place where a `Result` becomes a rejection. Keep
+ * it at the library boundary; inside the app, stay on the railway with `match`
+ * or `await ra`.
+ *
+ * @example
+ * ```ts
+ * import { rejectOnErr } from "@onrails/result/extra";
+ *
+ * useQuery({ queryKey: ["user", id], queryFn: () => rejectOnErr(loadUser(id)) });
+ * ```
+ */
+export const rejectOnErr = <T, E>(source: ResultAsync<T, E>): Promise<T> =>
+  source.resolve().then((result) => (isOk(result) ? result.value : Promise.reject(result.error)));

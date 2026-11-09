@@ -1,10 +1,12 @@
 import { describe, it } from "bun:test";
 import { expectType, type TypeEqual } from "ts-expect";
-import type { Maybe } from "../src/maybe.js";
 import {
   type andThen,
+  find,
   flatMap,
   fromNullable,
+  head,
+  type Maybe,
   map,
   match,
   none,
@@ -89,5 +91,31 @@ describe("Maybe unwrapOr types", () => {
   it("method widens to T | U", () => {
     const v = some(1).unwrapOr(undefined);
     expectType<TypeEqual<typeof v, number | undefined>>(true);
+  });
+});
+
+describe("iterable lookups", () => {
+  type Click = { type: "click"; x: number };
+  type Key = { type: "key"; key: string };
+  const events: readonly (Click | Key)[] = [];
+
+  it("find with a type guard narrows", () => {
+    const m = find(events, (e): e is Click => e.type === "click");
+    expectType<TypeEqual<typeof m, Maybe<Click>>>(true);
+  });
+
+  it("find with a boolean predicate keeps the element type", () => {
+    const m = find(events, (e) => e.type.length > 3);
+    expectType<TypeEqual<typeof m, Maybe<Click | Key>>>(true);
+  });
+
+  it("curried find narrows", () => {
+    const m = find((e: Click | Key): e is Key => e.type === "key")(events);
+    expectType<TypeEqual<typeof m, Maybe<Key>>>(true);
+  });
+
+  it("head reads the iterable element type", () => {
+    const m = head(new Set(["a"]));
+    expectType<TypeEqual<typeof m, Maybe<string>>>(true);
   });
 });

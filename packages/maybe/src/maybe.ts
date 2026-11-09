@@ -254,7 +254,7 @@ export const unwrap = <T>(maybe: Maybe<T>): T => {
  * compact([some(1), none(), some(2)]);    // [1, 2]
  * ```
  */
-export const compact = <T>(maybes: readonly Maybe<T>[]): T[] => {
+export const compact = <T>(maybes: Iterable<Maybe<T>>): T[] => {
   const out: T[] = [];
   for (const m of maybes) {
     if (isSome(m)) {
@@ -265,8 +265,8 @@ export const compact = <T>(maybes: readonly Maybe<T>[]): T[] => {
 };
 
 /**
- * `compact(items.map(fn))` — map each item to `Maybe`, drop `None`,
- * collect the rest.
+ * Map each item to `Maybe`, drop `None`, collect the rest. One pass over any
+ * iterable.
  *
  * @example
  * ```ts
@@ -276,8 +276,92 @@ export const compact = <T>(maybes: readonly Maybe<T>[]): T[] => {
  * // string[]
  * ```
  */
-export const compactMap = <T, U>(items: readonly T[], fn: (item: T) => Maybe<U>): U[] =>
-  compact(items.map(fn));
+export const compactMap = <T, U>(items: Iterable<T>, fn: (item: T) => Maybe<U>): U[] => {
+  const out: U[] = [];
+  for (const item of items) {
+    const m = fn(item);
+    if (isSome(m)) out.push(m.value);
+  }
+  return out;
+};
+
+/**
+ * First element of an iterable, or `None` when it is empty. Pulls one element
+ * only.
+ *
+ * @example
+ * ```ts
+ * head([3, 4]);        // Some(3)
+ * head(new Set());     // None
+ * ```
+ */
+export const head = <T>(items: Iterable<T>): Maybe<T> => {
+  for (const item of items) return some(item);
+  return none<T>();
+};
+
+/**
+ * Last element of an iterable, or `None` when it is empty. Reads arrays by
+ * index; walks any other iterable to the end.
+ *
+ * @example
+ * ```ts
+ * last([3, 4]);   // Some(4)
+ * last([]);       // None
+ * ```
+ */
+export const last = <T>(items: Iterable<T>): Maybe<T> => {
+  if (Array.isArray(items))
+    return items.length > 0 ? some(items[items.length - 1] as T) : none<T>();
+  let found = none<T>();
+  for (const item of items) found = some(item);
+  return found;
+};
+
+const atImpl = <T>(items: readonly T[], index: number): Maybe<T> => {
+  const i = index < 0 ? items.length + index : index;
+  // Index check, not a nullish check: an element may itself be `undefined`.
+  return Number.isInteger(i) && i >= 0 && i < items.length ? some(items[i] as T) : none<T>();
+};
+
+/**
+ * Element at `index`, or `None` when out of range. A negative index counts
+ * from the end, as `Array.prototype.at`. An element that is `undefined` is
+ * still `Some(undefined)`.
+ *
+ * @example
+ * ```ts
+ * at(["a", "b"], -1);   // Some("b")
+ * at(["a", "b"], 5);    // None
+ * pipe(rows, at(0));    // curried
+ * ```
+ */
+export const at: {
+  <T>(items: readonly T[], index: number): Maybe<T>;
+  (index: number): <T>(items: readonly T[]) => Maybe<T>;
+} = dual(2, atImpl);
+
+const findImpl = <T>(items: Iterable<T>, pred: (item: T) => boolean): Maybe<T> => {
+  for (const item of items) if (pred(item)) return some(item);
+  return none<T>();
+};
+
+/**
+ * First element that matches `pred`, or `None`. Stops at the first match. A
+ * type-guard predicate narrows the result.
+ *
+ * @example
+ * ```ts
+ * find(users, (u) => u.id === id);                   // Maybe<User>
+ * find(events, (e): e is Click => e.type === "click"); // Maybe<Click>
+ * ```
+ */
+export const find: {
+  <T, S extends T>(items: Iterable<T>, pred: (item: T) => item is S): Maybe<S>;
+  <T>(items: Iterable<T>, pred: (item: T) => boolean): Maybe<T>;
+  <T, S extends T>(pred: (item: T) => item is S): (items: Iterable<T>) => Maybe<S>;
+  <T>(pred: (item: T) => boolean): (items: Iterable<T>) => Maybe<T>;
+} = dual(2, findImpl);
 
 /**
  * `flatMap(fromNullable(value), fn)` — lift a nullable then bind through

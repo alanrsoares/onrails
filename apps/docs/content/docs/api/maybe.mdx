@@ -74,6 +74,62 @@ andThen(fromNullable(user), (u) =>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
+### at <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Element at `index`, or `None` when out of range. A negative index counts
+from the end, as `Array.prototype.at`. An element that is `undefined` is
+still `Some(undefined)`.
+
+```typescript
+function at<T>(items: readonly T[], index: number): Maybe<T>
+function at(index: number): <T>(items: readonly T[]) => Maybe<T>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `readonly T[]` |  |
+| `index` | `number` |  |
+
+#### Example
+
+```ts
+at(["a", "b"], -1);   // Some("b")
+at(["a", "b"], 5);    // None
+pipe(rows, at(0));    // curried
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### find <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+First element that matches `pred`, or `None`. Stops at the first match. A
+type-guard predicate narrows the result.
+
+```typescript
+function find<T, S extends T>(items: Iterable<T>, pred: (item: T) => item is S): Maybe<S>
+function find<T>(items: Iterable<T>, pred: (item: T) => boolean): Maybe<T>
+function find<T, S extends T>(pred: (item: T) => item is S): (items: Iterable<T>) => Maybe<S>
+function find<T>(pred: (item: T) => boolean): (items: Iterable<T>) => Maybe<T>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `Iterable<T>` |  |
+| `pred` | `(item: T) => item is S` |  |
+
+#### Example
+
+```ts
+find(users, (u) => u.id === id);                   // Maybe<User>
+find(events, (e): e is Click => e.type === "click"); // Maybe<Click>
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
 ### flatMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Canonical bind for `Maybe`. Chains a `Maybe`-returning step;
@@ -97,6 +153,30 @@ function flatMap<T, U>(fn: (value: T) => Maybe<U>): (maybe: Maybe<T>) => Maybe<U
 flatMap(fromNullable(user), (u) =>
   u.active ? some(u) : none(),
 );
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### head <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+First element of an iterable, or `None` when it is empty. Pulls one element
+only.
+
+```typescript
+function head<T>(items: Iterable<T>): Maybe<T>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `Iterable<T>` |  |
+
+#### Example
+
+```ts
+head([3, 4]);        // Some(3)
+head(new Set());     // None
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -145,6 +225,30 @@ function isSome<T>(maybe: Maybe<T>): maybe is { readonly _tag: "Some"; readonly 
 if (isSome(m)) {
   console.log(m.value);   // narrowed to Some branch
 }
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### last <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Last element of an iterable, or `None` when it is empty. Reads arrays by
+index; walks any other iterable to the end.
+
+```typescript
+function last<T>(items: Iterable<T>): Maybe<T>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `Iterable<T>` |  |
+
+#### Example
+
+```ts
+last([3, 4]);   // Some(4)
+last([]);       // None
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -390,14 +494,14 @@ function unwrapOr<U>(defaultValue: U): <T>(maybe: Maybe<T>) => U | T
 Drop every `None` and collect the remaining `Some` values into an array.
 
 ```typescript
-function compact<T>(maybes: readonly Maybe<T>[]): T[]
+function compact<T>(maybes: Iterable<Maybe<T>>): T[]
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `maybes` | `readonly Maybe<T>[]` |  |
+| `maybes` | `Iterable<Maybe<T>>` |  |
 
 #### Example
 
@@ -409,18 +513,18 @@ compact([some(1), none(), some(2)]);    // [1, 2]
 
 ### compactMap <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-`compact(items.map(fn))` — map each item to `Maybe`, drop `None`,
-collect the rest.
+Map each item to `Maybe`, drop `None`, collect the rest. One pass over any
+iterable.
 
 ```typescript
-function compactMap<T, U>(items: readonly T[], fn: (item: T) => Maybe<U>): U[]
+function compactMap<T, U>(items: Iterable<T>, fn: (item: T) => Maybe<U>): U[]
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `items` | `readonly T[]` |  |
+| `items` | `Iterable<T>` |  |
 | `fn` | `(item: T) => Maybe<U>` |  |
 
 #### Example

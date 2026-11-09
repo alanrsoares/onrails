@@ -55,6 +55,8 @@ export {
   unwrapOk,
   unwrapOr,
 } from "./result.js";
+export type { FoldSeqOutput, SeqFailure, SeqSource, TraverseSeqOutput } from "./sequence.js";
+export { foldSeq, traverseSeq } from "./sequence.js";
 export { $, tryGen, yieldResult } from "./try-gen.js";
 
 export type { Err, Ok, ResultData } from "./types.js";

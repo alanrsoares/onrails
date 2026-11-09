@@ -133,6 +133,50 @@ parseUserName(raw); // Result<string, ParseError | { kind: "missing" }>
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
+### foldSeq <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Threads a state through the items, one step at a time. Each step reads the
+state the step before it produced. A failed step is recorded in `failed`
+and leaves the state as it was.
+
+```typescript
+function foldSeq<A, S, E>(items: SeqSource<A>, init: S, fn: (state: S, item: A) => Step<S, E>): ResultAsync<FoldSeqOutput<S, A, E>, never>
+function foldSeq<A, S, E>(init: S, fn: (state: S, item: A) => Step<S, E>): (items: SeqSource<A>) => ResultAsync<FoldSeqOutput<S, A, E>, never>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `SeqSource<A>` |  |
+| `init` | `S` |  |
+| `fn` | `(state: S, item: A) => Step<S, E>` |  |
+
+#### Example
+
+```ts
+// Add each topic after the last one that was added; count the misses.
+const added = foldSeq(topicIds, null as Anchor | null, (after, id) =>
+  addTopic(bookId, id, after).map(() => ({ id })),
+);
+// ResultAsync<{ state: Anchor | null; failed: readonly { item: string; error: AddError }[] }, never>
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### FoldSeqOutput <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+Output of [foldSeq](#foldseq-ƒ): the final state and the failed steps, in input order.
+
+```typescript
+export type FoldSeqOutput<S, A, E> = {
+  readonly state: S;
+  readonly failed: readonly SeqFailure<A, E>[];
+};
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
 ### fromThrowable <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Wraps a throwing sync **function**, returning a function that produces a
@@ -439,6 +483,26 @@ export type ResultData<T, E> =
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
 
+### SeqFailure <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+One failed step: the item it ran on and the `Err` it returned.
+
+```typescript
+export type SeqFailure<A, E> = { readonly item: A; readonly error: E };
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### SeqSource <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+A sync or async source of items.
+
+```typescript
+export type SeqSource<A> = Iterable<A> | AsyncIterable<A>;
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
 ### show <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
 Debug printer — renders a result as `Ok(…)` / `Err(…)` for logs. Payloads
@@ -517,6 +581,47 @@ pipe(
   loadUser(id),
   tapErr((e) => metrics.inc("user.load.fail", { kind: e.kind })),
 );
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### traverseSeq <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
+
+Runs `fn` on each item, one at a time, and collects the results. A step
+starts only after the one before it has settled. A failed step is recorded
+in `failed` and the traversal goes on; the carrier itself never fails.
+
+```typescript
+function traverseSeq<A, T, E>(items: SeqSource<A>, fn: (item: A) => Step<T, E>): ResultAsync<TraverseSeqOutput<T, A, E>, never>
+function traverseSeq<A, T, E>(fn: (item: A) => Step<T, E>): (items: SeqSource<A>) => ResultAsync<TraverseSeqOutput<T, A, E>, never>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `SeqSource<A>` |  |
+| `fn` | `(item: A) => Step<T, E>` |  |
+
+#### Example
+
+```ts
+// Move each object in turn (two at once collide); report the refused ids.
+const moved = traverseSeq(ids, (id) => changeState(id));
+// ResultAsync<{ ok: readonly State[]; failed: readonly { item: number; error: StateError }[] }, never>
+```
+
+<hr className="my-8 border-neutral-200 dark:border-neutral-800" />
+
+### TraverseSeqOutput <span className="inline-flex items-center rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 uppercase tracking-wider px-2 py-0.5 text-[10px] font-medium ml-2 align-middle">type</span>
+
+Output of [traverseSeq](#traverseseq-ƒ): `Ok` values and failed steps, both in input order.
+
+```typescript
+export type TraverseSeqOutput<T, A, E> = {
+  readonly ok: readonly T[];
+  readonly failed: readonly SeqFailure<A, E>[];
+};
 ```
 
 <hr className="my-8 border-neutral-200 dark:border-neutral-800" />
@@ -670,15 +775,15 @@ Unlike [combine](#combine-ƒ), this does **not** short-circuit on first failure 
 use for independent checks where you want to report all problems at once.
 
 ```typescript
-function validateAll<T, E>(results: readonly Result<T, E>[]): Result<T[], readonly E[]>
-function validateAll<T, E>(results: readonly Result<T, E>[], combineErrors: (left: E, right: E) => E): Result<T[], E>
+function validateAll<T, E>(results: Iterable<Result<T, E>>): Result<T[], readonly E[]>
+function validateAll<T, E>(results: Iterable<Result<T, E>>, combineErrors: (left: E, right: E) => E): Result<T[], E>
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `results` | `readonly Result<T, E>[]` |  |
+| `results` | `Iterable<Result<T, E>>` |  |
 
 #### Example
 
@@ -1469,20 +1574,20 @@ const c = tryAsync(() => crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce }, k
 
 ### combine <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 font-medium ml-2 align-middle">ƒ</span>
 
-Combines a homogeneous array of results into a single result holding an
+Combines a homogeneous iterable of results into a single result holding an
 array of the `Ok` values, in input order. Short-circuits on the first `Err`
-(first failure wins). For heterogeneous tuples that preserve per-index
+(first failure wins) and stops pulling from the source there. For heterogeneous tuples that preserve per-index
 types, use [combineTuple](#combinetuple-ƒ).
 
 ```typescript
-function combine<T, E>(results: readonly Result<T, E>[]): Result<T[], E>
+function combine<T, E>(results: Iterable<Result<T, E>>): Result<T[], E>
 ```
 
 #### Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `results` | `readonly Result<T, E>[]` |  |
+| `results` | `Iterable<Result<T, E>>` |  |
 
 #### Example
 

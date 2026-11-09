@@ -3,6 +3,11 @@
 A cookbook of functional composition patterns built on `@onrails/result` + `@onrails/maybe`. Every transform in the core API is **dual-form** — call it data-first for one-shots, or data-last (curried) for point-free pipelines:
 
 ```ts
+import { map, type Result } from "@onrails/result";
+
+declare const result: Result<number, string>;
+declare const fn: (n: number) => string;
+
 map(result, fn);   // data-first — best inference for one-shot calls
 map(fn)(result);   // curried, data-last — feeds `pipe(...)` and `flow(...)`
 ```
@@ -27,7 +32,10 @@ To keep codebases readable and consistent, follow the four-tier decision guideli
 ### Tier 1: 1–2 steps, linear (Direct data-first call or method chain)
 
 ```ts
-import { map } from "@onrails/result";
+import { map, type Result } from "@onrails/result";
+
+declare const rawResult: Result<string, Error>;
+declare const normalize: (raw: string) => string;
 
 const normalized = map(rawResult, normalize);
 ```
@@ -35,9 +43,18 @@ const normalized = map(rawResult, normalize);
 ### Tier 2: 3+ steps, linear (pipe / flow)
 
 ```ts
-import { flow, map, flatMap, recover } from "@onrails/result";
+import { flow, map, flatMap, recover, type Result } from "@onrails/result";
 
+type Input = { name: string };
+declare const parseRaw: (raw: string) => Result<string, Error>;
+declare const normalize: (raw: string) => string;
+declare const validate: (s: string) => Result<Input, "invalid">;
+declare const fallback: (e: Error | "invalid") => Result<Input, never>;
+
+// Start from a step with a concrete input: a generic curried first step
+// (`map(normalize)`) leaves the error type with nothing to infer from.
 const process = flow(
+  parseRaw,
   map(normalize),
   flatMap(validate),
   recover(fallback)
@@ -48,7 +65,14 @@ const process = flow(
 
 ```ts
 import { tryGen, $ } from "@onrails/result/try-gen";
-import { ok, err } from "@onrails/result";
+import { ok, err, type Result } from "@onrails/result";
+
+type User = { id: string; isAdmin: boolean };
+type Post = { id: string; authorId: string };
+declare const req: { headers: Record<string, string> };
+declare const postId: string;
+declare const authenticate: (r: typeof req) => Result<User, { kind: "unauthenticated" }>;
+declare const fetchPost: (id: string) => Result<Post, { kind: "not_found" }>;
 
 const stepResult = tryGen(() => {
   const user = $(authenticate(req));
@@ -64,6 +88,13 @@ const stepResult = tryGen(() => {
 
 ```ts
 import { Railway } from "@onrails/result/railway";
+
+type ProfileRow = { id: string; name: string };
+declare const raw: unknown;
+declare const IdSchema: { parse: (x: unknown) => string };
+declare const db: { profiles: { find: (id: string) => Promise<ProfileRow | null> } };
+declare const toError: (e: unknown) => Error;
+declare const normalizeProfile: (p: ProfileRow) => { id: string; displayName: string };
 
 const workflow = Railway
   .fromSync("id", () => IdSchema.parse(raw), toError)
@@ -85,6 +116,10 @@ import { flatMap, fromThrowable, type Result } from "@onrails/result";
 
 type ParseError = { kind: "parse"; message: string };
 type SchemaError = { kind: "schema"; field: string };
+type User = { id: string };
+type Order = { id: string; total: number };
+declare const UserSchema: { parse: (x: unknown) => User };
+declare const OrderSchema: { parse: (x: unknown) => Order };
 
 const parseJsonWith = <T>(schema: { parse: (x: unknown) => T }) =>
   flow(
@@ -108,10 +143,15 @@ Why point-free: the parser's *input* never appears in the definition. Reuse the 
 A typical service-layer flow chains sync validation with async IO.
 
 ```ts
-import { ok, err, pipe, flatMap, mapErr, tap } from "@onrails/result";
+import { ok, err, pipe, flatMap, mapErr, tap, type Result } from "@onrails/result";
 import { asyncAfter, tryAsync } from "@onrails/result";
 
 type DbError = { kind: "db"; cause: unknown };
+type User = { id: string; active: boolean; cart: string[] };
+type OrderRow = { id: string; userId: string };
+declare const parseUser: (raw: string) => Result<User, { kind: "parse" }>;
+declare const log: { info: (entry: object) => void };
+declare const db: { orders: { insert: (row: { userId: string; items: string[] }) => Promise<OrderRow> } };
 
 const saveOrder = (rawJson: string) =>
   pipe(
@@ -139,12 +179,19 @@ const saveOrder = (rawJson: string) =>
 Three call sites return three error shapes. `mapErr` data-last unifies them into one app-level union.
 
 ```ts
-import { pipe, flatMap, mapErr } from "@onrails/result";
+import { pipe, flatMap, mapErr, type Result } from "@onrails/result";
 
 type AppError =
   | { kind: "auth";   reason: string }
   | { kind: "http";   status: number }
   | { kind: "decode"; field: string };
+
+type Session = { userId: string };
+type Profile = { name: string };
+type DTO = { displayName: string };
+declare const verifyToken: (token: string) => Result<Session, "expired" | "bad_sig">;
+declare const fetchProfileSync: (s: Session) => Result<Profile, { status: number }>;
+declare const decodeProfile: (p: Profile) => Result<DTO, { field: string }>;
 
 const loadDashboard = (token: string) =>
   pipe(
@@ -174,6 +221,10 @@ import { fromNullable } from "@onrails/maybe";
 import { toResult } from "@onrails/maybe/interop";
 
 type RowMissing = { kind: "not_found"; id: string };
+type User = { id: string; name: string };
+type Order = { id: string; total: number };
+declare const userCache: Map<string, User>;
+declare const orderCache: Map<string, Order>;
 
 const requireRow = <T>(loader: (id: string) => T | null | undefined) =>
   flow(
@@ -185,8 +236,8 @@ const requireRow = <T>(loader: (id: string) => T | null | undefined) =>
     map((row: T) => ({ ...row, loadedAt: Date.now() })),
   );
 
-const requireUser = requireRow(userCache.get);
-const requireOrder = requireRow(orderCache.get);
+const requireUser = requireRow((id) => userCache.get(id));
+const requireOrder = requireRow((id) => orderCache.get(id));
 // (id: string) => Result<User & { loadedAt: number }, RowMissing>
 ```
 
@@ -203,6 +254,12 @@ import { pipe, ResultAsync } from "@onrails/result";
 
 type ProfileError = { kind: "profile"; cause: unknown };
 type MetricsError = { kind: "metrics"; cause: unknown };
+type Profile = { name: string };
+type Metrics = { score: number };
+type Flags = { enabled: string[] };
+declare const loadProfile: (id: string) => ResultAsync<Profile, ProfileError>;
+declare const loadRecentMetrics: (id: string) => ResultAsync<Metrics, MetricsError>;
+declare const loadFeatureFlags: (id: string) => ResultAsync<Flags, never>;
 
 const buildSummary = (userId: string) =>
   pipe(
@@ -232,7 +289,7 @@ Compose validators data-last; `recover` re-tags or rescues specific error kinds.
 
 ```ts
 import { flow } from "@onrails/result/pipe";
-import { flatMap, recover, ok, err } from "@onrails/result";
+import { flatMap, recover, ok, err, type Result } from "@onrails/result";
 
 type LengthError = { kind: "len"; min: number };
 type CharsError  = { kind: "chars"; bad: string };
@@ -265,8 +322,14 @@ const validateUsername = flow(
 When a single value gets consumed multiple times in branchy logic, point-free flatMap chains get awkward. Drop into `tryGen` and rejoin the pipe.
 
 ```ts
-import { ok, pipe, mapErr } from "@onrails/result";
+import { ok, pipe, mapErr, type Result } from "@onrails/result";
 import { tryGen, $ } from "@onrails/result/try-gen";
+
+type User = { id: string };
+type AclUser = User & { roles: string[] };
+declare const parseUser: (raw: string) => Result<User, { kind: "parse" }>;
+declare const enrichWithAcl: (u: User) => Result<AclUser, { kind: "acl" }>;
+declare const persistSync: (u: AclUser) => Result<AclUser, { kind: "db" }>;
 
 const ingest = (raw: string) =>
   pipe(
@@ -297,11 +360,14 @@ Use `pipe` everywhere else — it composes better and reads top-to-bottom.
 `recover` is the error-track bind. Recover only the kinds you can handle; pass the rest through.
 
 ```ts
-import { pipe, flatMap, recover, ok, err } from "@onrails/result";
+import { pipe, recover, err, type Result } from "@onrails/result";
 
+type Body = { byteLength: number };
 type NetworkError = { kind: "network"; retryable: boolean };
 type RateLimit    = { kind: "rate_limit"; retryAfter: number };
 type Fatal        = { kind: "fatal";  message: string };
+
+declare const fetchSync: (url: string) => Result<Body, NetworkError | RateLimit | Fatal>;
 
 const fetchWithBackoff = (url: string) =>
   pipe(
@@ -325,6 +391,7 @@ When `recover` only inspects the error, the whole pipeline collapses into one `f
 import { flow } from "@onrails/result/pipe";
 import { recover, err, ok, type Result } from "@onrails/result";
 
+type Body = { byteLength: number };
 type NetworkError = { kind: "network"; retryable: boolean };
 type Fatal        = { kind: "fatal"; message: string };
 
@@ -352,7 +419,11 @@ When `recover` needs configuration, take it on the *outer* factory. The inner `f
 import { flow } from "@onrails/result/pipe";
 import { map, recover, ok, err, type Result } from "@onrails/result";
 
+type Body = { byteLength: number };
 type FetchError = { kind: "network" } | { kind: "fatal"; message: string };
+
+declare const fetchSync: (url: string) => Result<Body, FetchError>;
+declare const emptyBody: Body;
 
 type FetchConfig = {
   readonly fallback?: Body;
@@ -385,6 +456,7 @@ Outer closure captures things that don't change per-call (config); the inner `fl
 import { flow } from "@onrails/result/pipe";
 import { flatMap, map, type Result } from "@onrails/result";
 
+type Validated = { id: string };
 type Saved = { id: string; at: number };
 type ParseError  = { kind: "parse"; message: string };
 type SchemaError = { kind: "schema"; field: string };
@@ -446,6 +518,7 @@ import { Railway } from "@onrails/result/railway";
 import { type ResultAsync } from "@onrails/result";
 
 type Dashboard = { title: string };
+type Profile = { name: string };
 
 declare const IdSchema: { parse: (x: unknown) => string };
 declare const fetchProfile: (id: string) => Promise<Profile>;
@@ -459,6 +532,101 @@ const loadDashboard = (rawId: unknown): ResultAsync<Dashboard, Error> =>
 ```
 
 Every step reads name-first (`fromSync("id", …)`, `fromPromise("profile", …)`, `derive("title", …)`) so the field names line up at the left edge, and each step's callback sees the fully-typed context accumulated so far — no manual context annotations needed.
+
+---
+
+## 14. Hand-off to TanStack Query (rejecting `Promise`)
+
+TanStack Query, SWR and React Router loaders expect a `Promise` that **rejects** on failure. `await ra` never rejects, so use `rejectOnErr` from `@onrails/result/extra` as the one exit from the railway. Call it in the `queryFn` / `mutationFn` only, not inside your domain functions.
+
+
+```ts
+import { type ResultAsync } from "@onrails/result";
+import { rejectOnErr } from "@onrails/result/extra";
+
+type User = { id: string; name: string };
+type LoadError = { kind: "not_found" } | { kind: "network"; cause: unknown };
+
+declare const loadUser: (id: string) => ResultAsync<User, LoadError>;
+declare const saveUser: (user: User) => ResultAsync<User, LoadError>;
+declare const useQuery: <T, E>(opts: { queryKey: unknown[]; queryFn: () => Promise<T> }) => { data?: T; error: E | null };
+declare const useMutation: <T, V>(opts: { mutationFn: (v: V) => Promise<T> }) => unknown;
+
+const query = useQuery<User, LoadError>({
+  queryKey: ["user", "u1"],
+  queryFn: () => rejectOnErr(loadUser("u1")),
+});
+// query.error: LoadError | null — the Err value, unchanged
+
+useMutation({ mutationFn: (user: User) => rejectOnErr(saveUser(user)) });
+```
+
+
+The `Err` value becomes the rejection reason as-is, so `query.error` is your tagged error, not a wrapped `Error`. TanStack Query types `error` as `Error` by default. Pass `E` as the second type argument (as above), or register it globally with `Register.defaultError`. `rejectOnErr` is not an `unwrap*` call, so the `no-unsafe-unwrap` lint rules do not flag it.
+
+---
+
+## 15. One step at a time, keep going on failure (`traverseSeq` / `foldSeq`)
+
+`ResultAsync.combine` takes carriers that have already started and stops at the first `Err`. When steps must run **in turn** (two at once collide, or a step reads what the step before it produced) and a failed step must not stop the rest, use `traverseSeq` or `foldSeq`. Both take sync or async iterables.
+
+
+```ts
+import { foldSeq, traverseSeq, type ResultAsync } from "@onrails/result";
+
+type StateError = { kind: "refused"; id: number };
+type Anchor = { id: string };
+type AddError = { kind: "missing"; id: string };
+
+declare const changeState: (id: number) => ResultAsync<"done", StateError>;
+declare const addTopic: (bookId: string, id: string, after: Anchor | null) => ResultAsync<void, AddError>;
+declare const topicPages: () => AsyncIterable<string>;
+
+// Move each object in turn; report the ids that were refused.
+const refused = traverseSeq([1, 2, 3], changeState).map(({ failed }) => failed.map((f) => f.item));
+// ResultAsync<number[], never>
+
+// Add each topic after the last one that was added; a failed add keeps the anchor.
+const added = foldSeq(topicPages(), null as Anchor | null, (after, id) =>
+  addTopic("book-1", id, after).map((): Anchor => ({ id })),
+).map(({ failed }) => ({ missing: failed.length }));
+// ResultAsync<{ missing: number }, never>
+```
+
+
+The carrier never fails (`E = never`): each failure is data in `failed`, with the item it ran on. A step that throws is a defect, so wrap throwing calls in `tryAsync`.
+
+---
+
+## 16. Iterables in, `Maybe` / `Result` out
+
+Native iterators and Iterator Helpers stay lazy; the aggregation helpers accept any `Iterable`, so there is no need to spread into an array first. Lookups that can miss return `Maybe`, since "no element" is expected absence.
+
+
+```ts
+import { combine, type Result } from "@onrails/result";
+import { find, head, last, unwrapOr } from "@onrails/maybe";
+
+type Row = { id: string; deleted: boolean };
+type ParseError = { kind: "parse"; line: number };
+
+declare const rows: Map<string, Row>;
+declare const lines: () => Generator<string>;
+declare const parseLine: (line: string, n: number) => Result<Row, ParseError>;
+
+const firstLive = find(rows.values(), (r) => !r.deleted);   // Maybe<Row>
+const newest = last(rows.keys());                            // Maybe<string>
+const label = unwrapOr(head(rows.keys()), "none");           // string
+
+function* parsed(): Generator<Result<Row, ParseError>> {
+  let n = 0;
+  for (const line of lines()) yield parseLine(line, ++n);
+}
+const all = combine(parsed());   // Result<Row[], ParseError>: stops reading at the first bad line
+```
+
+
+`combine` and `allOk` stop pulling at the first `Err`; `find` and `head` stop at the first hit. `last` walks the whole iterable unless it is an array.
 
 ---
 
