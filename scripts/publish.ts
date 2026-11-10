@@ -71,11 +71,20 @@ const gitProblem = async (): Promise<string | null> => {
 const problem = await gitProblem();
 if (problem && !dryRun) fail(problem);
 if (problem) console.warn(`release: ${problem} (ignored for --dry-run)`);
-else await $`git pull --ff-only`.cwd(ROOT).quiet();
+else {
+  if ((await $`git pull --ff-only`.cwd(ROOT).nothrow().quiet()).exitCode !== 0) fail("git pull --ff-only failed");
+  // Publish only what is on origin: unpushed commits would ship under a pending version.
+  if ((await $`git rev-list @{u}..HEAD`.cwd(ROOT).text()).trim()) fail("main has unpushed commits");
+}
 if ((await $`npm whoami`.nothrow().quiet()).exitCode !== 0) fail("not logged in to npm: run npm login");
 
-const isPublished = async (p: Pkg) =>
-  (await $`npm view ${`${p.name}@${p.version}`} version`.nothrow().quiet()).exitCode === 0;
+// Only E404 means "not published"; any other npm error (network, auth) stops the run.
+const isPublished = async (p: Pkg): Promise<boolean> => {
+  const res = await $`npm view ${`${p.name}@${p.version}`} version`.nothrow().quiet();
+  if (res.exitCode === 0) return true;
+  if (res.stderr.toString().includes("E404")) return false;
+  return fail(`npm view ${p.name}@${p.version} failed: ${res.stderr.toString().trim()}`);
+};
 
 const pending: Pkg[] = [];
 for (const dir of ORDER) {
@@ -95,7 +104,7 @@ const packDir = mkdtempSync(join(tmpdir(), "onrails-release-"));
 for (const p of pending) {
   const pkgJson = join(ROOT, "packages", p.dir, "package.json");
   const original = readFileSync(pkgJson, "utf8");
-  writeFileSync(pkgJson, original.replace('"provenance": true', '"provenance": false'));
+  writeFileSync(pkgJson, original.replace(/"provenance"\s*:\s*true/, '"provenance": false'));
   let tarball: string;
   try {
     tarball = (
