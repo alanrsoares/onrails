@@ -72,7 +72,7 @@
     },
     "packages/biome-plugin": {
       "name": "@onrails/biome-plugin",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "devDependencies": {
         "@biomejs/biome": "catalog:",
       },
@@ -82,7 +82,7 @@
     },
     "packages/codemod": {
       "name": "@onrails/codemod",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "bin": {
         "onrails-codemod-neverthrow": "./src/index.ts",
       },
@@ -96,7 +96,7 @@
     },
     "packages/docgen": {
       "name": "@onrails/docgen",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "dependencies": {
         "@onrails/pattern": "workspace:^",
         "@onrails/result": "workspace:^",
@@ -113,7 +113,7 @@
     },
     "packages/eslint-plugin": {
       "name": "@onrails/eslint-plugin",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "devDependencies": {
         "@typescript-eslint/parser": "^8.67.0",
         "eslint": "^10.8.1",
@@ -133,7 +133,7 @@
     },
     "packages/maybe": {
       "name": "@onrails/maybe",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "devDependencies": {
         "@onrails/result": "workspace:*",
         "fast-check": "catalog:",
@@ -149,7 +149,7 @@
     },
     "packages/pattern": {
       "name": "@onrails/pattern",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "devDependencies": {
         "@onrails/result": "workspace:*",
         "ts-expect": "catalog:",
@@ -158,7 +158,7 @@
     },
     "packages/result": {
       "name": "@onrails/result",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "devDependencies": {
         "fast-check": "catalog:",
         "neverthrow": "^8.2.0",
