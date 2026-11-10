@@ -3,11 +3,13 @@ name: Release
 on:
   push:
     branches: [main]
+  # Manual re-run: publishes every package whose version is not on npm yet.
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
-  id-token: write # for npm provenance
+  id-token: write # npm trusted publishing (OIDC) + provenance
 
 jobs:
   release-please:
@@ -26,7 +28,7 @@ jobs:
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    if: ${{ needs.release-please.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -41,23 +43,30 @@ jobs:
           - { name: twoslash,      path: packages/twoslash,      build: true  }
           - { name: docgen,        path: packages/docgen,        build: true  }
     steps:
+      - uses: actions/checkout@v4
+      # Gate on npm, not on release-please output: publishing is then
+      # idempotent, and a manual run picks up any version that failed before.
       - id: gate
-        env:
-          PATHS: ${{ needs.release-please.outputs.paths_released }}
-          PATH_TO_CHECK: ${{ matrix.path }}
+        working-directory: ${{ matrix.path }}
         run: |
-          if echo "$PATHS" | grep -q "\"$PATH_TO_CHECK\""; then
-            echo "released=true" >> "$GITHUB_OUTPUT"
-          else
+          spec="$(jq -r '.name + "@" + .version' package.json)"
+          if npm view "$spec" version >/dev/null 2>&1; then
             echo "released=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping ${{ matrix.name }} — not in release set."
+            echo "Skipping $spec: already on npm."
+          else
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "spec=$spec" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.gate.outputs.released == 'true'
-        uses: actions/checkout@v4
       - if: steps.gate.outputs.released == 'true'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.4
+      # npm >= 11.5.1 is required for trusted publishing; Node 24 ships it.
+      - if: steps.gate.outputs.released == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
       - if: steps.gate.outputs.released == 'true'
         run: bun install --frozen-lockfile
       # `bun run build` stages result ahead of its dependents, so every
@@ -69,9 +78,12 @@ jobs:
       - if: steps.gate.outputs.released == 'true' && matrix.build
         name: Verify packaging
         run: bun run check:packaging
+      # bun pack rewrites workspace: / catalog: ranges to real versions;
+      # npm publishes the tarball, since bun publish cannot do OIDC or
+      # provenance. No NPM_TOKEN: auth is the workflow's OIDC identity.
       - if: steps.gate.outputs.released == 'true'
-        name: Publish ${{ matrix.name }}
+        name: Publish ${{ steps.gate.outputs.spec }}
         working-directory: ${{ matrix.path }}
-        run: bun publish --access public
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          bun pm pack --destination "$RUNNER_TEMP/pack" --quiet
+          npm publish "$RUNNER_TEMP"/pack/*.tgz --access public --provenance
